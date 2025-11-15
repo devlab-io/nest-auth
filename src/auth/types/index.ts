@@ -1,19 +1,19 @@
 export enum ActionTokenType {
   Invite = 'invite',
-  ResetPassword = 'reset-password',
   AcceptTerms = 'accept-terms',
-  AcceptConditions = 'accept-conditions',
+  AcceptPrivacyPolicy = 'accept-privacy-policy',
+  ChangeEmail = 'change-email',
   ValidateEmail = 'validate-email',
   CreatePassword = 'create-password',
-  AcceptPrivacyPolicy = 'accept-privacy-policy',
+  ResetPassword = 'reset-password',
 }
 
 export interface ActionToken {
   token: string;
   type: ActionTokenType;
+  email: string;
   createdAt: Date;
   expiresAt?: Date;
-  email?: string;
   user?: User;
   roles?: Role[];
 }
@@ -36,10 +36,10 @@ export interface ActionTokenQueryParams {
 
 export interface CreateActionTokenRequest {
   type: ActionTokenType;
+  email?: string; // If user is not provided, email is required
   expiresIn?: number; // hours
-  email?: string;
-  user?: string;
-  roles: string[];
+  user?: User;
+  roles?: string[];
 }
 
 export interface Role {
@@ -52,6 +52,7 @@ export interface User {
   id: string;
   username: string;
   email: string;
+  emailValidated: boolean;
   firstName?: string;
   lastName?: string;
   phone?: string;
@@ -71,6 +72,7 @@ export interface UserQueryParams {
   id?: string;
   username?: string;
   email?: string;
+  emailValidated?: boolean;
   firstName?: string;
   lastName?: string;
   phone?: string;
@@ -98,16 +100,18 @@ export interface UserPage {
   limit: number;
 }
 
+export interface GenerateUsernameRequest {
+  email: string;
+  username?: string;
+  firstName?: string;
+  lastName?: string;
+}
+
 export interface InviteRequest {
   email: string;
   expiresIn?: number; // hours
   message?: string;
   roles?: string[];
-}
-
-export interface SignInRequest {
-  email: string;
-  password: string;
 }
 
 export interface SignUpRequest {
@@ -120,6 +124,42 @@ export interface SignUpRequest {
   lastName?: string;
   phone?: string;
   profilePicture?: string;
+}
+
+export interface ActionRequest {
+  token: string;
+  email: string;
+}
+
+export interface AcceptInvitationRequest extends SignUpRequest, ActionRequest {}
+
+export interface ChangeEmailRequest extends ActionRequest {
+  email: string;
+}
+
+export interface ValidateEmailRequest extends ActionRequest {
+  email: string;
+}
+
+export interface CreatePasswordRequest extends ActionRequest {
+  password: string;
+}
+
+export interface ResetPasswordRequest extends ActionRequest {
+  password: string;
+}
+
+export interface AcceptTermsRequest extends ActionRequest {
+  acceptedTerms: boolean;
+}
+
+export interface AcceptPrivacyPolicyRequest extends ActionRequest {
+  acceptedPrivacyPolicy: boolean;
+}
+
+export interface SignInRequest {
+  email: string;
+  password: string;
 }
 
 export interface AuthResponse {

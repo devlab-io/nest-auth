@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   InternalServerErrorException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -60,23 +61,24 @@ export class ActionTokenService {
   public async create(
     create: CreateActionTokenRequest,
   ): Promise<ActionTokenEntity> {
+    // Email is required for all action tokens
+    if (!create.email && !create.user) {
+      throw new BadRequestException(
+        'An email is required for any action token',
+      );
+    }
     // Validate the create action token request
     switch (create.type) {
       case ActionTokenType.Invite:
-        if (!create.email) {
-          throw new BadRequestException(
-            `An email is required for ${create.type} token`,
-          );
-        }
         break;
       case ActionTokenType.ResetPassword:
       case ActionTokenType.AcceptTerms:
-      case ActionTokenType.AcceptConditions:
+      case ActionTokenType.AcceptPrivacyPolicy:
       case ActionTokenType.ValidateEmail:
       case ActionTokenType.CreatePassword:
         if (!create.user) {
           throw new BadRequestException(
-            `A user is required for ${create.type} token`,
+            `A user is required in order to create a "${create.type}" action token`,
           );
         }
         break;
@@ -117,11 +119,12 @@ export class ActionTokenService {
     let user: UserEntity | null = null;
     if (create.user) {
       user = await this.userRepository.findOne({
-        where: { id: create.user },
+        where: { id: create.user.id },
       });
       if (!user) {
         throw new BadRequestException(`User with id ${create.user} not found`);
       }
+      create.email = user.email;
     }
 
     // Expiration date
@@ -134,7 +137,7 @@ export class ActionTokenService {
     const actionToken: ActionTokenEntity = this.actionTokenRepository.create({
       token,
       type: create.type,
-      email: create.email,
+      email: create.email!.toLowerCase(), // we use either the provided email or the user email, it is defined above
       user: user ?? undefined,
       roles: roles.length > 0 ? roles : undefined,
       expiresAt: expiresAt,
@@ -204,17 +207,36 @@ export class ActionTokenService {
 
   /**
    * Check if a token is valid (exists and not expired)
+   * It must be associated to the given email.
+   * If the token exists but is expired, it is deleted and the token is not valid
    *
    * @param token - The token value
-   * @returns True if the token is valid, false otherwise
+   * @param email - The email associated to the token
+   * @param type - The type of the token
+   * @returns The action token if it is valid
+   * @throws ForbiddenException if the token is not valid
    */
-  public async isValid(token: string): Promise<boolean> {
+  public async validate(
+    token: string,
+    email: string,
+    type: ActionTokenType,
+  ): Promise<ActionTokenEntity> {
     // Look for the token
     const actionToken: ActionTokenEntity | null = await this.findByToken(token);
 
     // If the token is not found, it is not valid
     if (!actionToken) {
-      return false;
+      throw new ForbiddenException('Invalid action token');
+    }
+
+    // If the token is not associated to the given email, it is not valid
+    if (actionToken.email !== email.toLowerCase()) {
+      throw new ForbiddenException('Invalid action token');
+    }
+
+    // If the token is not of the given type, it is not valid
+    if (actionToken.type !== type) {
+      throw new ForbiddenException('Invalid action token');
     }
 
     // If the token has expired, it is not valid
@@ -223,11 +245,11 @@ export class ActionTokenService {
       await this.actionTokenRepository.remove(actionToken);
 
       // The token is not valid
-      return false;
+      throw new ForbiddenException('Invalid action token');
     }
 
     // The token is valid
-    return true;
+    return actionToken;
   }
 
   /**

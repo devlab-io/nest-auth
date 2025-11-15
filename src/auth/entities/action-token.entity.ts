@@ -16,7 +16,7 @@ import { RoleEntity } from './role.entity';
 @Entity({ name: 'action_tokens' })
 @Check(
   'check_action_tokens_type_valid',
-  "type in ('invite','reset-password','accept-terms','accept-conditions','validate-email','create-password','accept-privacy-policy')",
+  "type in ('invite','reset-password','accept-terms','validate-email','create-password','accept-privacy-policy')",
 )
 export class ActionTokenEntity implements ActionToken {
   @PrimaryColumn({ type: 'text' })
@@ -25,14 +25,14 @@ export class ActionTokenEntity implements ActionToken {
   @Column({ type: 'text' })
   type: ActionTokenType;
 
+  @Column({ type: 'text' })
+  email: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
   @Column({ type: 'timestamp', name: 'expires_at', nullable: true })
   expiresAt?: Date;
-
-  @Column({ type: 'text', nullable: true })
-  email?: string;
 
   @ManyToOne(() => UserEntity, (user) => user.actionsTokens, {
     nullable: true,

@@ -40,6 +40,13 @@ export class UserEntity implements User {
   email: string;
 
   @ApiProperty({
+    example: true,
+    description: 'Indicates if the user email is validated',
+  })
+  @Column({ name: 'email_validated', default: false })
+  emailValidated: boolean;
+
+  @ApiProperty({
     example: 'John',
     description: 'First name of the user',
     nullable: true,
