@@ -1,0 +1,137 @@
+name: Publish to GitHub Packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.1)'
+        required: true
+        type: string
+      release_description:
+        description: 'Release description/commit message'
+        required: true
+        type: string
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify branch
+        run: |
+          if [ "${{ github.ref }}" != "refs/heads/develop" ]; then
+            echo "Error: This workflow must be triggered from the 'develop' branch"
+            echo "Current branch: ${{ github.ref }}"
+            exit 1
+          fi
+          echo "✓ Workflow triggered from develop branch"
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@devlab-io'
+
+      - name: Extract version number
+        id: version
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          # Remove 'v' prefix if present
+          VERSION=${VERSION#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Checkout and pull develop
+        run: |
+          git checkout develop
+          git pull origin develop
+
+      - name: Merge develop into main
+        run: |
+          git fetch origin main
+          git checkout main
+          git pull origin main
+          git merge develop -m "chore: merge develop into main for release ${{ steps.version.outputs.tag }}"
+          git push origin main
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build package
+        run: yarn build
+
+      - name: Check code formatting
+        run: yarn format:check
+
+      - name: Run linter
+        run: yarn lint:check
+
+      - name: Type check
+        run: yarn type-check
+
+      - name: Run tests
+        run: yarn test
+
+      - name: Update version in package.json
+        run: |
+          npm version ${{ steps.version.outputs.version }} --no-git-tag-version
+
+      - name: Commit and push version update
+        run: |
+          git add package.json package-lock.json 2>/dev/null || git add package.json
+          git commit -m "chore: bump version to ${{ steps.version.outputs.version }}" || echo "No changes to commit"
+          git push origin main
+
+      - name: Create git tag
+        run: |
+          git tag -a ${{ steps.version.outputs.tag }} -m "${{ github.event.inputs.release_description }}"
+          git push origin ${{ steps.version.outputs.tag }}
+
+      - name: Create release archive
+        run: |
+          mkdir -p release
+          tar -czf release/nest-storage-${{ steps.version.outputs.tag }}.tar.gz dist package.json README.md
+          zip -r release/nest-storage-${{ steps.version.outputs.tag }}.zip dist package.json README.md
+
+      - name: Publish to GitHub Packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm publish
+
+      - name: Create GitHub Release with archive
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          body: ${{ github.event.inputs.release_description }}
+          files: |
+            release/nest-storage-${{ steps.version.outputs.tag }}.tar.gz
+            release/nest-storage-${{ steps.version.outputs.tag }}.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout and pull develop
+        run: |
+          git checkout develop
+          git pull origin develop
+
+      - name: Merge main into develop
+        run: |
+          git merge origin/main -m "chore: merge main into develop after release ${{ steps.version.outputs.tag }}"
+          git push origin develop
