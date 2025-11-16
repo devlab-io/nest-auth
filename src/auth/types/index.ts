@@ -1,16 +1,20 @@
+/**
+ * Action Token Type as bit mask
+ * Each action is represented by a unique bit position
+ */
 export enum ActionTokenType {
-  Invite = 'invite',
-  AcceptTerms = 'accept-terms',
-  AcceptPrivacyPolicy = 'accept-privacy-policy',
-  ChangeEmail = 'change-email',
-  ValidateEmail = 'validate-email',
-  CreatePassword = 'create-password',
-  ResetPassword = 'reset-password',
+  Invite = 1 << 0, // 1 (00000001)
+  ValidateEmail = 1 << 1, // 2 (00000010)
+  AcceptTerms = 1 << 2, // 4 (00000100)
+  AcceptPrivacyPolicy = 1 << 3, // 8 (00001000)
+  CreatePassword = 1 << 4, // 16 (00010000)
+  ResetPassword = 1 << 5, // 32 (00100000)
+  ChangeEmail = 1 << 6, // 64 (01000000)
 }
 
 export interface ActionToken {
   token: string;
-  type: ActionTokenType;
+  type: number; // Bit mask of ActionTokenType values
   email: string;
   createdAt: Date;
   expiresAt?: Date;
@@ -26,7 +30,7 @@ export interface ActionTokenPage {
 }
 
 export interface ActionTokenQueryParams {
-  type?: ActionTokenType;
+  type?: number; // Bit mask of ActionTokenType values
   createdAt?: Date;
   expiresAt?: Date;
   email?: string;
@@ -35,7 +39,7 @@ export interface ActionTokenQueryParams {
 }
 
 export interface CreateActionTokenRequest {
-  type: ActionTokenType;
+  type: number; // Bit mask of ActionTokenType values
   email?: string; // If user is not provided, email is required
   expiresIn?: number; // hours
   user?: User;
@@ -82,7 +86,7 @@ export interface UserQueryParams {
   createdAt?: Date;
   updatedAt?: Date;
   roles?: string[];
-  actions?: ActionTokenType[];
+  actions?: number[]; // Array of bit masks or single ActionTokenType values
 }
 
 export interface UserUpdateRequest {
@@ -156,6 +160,15 @@ export interface AcceptTermsRequest extends ActionRequest {
 export interface AcceptPrivacyPolicyRequest extends ActionRequest {
   acceptedPrivacyPolicy: boolean;
 }
+
+export type AnyActionRequest =
+  | AcceptInvitationRequest
+  | ChangeEmailRequest
+  | ValidateEmailRequest
+  | CreatePasswordRequest
+  | ResetPasswordRequest
+  | AcceptTermsRequest
+  | AcceptPrivacyPolicyRequest;
 
 export interface SignInRequest {
   email: string;

@@ -20,6 +20,7 @@ import {
   ActionTokenQueryParams,
   ActionTokenPage,
 } from '../types';
+import { ActionTokenTypeUtils } from '../utils';
 import { randomBytes } from 'crypto';
 import { Logger } from '@nestjs/common';
 
@@ -68,20 +69,33 @@ export class ActionTokenService {
       );
     }
     // Validate the create action token request
-    switch (create.type) {
-      case ActionTokenType.Invite:
-        break;
-      case ActionTokenType.ResetPassword:
-      case ActionTokenType.AcceptTerms:
-      case ActionTokenType.AcceptPrivacyPolicy:
-      case ActionTokenType.ValidateEmail:
-      case ActionTokenType.CreatePassword:
-        if (!create.user) {
-          throw new BadRequestException(
-            `A user is required in order to create a "${create.type}" action token`,
-          );
-        }
-        break;
+    // Actions that require an existing user
+    const actionsRequiringUser =
+      ActionTokenType.ResetPassword |
+      ActionTokenType.AcceptTerms |
+      ActionTokenType.AcceptPrivacyPolicy |
+      ActionTokenType.ValidateEmail |
+      ActionTokenType.CreatePassword |
+      ActionTokenType.ChangeEmail;
+
+    // Check if the bit mask contains any action that requires a user
+    if (
+      ActionTokenTypeUtils.hasAnyAction(create.type, actionsRequiringUser) &&
+      !create.user
+    ) {
+      throw new BadRequestException(
+        'A user is required for this action token type',
+      );
+    }
+
+    // Invite action cannot be combined with user-requiring actions
+    if (
+      ActionTokenTypeUtils.hasAction(create.type, ActionTokenType.Invite) &&
+      ActionTokenTypeUtils.hasAnyAction(create.type, actionsRequiringUser)
+    ) {
+      throw new BadRequestException(
+        'Invite action cannot be combined with actions requiring an existing user',
+      );
     }
 
     // Generate a unique token
@@ -122,7 +136,9 @@ export class ActionTokenService {
         where: { id: create.user.id },
       });
       if (!user) {
-        throw new BadRequestException(`User with id ${create.user} not found`);
+        throw new BadRequestException(
+          `User with id ${create.user.id} not found`,
+        );
       }
       create.email = user.email;
     }
@@ -212,14 +228,14 @@ export class ActionTokenService {
    *
    * @param token - The token value
    * @param email - The email associated to the token
-   * @param type - The type of the token
+   * @param requiredActions - The required actions (bit mask)
    * @returns The action token if it is valid
    * @throws ForbiddenException if the token is not valid
    */
   public async validate(
     token: string,
     email: string,
-    type: ActionTokenType,
+    requiredActions: number,
   ): Promise<ActionTokenEntity> {
     // Look for the token
     const actionToken: ActionTokenEntity | null = await this.findByToken(token);
@@ -234,9 +250,13 @@ export class ActionTokenService {
       throw new ForbiddenException('Invalid action token');
     }
 
-    // If the token is not of the given type, it is not valid
-    if (actionToken.type !== type) {
-      throw new ForbiddenException('Invalid action token');
+    // Check if the token contains all required actions
+    if (
+      !ActionTokenTypeUtils.hasAllActions(actionToken.type, requiredActions)
+    ) {
+      throw new ForbiddenException(
+        'Token does not contain all required actions',
+      );
     }
 
     // If the token has expired, it is not valid

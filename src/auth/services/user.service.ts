@@ -21,13 +21,15 @@ import {
   AcceptTermsRequest,
   AcceptPrivacyPolicyRequest,
   ValidateEmailRequest,
+  AnyActionRequest,
+  CreateActionTokenRequest,
 } from '../types';
 import * as bcrypt from 'bcryptjs';
 import { MailerService, MailerServiceToken } from '@devlab-io/nest-mailer';
 import { ActionTokenService } from './action-token.service';
 import { RoleService } from './role.service';
 import { UserConfig, UserConfigToken } from '../config/user.config';
-import { capitalize, normalize } from '../utils';
+import { capitalize, normalize, ActionTokenTypeUtils } from '../utils';
 
 @Injectable()
 export class UserService {
@@ -119,6 +121,325 @@ export class UserService {
   }
 
   /**
+   * Get the maximum expiration time for a set of actions
+   *
+   * @param actions - Bit mask of actions
+   * @returns The maximum expiration time in hours
+   */
+  private getMaxExpirationTime(actions: number): number {
+    let maxExpiration: number = 0;
+
+    if (ActionTokenTypeUtils.hasAction(actions, ActionTokenType.Invite)) {
+      maxExpiration = Math.max(
+        maxExpiration,
+        this.userConfig.user.actions.invite,
+      );
+    }
+    if (
+      ActionTokenTypeUtils.hasAction(actions, ActionTokenType.ValidateEmail)
+    ) {
+      maxExpiration = Math.max(
+        maxExpiration,
+        this.userConfig.user.actions.validateEmail,
+      );
+    }
+    if (ActionTokenTypeUtils.hasAction(actions, ActionTokenType.AcceptTerms)) {
+      maxExpiration = Math.max(
+        maxExpiration,
+        this.userConfig.user.actions.acceptTerms,
+      );
+    }
+    if (
+      ActionTokenTypeUtils.hasAction(
+        actions,
+        ActionTokenType.AcceptPrivacyPolicy,
+      )
+    ) {
+      maxExpiration = Math.max(
+        maxExpiration,
+        this.userConfig.user.actions.acceptPrivacyPolicy,
+      );
+    }
+    if (
+      ActionTokenTypeUtils.hasAction(actions, ActionTokenType.CreatePassword)
+    ) {
+      maxExpiration = Math.max(
+        maxExpiration,
+        this.userConfig.user.actions.createPassword,
+      );
+    }
+    if (
+      ActionTokenTypeUtils.hasAction(actions, ActionTokenType.ResetPassword)
+    ) {
+      maxExpiration = Math.max(
+        maxExpiration,
+        this.userConfig.user.actions.resetPassword,
+      );
+    }
+    if (ActionTokenTypeUtils.hasAction(actions, ActionTokenType.ChangeEmail)) {
+      maxExpiration = Math.max(
+        maxExpiration,
+        this.userConfig.user.actions.changeEmail,
+      );
+    }
+
+    // If no action was found (should not happen in practice), return a default value
+    if (maxExpiration === 0) {
+      this.logger.warn(
+        `No valid action found in bit mask ${actions}, using default expiration of 24 hours`,
+      );
+      return 24;
+    }
+
+    return maxExpiration;
+  }
+
+  /**
+   * Generate email content from action bit mask
+   *
+   * @param actions - Bit mask of actions
+   * @param token - The token value
+   * @param expiresIn - Expiration time in hours
+   * @returns Email subject and body
+   */
+  private generateEmailContent(
+    actions: number,
+    token: string,
+    expiresIn: number,
+  ): { subject: string; body: string } {
+    const actionNames: string[] = [];
+    const actionDescriptions: string[] = [];
+
+    if (ActionTokenTypeUtils.hasAction(actions, ActionTokenType.Invite)) {
+      actionNames.push('Invitation');
+      actionDescriptions.push("Rejoindre l'application");
+    }
+    if (
+      ActionTokenTypeUtils.hasAction(actions, ActionTokenType.ValidateEmail)
+    ) {
+      actionNames.push('Validation Email');
+      actionDescriptions.push('Valider votre adresse email');
+    }
+    if (ActionTokenTypeUtils.hasAction(actions, ActionTokenType.AcceptTerms)) {
+      actionNames.push('Acceptation CGU');
+      actionDescriptions.push("Accepter les conditions d'utilisation");
+    }
+    if (
+      ActionTokenTypeUtils.hasAction(
+        actions,
+        ActionTokenType.AcceptPrivacyPolicy,
+      )
+    ) {
+      actionNames.push('Acceptation Politique de Confidentialité');
+      actionDescriptions.push('Accepter la politique de confidentialité');
+    }
+    if (
+      ActionTokenTypeUtils.hasAction(actions, ActionTokenType.CreatePassword)
+    ) {
+      actionNames.push('Création Mot de Passe');
+      actionDescriptions.push('Créer votre mot de passe');
+    }
+    if (
+      ActionTokenTypeUtils.hasAction(actions, ActionTokenType.ResetPassword)
+    ) {
+      actionNames.push('Réinitialisation Mot de Passe');
+      actionDescriptions.push('Réinitialiser votre mot de passe');
+    }
+    if (ActionTokenTypeUtils.hasAction(actions, ActionTokenType.ChangeEmail)) {
+      actionNames.push('Changement Email');
+      actionDescriptions.push('Changer votre adresse email');
+    }
+
+    const subject: string =
+      actionNames.length === 1
+        ? actionNames[0]
+        : `Actions Requises: ${actionNames.join(', ')}`;
+
+    const actionList: string = actionDescriptions
+      .map((desc, index) => `${index + 1}. ${desc}`)
+      .join('\n');
+
+    const body: string = `Bonjour,
+
+Vous avez reçu ce message car vous devez effectuer une ou plusieurs actions sur votre compte.
+
+${actionList}
+
+Veuillez utiliser le lien suivant pour effectuer ces actions :
+${token}
+
+Ce lien est valide pendant ${expiresIn} heures.
+
+Cordialement,
+L'équipe`;
+
+    return { subject, body };
+  }
+
+  /**
+   * Send an action token email to a user (generic method)
+   *
+   * @param request - The create action token request
+   * @param preActions - Optional callback to execute before creating the token (e.g., set fields to false)
+   * @throws NotFoundException if the user is not found (when user is provided)
+   * @throws BadRequestException if neither email nor user is provided
+   */
+  public async sendActionToken(
+    request: CreateActionTokenRequest,
+    preActions?: (user: UserEntity) => Promise<void> | void,
+  ): Promise<void> {
+    let user: UserEntity | undefined = undefined;
+    let normalizedEmail: string;
+
+    // Get the user and email
+    if (request.user) {
+      // Re-fetch the user to guarantee it's a UserEntity (even if redundant)
+      user = await this.getById(request.user.id);
+      normalizedEmail = user.email.toLowerCase();
+
+      // Execute pre-actions if provided
+      if (preActions) {
+        await preActions(user);
+        await this.userRepository.save(user);
+      }
+    } else if (request.email) {
+      normalizedEmail = request.email.toLowerCase();
+    } else {
+      throw new BadRequestException(
+        'Either email or user must be provided in the request',
+      );
+    }
+
+    // Use provided expiresIn or calculate the maximum expiration time for the actions
+    const expirationTime: number =
+      request.expiresIn ?? this.getMaxExpirationTime(request.type);
+
+    // Create the action token (actionTokenService.create will verify if a user is required)
+    const token: ActionTokenEntity = await this.actionTokenService.create({
+      type: request.type,
+      email: normalizedEmail,
+      user: user,
+      roles: request.roles,
+      expiresIn: expirationTime,
+    });
+
+    // Generate email content from actions
+    const emailContent = this.generateEmailContent(
+      request.type,
+      token.token,
+      expirationTime,
+    );
+
+    // Send the email
+    await this.mailerService.send(
+      normalizedEmail,
+      emailContent.subject,
+      emailContent.body,
+    );
+
+    // Log
+    this.logger.debug(
+      `Action token sent to ${normalizedEmail} for actions: ${request.type}`,
+    );
+  }
+
+  /**
+   * Process an action token (generic method)
+   *
+   * @param request - The process action token request
+   * @param requiredActions - Bit mask of required actions
+   * @throws ForbiddenException if the action token is not valid
+   * @throws BadRequestException if required data is missing
+   */
+  public async processActionToken(
+    request: AnyActionRequest,
+    requiredActions: number,
+  ): Promise<void> {
+    // Validate the action token
+    const token: ActionTokenEntity = await this.actionTokenService.validate(
+      request.token,
+      request.email,
+      requiredActions,
+    );
+
+    // Get the user from the token (guaranteed to be defined by the token type)
+    const user: UserEntity = token.user!;
+
+    // Process each action in the bit mask
+    if (
+      ActionTokenTypeUtils.hasAnyAction(
+        requiredActions,
+        ActionTokenType.CreatePassword | ActionTokenType.ResetPassword,
+      )
+    ) {
+      if (!('password' in request) || !request.password) {
+        throw new BadRequestException('Password is required for this action');
+      }
+      user.password = await this.hashPassword(request.password);
+    }
+
+    if (
+      ActionTokenTypeUtils.hasAction(
+        requiredActions,
+        ActionTokenType.ValidateEmail,
+      )
+    ) {
+      user.emailValidated = true;
+    }
+
+    if (
+      ActionTokenTypeUtils.hasAction(
+        requiredActions,
+        ActionTokenType.AcceptTerms,
+      )
+    ) {
+      if (!('acceptedTerms' in request)) {
+        throw new BadRequestException(
+          'acceptedTerms is required for this action',
+        );
+      }
+      if (!request.acceptedTerms) {
+        this.logger.warn(
+          `User with email ${request.email} has rejected the terms of service`,
+        );
+        throw new BadRequestException('User must accept the terms');
+      }
+      user.acceptedTerms = true;
+    }
+
+    if (
+      ActionTokenTypeUtils.hasAction(
+        requiredActions,
+        ActionTokenType.AcceptPrivacyPolicy,
+      )
+    ) {
+      if (!('acceptedPrivacyPolicy' in request)) {
+        throw new BadRequestException(
+          'acceptedPrivacyPolicy is required for this action',
+        );
+      }
+      if (!request.acceptedPrivacyPolicy) {
+        this.logger.warn(
+          `User with email ${request.email} has rejected the privacy policy`,
+        );
+        throw new BadRequestException('User must accept the privacy policy');
+      }
+      user.acceptedPrivacyPolicy = true;
+    }
+
+    // Save the user
+    await this.userRepository.save(user);
+
+    // Revoke the action token
+    await this.actionTokenService.revoke(request.token);
+
+    // Log
+    this.logger.debug(
+      `User with email ${user.email} has processed actions: ${requiredActions}`,
+    );
+  }
+
+  /**
    * Invite a user by creating an invitation token
    *
    * @param invite - The invite request containing the email and roles.
@@ -135,25 +456,13 @@ export class UserService {
       );
     }
 
-    // Create invitation token
-    const actionToken: ActionTokenEntity = await this.actionTokenService.create(
-      {
-        type: ActionTokenType.Invite,
-        email: invite.email,
-        roles: invite.roles ?? this.userConfig.user.defaultRoles, // action token service will verify if the roles exists
-        expiresIn: invite.expiresIn,
-      },
-    );
-
-    // Send invitation email
-    await this.mailerService.send(
-      invite.email,
-      'Invitation to join the application',
-      `You are invited to join the application. Please use the following link to sign up: ${actionToken.token}`,
-    );
-
-    // log
-    this.logger.debug(`Invitation email sent to ${invite.email}`);
+    // Use sendActionToken without userId (actionTokenService.create will verify if a user is required)
+    await this.sendActionToken({
+      email: invite.email,
+      type: ActionTokenType.Invite,
+      expiresIn: invite.expiresIn,
+      roles: invite.roles ?? this.userConfig.user.defaultRoles,
+    });
   }
 
   /**
@@ -171,7 +480,7 @@ export class UserService {
     const token: ActionTokenEntity = await this.actionTokenService.validate(
       request.token,
       request.email,
-      ActionTokenType.Invite,
+      ActionTokenType.Invite as number,
     );
 
     // Generate username if not provided
@@ -260,7 +569,7 @@ export class UserService {
     user = await this.userRepository.save(user);
 
     // Create and send an email validation token
-    await this.sendEmailValidation(user.id, user);
+    await this.sendEmailValidation(user.id);
 
     // Log
     this.logger.debug(`User with email ${user.email} signed up`);
@@ -282,7 +591,7 @@ export class UserService {
     request: UserUpdateRequest,
   ): Promise<UserEntity> {
     // Get the user with the given ID
-    let user: UserEntity | null = await this.getById(id);
+    let user: UserEntity = await this.getById(id);
 
     // Update the user
     if (request.firstName !== undefined) {
@@ -318,25 +627,11 @@ export class UserService {
    * @throws NotFoundException if the user is not found
    */
   public async sendCreatePassword(id: string): Promise<void> {
-    // Get the user with the given ID
-    const user: UserEntity | null = await this.getById(id);
-
-    // Create a create password token
-    const token: ActionTokenEntity = await this.actionTokenService.create({
+    const user: UserEntity = await this.getById(id);
+    await this.sendActionToken({
       type: ActionTokenType.CreatePassword,
       user: user,
-      expiresIn: 24, // 1 day
     });
-
-    // Send the create password email
-    await this.mailerService.send(
-      user.email,
-      'Create password',
-      `Please use the following link to create your password: ${token.token} (valid for 24 hours)`,
-    );
-
-    // Log
-    this.logger.debug(`Password creation email sent to ${user.email}`);
   }
 
   /**
@@ -349,27 +644,7 @@ export class UserService {
   public async acceptCreatePassword(
     request: ResetPasswordRequest,
   ): Promise<void> {
-    // Validate the action token
-    const token: ActionTokenEntity = await this.actionTokenService.validate(
-      request.token,
-      request.email,
-      ActionTokenType.CreatePassword,
-    );
-
-    // Get the user within the token, he his garanteed to be defined by the type of the token.
-    let user: UserEntity = token.user!;
-
-    // Hash and update the user's password
-    user.password = await this.hashPassword(request.password);
-
-    // Save the user
-    user = await this.userRepository.save(user);
-
-    // Revoke the action token
-    await this.actionTokenService.revoke(request.token);
-
-    // Log
-    this.logger.debug(`User with email ${user.email} has created his password`);
+    await this.processActionToken(request, ActionTokenType.CreatePassword);
   }
 
   /**
@@ -390,20 +665,10 @@ export class UserService {
       return;
     }
 
-    // Create a reset password token
-    const token: ActionTokenEntity = await this.actionTokenService.create({
+    await this.sendActionToken({
       type: ActionTokenType.ResetPassword,
-      email: user.email,
       user: user,
-      expiresIn: 24, // 1 day
     });
-
-    // Send the reset password email
-    await this.mailerService.send(
-      email,
-      'Reset password',
-      `Please use the following link to reset your password: ${token.token} (valid for 24 hours)`,
-    );
   }
 
   /**
@@ -416,27 +681,14 @@ export class UserService {
   public async acceptResetPassword(
     request: ResetPasswordRequest,
   ): Promise<void> {
-    // Validate the action token
-    const token: ActionTokenEntity = await this.actionTokenService.validate(
-      request.token,
-      request.email,
+    await this.processActionToken(
+      {
+        token: request.token,
+        email: request.email,
+        password: request.password,
+      },
       ActionTokenType.ResetPassword,
     );
-
-    // Get the user within the token, he his garanteed to be defined by the type of the token.
-    let user: UserEntity = token.user!;
-
-    // Hash and update the user's password
-    user.password = await this.hashPassword(request.password);
-
-    // Save the user
-    user = await this.userRepository.save(user);
-
-    // Revoke the action token
-    await this.actionTokenService.revoke(request.token);
-
-    // Log
-    this.logger.debug(`User with email ${user.email} has reset his password`);
   }
 
   /**
@@ -446,31 +698,16 @@ export class UserService {
    * @throws NotFoundException if the user is not found
    */
   public async sendAcceptTerms(id: string): Promise<void> {
-    // Get the user with the given ID
-    let user: UserEntity = await this.getById(id);
-
-    // set the user's accepted terms to false
-    user.acceptedTerms = false;
-
-    // Save the user
-    user = await this.userRepository.save(user);
-
-    // Create a accept terms token
-    const token: ActionTokenEntity = await this.actionTokenService.create({
-      type: ActionTokenType.AcceptTerms,
-      user: user,
-      expiresIn: 24, // 1 day
-    });
-
-    // Send the accept terms email
-    await this.mailerService.send(
-      user.email,
-      'Accept terms',
-      `Please use the following link to accept the terms of service: ${token.token} (valid for 24 hours)`,
+    const user: UserEntity = await this.getById(id);
+    await this.sendActionToken(
+      {
+        type: ActionTokenType.AcceptTerms,
+        user: user,
+      },
+      (user: UserEntity): void => {
+        user.acceptedTerms = false;
+      },
     );
-
-    // Log
-    this.logger.debug(`Terms acceptance email sent to ${user.email}`);
   }
 
   /**
@@ -481,36 +718,13 @@ export class UserService {
    * @throws ForbiddenException if the action token is not valid
    */
   public async acceptAcceptTerms(request: AcceptTermsRequest): Promise<void> {
-    // Validate the action token
-    const token: ActionTokenEntity = await this.actionTokenService.validate(
-      request.token,
-      request.email,
+    await this.processActionToken(
+      {
+        token: request.token,
+        email: request.email,
+        acceptedTerms: request.acceptedTerms,
+      },
       ActionTokenType.AcceptTerms,
-    );
-
-    // User must accept the terms and privacy policy
-    if (!request.acceptedTerms) {
-      this.logger.warn(
-        `User with email ${request.email} has rejected the terms of service`,
-      );
-      throw new BadRequestException('User must accept the terms');
-    }
-
-    // Get the user within the token, he his garanteed to be defined by the type of the token.
-    let user: UserEntity = token.user!;
-
-    // Update the user's accepted terms
-    user.acceptedTerms = true;
-
-    // Save the user
-    user = await this.userRepository.save(user);
-
-    // Revoke the action token
-    await this.actionTokenService.revoke(request.token);
-
-    // Log
-    this.logger.debug(
-      `User with email ${user.email} has accepted the terms of service`,
     );
   }
 
@@ -521,31 +735,16 @@ export class UserService {
    * @throws NotFoundException if the user is not found
    */
   public async sendAcceptPrivacyPolicy(id: string): Promise<void> {
-    // Get the user with the given ID
-    let user: UserEntity = await this.getById(id);
-
-    // set the user's accepted privacy policy to false
-    user.acceptedPrivacyPolicy = false;
-
-    // Save the user
-    user = await this.userRepository.save(user);
-
-    // Create a accept privacy policy token
-    const token: ActionTokenEntity = await this.actionTokenService.create({
-      type: ActionTokenType.AcceptPrivacyPolicy,
-      user: user,
-      expiresIn: 24, // 1 day
-    });
-
-    // Send the accept privacy policy email
-    await this.mailerService.send(
-      user.email,
-      'Accept privacy policy',
-      `Please use the following link to accept the privacy policy: ${token.token} (valid for 24 hours)`,
+    const user: UserEntity = await this.getById(id);
+    await this.sendActionToken(
+      {
+        type: ActionTokenType.AcceptPrivacyPolicy,
+        user: user,
+      },
+      (user: UserEntity): void => {
+        user.acceptedPrivacyPolicy = false;
+      },
     );
-
-    // Log
-    this.logger.debug(`Privacy policy acceptance email sent to ${user.email}`);
   }
 
   /**
@@ -558,36 +757,13 @@ export class UserService {
   public async acceptPrivacyPolicy(
     request: AcceptPrivacyPolicyRequest,
   ): Promise<void> {
-    // Validate the action token
-    const token: ActionTokenEntity = await this.actionTokenService.validate(
-      request.token,
-      request.email,
+    await this.processActionToken(
+      {
+        token: request.token,
+        email: request.email,
+        acceptedPrivacyPolicy: request.acceptedPrivacyPolicy,
+      },
       ActionTokenType.AcceptPrivacyPolicy,
-    );
-
-    // User must accept privacy policy
-    if (!request.acceptedPrivacyPolicy) {
-      this.logger.warn(
-        `User with email ${request.email} has rejected the privacy policy`,
-      );
-      throw new BadRequestException('User must accept the privacy policy');
-    }
-
-    // Get the user within the token, he his garanteed to be defined by the type of the token.
-    let user: UserEntity = token.user!;
-
-    // Update the user's accepted privacy policy
-    user.acceptedPrivacyPolicy = true;
-
-    // Save the user
-    user = await this.userRepository.save(user);
-
-    // Revoke the action token
-    await this.actionTokenService.revoke(request.token);
-
-    // Log
-    this.logger.debug(
-      `User with email ${user.email} has accepted the privacy policy`,
     );
   }
 
@@ -597,37 +773,17 @@ export class UserService {
    * @param id - The ID of the user
    * @throws NotFoundException if the user is not found
    */
-  public async sendEmailValidation(
-    id: string,
-    user?: UserEntity,
-  ): Promise<void> {
-    // Use the given user, or get the user with the given ID
-    if (!user) {
-      user = await this.getById(id);
-    }
-
-    // Create a validate email token
-    const token: ActionTokenEntity = await this.actionTokenService.create({
-      type: ActionTokenType.ValidateEmail,
-      user: user,
-      expiresIn: 24, // 1 day
-    });
-
-    // Set email validity to false
-    user.emailValidated = false;
-
-    // Save the user
-    user = await this.userRepository.save(user);
-
-    // Send the validate email email
-    await this.mailerService.send(
-      user.email,
-      'Validate email',
-      `Please use the following link to validate your email: ${token.token} (valid for 24 hours)`,
+  public async sendEmailValidation(id: string): Promise<void> {
+    const user: UserEntity = await this.getById(id);
+    await this.sendActionToken(
+      {
+        type: ActionTokenType.ValidateEmail,
+        user: user,
+      },
+      (user: UserEntity): void => {
+        user.emailValidated = false;
+      },
     );
-
-    // Log
-    this.logger.debug(`Email validation email sent to ${user.email}`);
   }
 
   /**
@@ -640,27 +796,13 @@ export class UserService {
   public async acceptEmailValidation(
     request: ValidateEmailRequest,
   ): Promise<void> {
-    // Validate the action token
-    const token: ActionTokenEntity = await this.actionTokenService.validate(
-      request.token,
-      request.email,
+    await this.processActionToken(
+      {
+        token: request.token,
+        email: request.email,
+      },
       ActionTokenType.ValidateEmail,
     );
-
-    // Get the user within the token, he his garanteed to be defined by the type of the token.
-    const user: UserEntity = token.user!;
-
-    // Update the user's accepted privacy policy
-    user.emailValidated = true;
-
-    // Save the user
-    await this.userRepository.save(user);
-
-    // Revoke the action token
-    await this.actionTokenService.revoke(request.token);
-
-    // Log
-    this.logger.debug(`User with email ${user.email} has validated his email`);
   }
 
   /**
@@ -736,6 +878,11 @@ export class UserService {
         email: `%${params.email}%`,
       });
     }
+    if (params.emailValidated !== undefined) {
+      queryBuilder.andWhere('user.emailValidated = :emailValidated', {
+        emailValidated: params.emailValidated,
+      });
+    }
     if (params.username) {
       queryBuilder.andWhere('user.username ILIKE :username', {
         username: `%${params.username}%`,
@@ -785,7 +932,7 @@ export class UserService {
     // Handle action tokens filter
     if (params.actions && params.actions.length > 0) {
       queryBuilder.andWhere('actionsTokens.type IN (:...actions)', {
-        actions: params.actions.map((action) => action.toString()),
+        actions: params.actions,
       });
     }
 
@@ -817,7 +964,7 @@ export class UserService {
    */
   public async enable(id: string): Promise<UserEntity> {
     // Get the user with the given ID
-    const user: UserEntity | null = await this.getById(id);
+    const user: UserEntity = await this.getById(id);
 
     // Enable the user
     user.enabled = true;
@@ -835,7 +982,7 @@ export class UserService {
    */
   public async disable(id: string): Promise<UserEntity> {
     // Get the user with the given ID
-    const user: UserEntity | null = await this.getById(id);
+    const user: UserEntity = await this.getById(id);
 
     // Disable the user
     user.enabled = false;
@@ -852,7 +999,7 @@ export class UserService {
    */
   public async delete(id: string): Promise<void> {
     // Get the user with the given ID
-    const user: UserEntity | null = await this.getById(id);
+    const user: UserEntity = await this.getById(id);
 
     // Delete the user
     await this.userRepository.remove(user);

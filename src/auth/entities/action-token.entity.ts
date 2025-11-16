@@ -1,5 +1,4 @@
 import {
-  Check,
   Column,
   CreateDateColumn,
   Entity,
@@ -9,21 +8,17 @@ import {
   ManyToOne,
   PrimaryColumn,
 } from 'typeorm';
-import { ActionTokenType, ActionToken } from '../types';
+import { ActionToken } from '../types';
 import { UserEntity } from './user.entity';
 import { RoleEntity } from './role.entity';
 
 @Entity({ name: 'action_tokens' })
-@Check(
-  'check_action_tokens_type_valid',
-  "type in ('invite','reset-password','accept-terms','validate-email','create-password','accept-privacy-policy')",
-)
 export class ActionTokenEntity implements ActionToken {
   @PrimaryColumn({ type: 'text' })
   token: string;
 
-  @Column({ type: 'text' })
-  type: ActionTokenType;
+  @Column({ type: 'integer' })
+  type: number; // Bit mask of ActionTokenType values
 
   @Column({ type: 'text' })
   email: string;

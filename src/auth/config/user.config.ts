@@ -5,6 +5,15 @@ export interface UserConfig {
   user: {
     canSignUp: boolean;
     defaultRoles: string[];
+    actions: {
+      invite: number; // hours
+      validateEmail: number; // hours
+      acceptTerms: number; // hours
+      acceptPrivacyPolicy: number; // hours
+      createPassword: number; // hours
+      resetPassword: number; // hours
+      changeEmail: number; // hours
+    };
   };
 }
 
@@ -13,6 +22,13 @@ export const UserConfigToken: symbol = Symbol('UserConfig');
 const userConfigSchema = z.object({
   USER_CAN_SIGN_UP: z.boolean().default(true),
   USER_DEFAULT_ROLES: z.array(z.string()).default([]),
+  USER_ACTION_INVITE: z.coerce.number().default(24),
+  USER_ACTION_VALIDATE_EMAIL: z.coerce.number().default(24),
+  USER_ACTION_ACCEPT_TERMS: z.coerce.number().default(24),
+  USER_ACTION_ACCEPT_PRIVACY_POLICY: z.coerce.number().default(24),
+  USER_ACTION_CREATE_PASSWORD: z.coerce.number().default(24),
+  USER_ACTION_RESET_PASSWORD: z.coerce.number().default(24),
+  USER_ACTION_CHANGE_EMAIL: z.coerce.number().default(24),
 });
 
 function parseUserConfig(env: NodeJS.ProcessEnv): UserConfig {
@@ -21,6 +37,15 @@ function parseUserConfig(env: NodeJS.ProcessEnv): UserConfig {
     user: {
       canSignUp: config.USER_CAN_SIGN_UP,
       defaultRoles: config.USER_DEFAULT_ROLES,
+      actions: {
+        invite: config.USER_ACTION_INVITE,
+        validateEmail: config.USER_ACTION_VALIDATE_EMAIL,
+        acceptTerms: config.USER_ACTION_ACCEPT_TERMS,
+        acceptPrivacyPolicy: config.USER_ACTION_ACCEPT_PRIVACY_POLICY,
+        createPassword: config.USER_ACTION_CREATE_PASSWORD,
+        resetPassword: config.USER_ACTION_RESET_PASSWORD,
+        changeEmail: config.USER_ACTION_CHANGE_EMAIL,
+      },
     },
   };
 }
