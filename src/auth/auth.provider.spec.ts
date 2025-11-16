@@ -6,16 +6,26 @@ jest.mock('./services', () => {
   const MockUserService = class UserService {};
   const MockActionTokenService = class ActionTokenService {};
   const MockRoleService = class RoleService {};
+  const MockJwtService = class JwtService {};
+  const MockSessionService = class SessionService {};
 
   return {
     UserService: MockUserService,
     ActionTokenService: MockActionTokenService,
     RoleService: MockRoleService,
+    JwtService: MockJwtService,
+    SessionService: MockSessionService,
   };
 });
 
 // Import the mocked services after the mock is set up
-import { UserService, ActionTokenService, RoleService } from './services';
+import {
+  UserService,
+  ActionTokenService,
+  RoleService,
+  JwtService,
+  SessionService,
+} from './services';
 
 describe('AuthProvider', () => {
   describe('provideAuthServices', () => {
@@ -23,15 +33,17 @@ describe('AuthProvider', () => {
       const providers = provideAuthServices();
 
       expect(providers).toBeInstanceOf(Array);
-      expect(providers.length).toBe(3);
+      expect(providers.length).toBe(5);
     });
 
-    it('should return UserService, ActionTokenService, and RoleService', () => {
+    it('should return UserService, ActionTokenService, RoleService, JwtService, and SessionService', () => {
       const providers = provideAuthServices();
 
       expect(providers).toContain(UserService);
       expect(providers).toContain(ActionTokenService);
       expect(providers).toContain(RoleService);
+      expect(providers).toContain(JwtService);
+      expect(providers).toContain(SessionService);
     });
 
     it('should return providers in the correct order', () => {
@@ -40,6 +52,8 @@ describe('AuthProvider', () => {
       expect(providers[0]).toBe(UserService);
       expect(providers[1]).toBe(ActionTokenService);
       expect(providers[2]).toBe(RoleService);
+      expect(providers[3]).toBe(JwtService);
+      expect(providers[4]).toBe(SessionService);
     });
 
     it('should return valid NestJS providers', () => {
@@ -59,10 +73,10 @@ describe('AuthProvider', () => {
       expect(providers1).toEqual(providers2);
     });
 
-    it('should return only the three expected services', () => {
+    it('should return only the five expected services', () => {
       const providers = provideAuthServices();
 
-      expect(providers.length).toBe(3);
+      expect(providers.length).toBe(5);
       // Verify all items are classes/functions
       providers.forEach((provider) => {
         expect(typeof provider).toBe('function');

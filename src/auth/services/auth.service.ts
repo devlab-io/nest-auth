@@ -12,19 +12,22 @@ import {
   AcceptTermsRequest,
   ActionTokenType,
   AnyActionRequest,
+  AuthResponse,
   CreateActionTokenRequest,
   CreatePasswordRequest,
   InviteRequest,
+  JwtToken,
   ResetPasswordRequest,
+  SignInRequest,
   SignUpRequest,
   UpdateUserRequest,
   ValidateEmailRequest,
 } from '../types';
 import { UserConfig, UserConfigToken } from '../config/user.config';
 import { ActionTokenService } from './action-token.service';
-import { RoleService } from './role.service';
 import { ActionTokenTypeUtils } from '../utils';
 import { MailerService, MailerServiceToken } from '@devlab-io/nest-mailer';
+import { JwtService } from './jwt.service';
 
 @Injectable()
 export class AuthService {
@@ -33,9 +36,9 @@ export class AuthService {
   public constructor(
     @Inject(UserConfigToken) private readonly userConfig: UserConfig,
     @Inject() private readonly actionTokenService: ActionTokenService,
-    @Inject() private readonly roleService: RoleService,
     @Inject() private readonly userService: UserService,
     @Inject(MailerServiceToken) private readonly mailerService: MailerService,
+    @Inject() private readonly jwtService: JwtService,
   ) {}
 
   /**
@@ -384,43 +387,55 @@ L'équipe`;
   }
 
   /**
-   * Accept an invitation to join the application
+   * Accept an invitation to join the application.
+   * The user is automatically signed in after accepting the invitation.
    *
    * @param request - The accept invitation request containing the users information.
-   * @returns The created user
+   * @returns The created user and the JWT token
    * @throws ForbiddenException if the action token is not valid
    * @throws BadRequestException if a user with the same email or username already exists
    */
   public async acceptInvitation(
     request: AcceptInvitationRequest,
-  ): Promise<UserEntity> {
+  ): Promise<AuthResponse> {
     // Validate the action token
-    const token: ActionTokenEntity = await this.actionTokenService.validate(
-      request,
-      ActionTokenType.Invite as number,
-    );
+    const actionToken: ActionTokenEntity =
+      await this.actionTokenService.validate(
+        request,
+        ActionTokenType.Invite as number,
+      );
 
     // Create the user
     const user: UserEntity = await this.userService.create(request);
 
     // Revoke the action token
-    await this.actionTokenService.revoke(token.token);
+    await this.actionTokenService.revoke(actionToken.token);
+
+    // Authenticate the user
+    const jwtToken: JwtToken = await this.jwtService.authenticate(
+      user,
+      request.password,
+    );
 
     // Log
     this.logger.debug(`User with email ${user.email} accepted invitation`);
 
-    // Return the user
-    return user;
+    // Done
+    return {
+      jwt: jwtToken,
+      user: user,
+    };
   }
 
   /**
-   * Register a new user (sign up)
+   * Register a new user (sign up).
+   * The user has to validate his email and reconnect in order to be signed in.
    *
    * @param request - The sign up request containing the users information.
    * @returns The created user
    * @throws BadRequestException if a user with the same email or username already exists
    */
-  public async signUp(request: SignUpRequest): Promise<UserEntity> {
+  public async signUp(request: SignUpRequest): Promise<void> {
     // User must accept the terms and privacy policy
     if (!request.acceptedTerms || !request.acceptedPrivacyPolicy) {
       throw new BadRequestException(
@@ -436,9 +451,39 @@ L'équipe`;
 
     // Log
     this.logger.debug(`User with email ${user.email} signed up`);
+  }
 
-    // Return the user
-    return user;
+  /**
+   * Sign in a user (sign in)
+   *
+   * @param request - The sign in request containing the users email and password.
+   * @returns The authenticated user
+   * @throws NotFoundException if the user is not found
+   * @throws BadRequestException if the credentials are invalid
+   */
+  public async signIn(request: SignInRequest): Promise<AuthResponse> {
+    // Search for the user
+    const user: UserEntity | null = await this.userService.findByEmail(
+      request.email,
+    );
+    if (!user) {
+      throw new BadRequestException('Invalid credentials');
+    }
+
+    // Authenticate the user
+    const token: JwtToken = await this.jwtService.authenticate(
+      user,
+      request.password,
+    );
+
+    // Log
+    this.logger.debug(`User with email ${user.email} signed in`);
+
+    // Done
+    return {
+      jwt: token,
+      user: user,
+    };
   }
 
   /**
@@ -606,5 +651,15 @@ L'équipe`;
     await this.userService.update(token.user!.id, {
       acceptedPrivacyPolicy: true,
     } as UpdateUserRequest);
+  }
+
+  /**
+   * Sign out a user (sign out)
+   *
+   * @returns The updated user
+   * @throws ForbiddenException if the action token is not valid
+   */
+  public async signOut(): Promise<void> {
+    await this.jwtService.logout();
   }
 }

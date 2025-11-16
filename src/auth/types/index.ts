@@ -191,6 +191,35 @@ export interface SignInRequest {
 }
 
 export interface AuthResponse {
-  accessToken: string;
+  jwt: JwtToken;
   user: User;
+}
+
+export interface JwtToken {
+  accessToken: string;
+  expiresIn: string;
+}
+
+export interface JwtPayload {
+  sub: string; // user id
+  email: string;
+  username: string;
+  roles: string[];
+  iat?: number;
+  exp?: number;
+}
+
+export interface Session {
+  token: string;
+  userId: string;
+  loginDate: Date;
+  expirationDate: Date;
+  user?: User;
+}
+
+export interface SessionQueryParams {
+  userId?: string;
+  loginDate?: Date;
+  expirationDate?: Date;
+  active?: boolean; // Only active (not expired) sessions
 }

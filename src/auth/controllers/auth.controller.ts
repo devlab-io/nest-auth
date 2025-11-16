@@ -4,11 +4,12 @@ import {
   AcceptInvitationRequest,
   AcceptPrivacyPolicyRequest,
   AcceptTermsRequest,
+  AuthResponse,
   CreatePasswordRequest,
   InviteRequest,
   ResetPasswordRequest,
+  SignInRequest,
   SignUpRequest,
-  User,
   ValidateEmailRequest,
 } from '../types';
 
@@ -29,13 +30,23 @@ export class AuthController {
   @Post('accept-invitation')
   async acceptInvitation(
     @Body() acceptInvitationRequest: AcceptInvitationRequest,
-  ): Promise<User> {
+  ): Promise<AuthResponse> {
     return await this.authService.acceptInvitation(acceptInvitationRequest);
   }
 
   @Post('sign-up')
-  async signUp(@Body() signUpRequest: SignUpRequest): Promise<User> {
+  async signUp(@Body() signUpRequest: SignUpRequest): Promise<void> {
     return await this.authService.signUp(signUpRequest);
+  }
+
+  @Post('sign-in')
+  async signIn(@Body() signInRequest: SignInRequest): Promise<AuthResponse> {
+    return await this.authService.signIn(signInRequest);
+  }
+
+  @Post('sign-out')
+  async signOut(): Promise<void> {
+    return await this.authService.signOut();
   }
 
   @Post('send-email-validation')

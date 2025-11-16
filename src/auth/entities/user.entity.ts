@@ -13,6 +13,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { User } from '../types';
 import { RoleEntity } from './role.entity';
 import { ActionTokenEntity } from './action-token.entity';
+import { SessionEntity } from './session.entity';
 
 @Entity('users')
 @Unique('unique_email', ['email'])
@@ -151,4 +152,9 @@ export class UserEntity implements User {
     cascade: false,
   })
   actionsTokens: ActionTokenEntity[];
+
+  @OneToMany(() => SessionEntity, (session) => session.user, {
+    cascade: false,
+  })
+  sessions: SessionEntity[];
 }
