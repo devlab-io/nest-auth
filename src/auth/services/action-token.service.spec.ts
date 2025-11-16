@@ -343,8 +343,7 @@ describe('ActionTokenService', () => {
       mockActionTokenRepository.findOne.mockResolvedValue(actionToken);
 
       const result = await service.validate(
-        token,
-        email,
+        { token, email },
         ActionTokenType.Invite,
       );
 
@@ -356,15 +355,13 @@ describe('ActionTokenService', () => {
 
       await expect(
         service.validate(
-          'invalid-token',
-          'test@example.com',
+          { token: 'invalid-token', email: 'test@example.com' },
           ActionTokenType.Invite,
         ),
       ).rejects.toThrow(ForbiddenException);
       await expect(
         service.validate(
-          'invalid-token',
-          'test@example.com',
+          { token: 'invalid-token', email: 'test@example.com' },
           ActionTokenType.Invite,
         ),
       ).rejects.toThrow('Invalid action token');
@@ -381,8 +378,7 @@ describe('ActionTokenService', () => {
 
       await expect(
         service.validate(
-          'valid-token',
-          'test@example.com',
+          { token: 'valid-token', email: 'test@example.com' },
           ActionTokenType.Invite,
         ),
       ).rejects.toThrow(ForbiddenException);
@@ -399,15 +395,13 @@ describe('ActionTokenService', () => {
 
       await expect(
         service.validate(
-          'valid-token',
-          'test@example.com',
+          { token: 'valid-token', email: 'test@example.com' },
           ActionTokenType.ValidateEmail,
         ),
       ).rejects.toThrow(ForbiddenException);
       await expect(
         service.validate(
-          'valid-token',
-          'test@example.com',
+          { token: 'valid-token', email: 'test@example.com' },
           ActionTokenType.ValidateEmail,
         ),
       ).rejects.toThrow('Token does not contain all required actions');
@@ -426,8 +420,7 @@ describe('ActionTokenService', () => {
 
       await expect(
         service.validate(
-          'expired-token',
-          'test@example.com',
+          { token: 'expired-token', email: 'test@example.com' },
           ActionTokenType.Invite,
         ),
       ).rejects.toThrow(ForbiddenException);

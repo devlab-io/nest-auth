@@ -19,6 +19,7 @@ import {
   ActionTokenType,
   ActionTokenQueryParams,
   ActionTokenPage,
+  ActionRequest,
 } from '../types';
 import { ActionTokenTypeUtils } from '../utils';
 import { randomBytes } from 'crypto';
@@ -222,23 +223,24 @@ export class ActionTokenService {
   }
 
   /**
-   * Check if a token is valid (exists and not expired)
-   * It must be associated to the given email.
+   * Check if an action request is valid (exists and not expired)
+   * The token must be associated to the given email.
+   * The token must contain all required actions.
    * If the token exists but is expired, it is deleted and the token is not valid
    *
-   * @param token - The token value
-   * @param email - The email associated to the token
+   * @param request - The action request to validate.
    * @param requiredActions - The required actions (bit mask)
    * @returns The action token if it is valid
    * @throws ForbiddenException if the token is not valid
    */
   public async validate(
-    token: string,
-    email: string,
+    request: ActionRequest,
     requiredActions: number,
   ): Promise<ActionTokenEntity> {
     // Look for the token
-    const actionToken: ActionTokenEntity | null = await this.findByToken(token);
+    const actionToken: ActionTokenEntity | null = await this.findByToken(
+      request.token,
+    );
 
     // If the token is not found, it is not valid
     if (!actionToken) {
@@ -246,7 +248,7 @@ export class ActionTokenService {
     }
 
     // If the token is not associated to the given email, it is not valid
-    if (actionToken.email !== email.toLowerCase()) {
+    if (actionToken.email !== request.email.toLowerCase()) {
       throw new ForbiddenException('Invalid action token');
     }
 

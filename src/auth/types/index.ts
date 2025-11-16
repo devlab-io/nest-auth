@@ -72,6 +72,38 @@ export interface User {
   actionsTokens: ActionToken[];
 }
 
+export interface CreateUserRequest {
+  username?: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  password: string;
+  enabled: boolean;
+  profilePicture?: string;
+  acceptedTerms: boolean;
+  acceptedPrivacyPolicy: boolean;
+  roles?: string[];
+}
+
+export interface PatchUserRequest {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  profilePicture?: string;
+  roles?: string[];
+}
+
+export interface UpdateUserRequest extends PatchUserRequest {
+  email?: string;
+  emailValidated?: boolean;
+  username?: string;
+  password?: string;
+  enabled?: boolean;
+  acceptedTerms?: boolean;
+  acceptedPrivacyPolicy?: boolean;
+}
+
 export interface UserQueryParams {
   id?: string;
   username?: string;
@@ -87,14 +119,6 @@ export interface UserQueryParams {
   updatedAt?: Date;
   roles?: string[];
   actions?: number[]; // Array of bit masks or single ActionTokenType values
-}
-
-export interface UserUpdateRequest {
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
-  profilePicture?: string;
-  roles?: string[];
 }
 
 export interface UserPage {
@@ -118,17 +142,7 @@ export interface InviteRequest {
   roles?: string[];
 }
 
-export interface SignUpRequest {
-  email: string;
-  password: string;
-  acceptedTerms: boolean;
-  acceptedPrivacyPolicy: boolean;
-  username?: string;
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
-  profilePicture?: string;
-}
+export interface SignUpRequest extends CreateUserRequest {}
 
 export interface ActionRequest {
   token: string;
