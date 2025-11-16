@@ -16,8 +16,12 @@ jobs:
         with:
           node-version: '20'
           cache: 'yarn'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@devlab-io'
 
       - name: Install dependencies
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: yarn install --frozen-lockfile
 
       - name: Check code formatting
