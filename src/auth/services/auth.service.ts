@@ -4,7 +4,7 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
-import { ActionTokenEntity, RoleEntity, UserEntity } from '../entities';
+import { ActionTokenEntity, UserEntity } from '../entities';
 import { UserService } from './user.service';
 import {
   AcceptInvitationRequest,
@@ -404,7 +404,7 @@ L'équipe`;
     const user: UserEntity = await this.userService.create(request);
 
     // Revoke the action token
-    await this.actionTokenService.revoke(request.token);
+    await this.actionTokenService.revoke(token.token);
 
     // Log
     this.logger.debug(`User with email ${user.email} accepted invitation`);
@@ -559,7 +559,7 @@ L'équipe`;
    * @returns The updated user
    * @throws ForbiddenException if the action token is not valid
    */
-  public async acceptAcceptTerms(request: AcceptTermsRequest): Promise<void> {
+  public async acceptTerms(request: AcceptTermsRequest): Promise<void> {
     // Validate the action token
     const token: ActionTokenEntity = await this.actionTokenService.validate(
       request,

@@ -142,6 +142,7 @@ export interface InviteRequest {
   roles?: string[];
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface SignUpRequest extends CreateUserRequest {}
 
 export interface ActionRequest {

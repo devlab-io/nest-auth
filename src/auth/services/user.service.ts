@@ -7,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { UserEntity, RoleEntity, ActionTokenEntity } from '../entities';
+import { UserEntity, RoleEntity } from '../entities';
 import {
   UserQueryParams,
   UpdateUserRequest,
@@ -260,64 +260,6 @@ export class UserService {
   }
 
   /**
-   * Find a user by its email
-   *
-   * @param email - The email of the user
-   * @returns The user or null if not found
-   */
-  public async findByEmail(email: string): Promise<UserEntity | null> {
-    return await this.userRepository.findOne({
-      where: { email: email.toLowerCase() },
-      relations: ['roles', 'actionsTokens'],
-    });
-  }
-
-  /**
-   * Find a user by ID
-   *
-   * @param id - The ID of the user
-   * @returns The user or null if not found
-   */
-  public async findById(id: string): Promise<UserEntity | null> {
-    return await this.userRepository.findOne({
-      where: { id },
-      relations: ['roles', 'actionsTokens'],
-    });
-  }
-
-  /**
-   * Get a user by ID
-   *
-   * @param id - The ID of the user
-   * @returns The user
-   * @throws NotFoundException if the user is not found
-   */
-  public async getById(id: string): Promise<UserEntity> {
-    // Look for the user with the given ID
-    const user: UserEntity | null = await this.findById(id);
-
-    // If the user is not found, throw an error
-    if (!user) {
-      throw new NotFoundException(`User with id ${id} not found`);
-    }
-
-    // Return the user
-    return user;
-  }
-
-  /**
-   * Check if a user with the given email exists
-   *
-   * @param email Check if a user with the given email exists
-   * @returns True if the user exists, false otherwise
-   */
-  public async exists(email: string): Promise<boolean> {
-    return await this.userRepository.exists({
-      where: { email: email.toLowerCase() },
-    });
-  }
-
-  /**
    * Search users with pagination and filters
    *
    * @param params - The query parameters
@@ -420,6 +362,64 @@ export class UserService {
       page,
       limit,
     };
+  }
+
+  /**
+   * Find a user by its email
+   *
+   * @param email - The email of the user
+   * @returns The user or null if not found
+   */
+  public async findByEmail(email: string): Promise<UserEntity | null> {
+    return await this.userRepository.findOne({
+      where: { email: email.toLowerCase() },
+      relations: ['roles', 'actionsTokens'],
+    });
+  }
+
+  /**
+   * Find a user by ID
+   *
+   * @param id - The ID of the user
+   * @returns The user or null if not found
+   */
+  public async findById(id: string): Promise<UserEntity | null> {
+    return await this.userRepository.findOne({
+      where: { id },
+      relations: ['roles', 'actionsTokens'],
+    });
+  }
+
+  /**
+   * Get a user by ID
+   *
+   * @param id - The ID of the user
+   * @returns The user
+   * @throws NotFoundException if the user is not found
+   */
+  public async getById(id: string): Promise<UserEntity> {
+    // Look for the user with the given ID
+    const user: UserEntity | null = await this.findById(id);
+
+    // If the user is not found, throw an error
+    if (!user) {
+      throw new NotFoundException(`User with id ${id} not found`);
+    }
+
+    // Return the user
+    return user;
+  }
+
+  /**
+   * Check if a user with the given email exists
+   *
+   * @param email Check if a user with the given email exists
+   * @returns True if the user exists, false otherwise
+   */
+  public async exists(email: string): Promise<boolean> {
+    return await this.userRepository.exists({
+      where: { email: email.toLowerCase() },
+    });
   }
 
   /**
