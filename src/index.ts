@@ -7,3 +7,4 @@ export * from './auth/services';
 export * from './auth/types';
 export * from './auth/utils';
 export * from './auth/auth.module';
+export * from './database';

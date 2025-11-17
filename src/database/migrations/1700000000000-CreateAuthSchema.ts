@@ -4,9 +4,12 @@ import {
   Table,
   TableIndex,
   TableForeignKey,
+  TableCheck,
 } from 'typeorm';
 
 export class CreateAuthSchema1700000000000 implements MigrationInterface {
+  public readonly name: string = 'CreateAuthSchema1700000000000';
+
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Enable UUID extension for PostgreSQL (if not already enabled)
     await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
@@ -194,6 +197,7 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
             name: 'userId',
             type: 'uuid',
             isPrimary: true,
+            primaryKeyConstraintName: 'PK_user_roles_composite',
             comment: 'Foreign key to users.id, cascades on delete',
           },
           {
@@ -205,11 +209,6 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
         ],
       }),
       true,
-    );
-
-    // Rename the composite primary key constraint for user_roles
-    await queryRunner.query(
-      `ALTER TABLE "user_roles" RENAME CONSTRAINT "user_roles_pkey" TO "PK_user_roles_composite"`,
     );
 
     // Create foreign keys for user_roles
@@ -283,6 +282,16 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
               'Foreign key to users.id, nullable (for invitation tokens before user creation)',
           },
         ],
+        checks: [
+          new TableCheck({
+            name: 'CHK_action_tokens_expires_after_created',
+            expression: 'expires_at IS NULL OR expires_at > created_at',
+          }),
+          new TableCheck({
+            name: 'CHK_action_tokens_type_positive',
+            expression: 'type > 0',
+          }),
+        ],
       }),
       true,
     );
@@ -310,6 +319,7 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
             name: 'token',
             type: 'text',
             isPrimary: true,
+            primaryKeyConstraintName: 'PK_action_token_roles_composite',
             comment: 'Foreign key to action_tokens.token, cascades on delete',
           },
           {
@@ -321,11 +331,6 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
         ],
       }),
       true,
-    );
-
-    // Rename the composite primary key constraint for action_token_roles
-    await queryRunner.query(
-      `ALTER TABLE "action_token_roles" RENAME CONSTRAINT "action_token_roles_pkey" TO "PK_action_token_roles_composite"`,
     );
 
     // Create foreign keys for action_token_roles
@@ -383,6 +388,12 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
             isNullable: false,
             comment: 'Timestamp when the session expires',
           },
+        ],
+        checks: [
+          new TableCheck({
+            name: 'CHK_sessions_expiration_after_login',
+            expression: 'expiration_date > login_date',
+          }),
         ],
       }),
       true,
