@@ -5,4 +5,5 @@ export * from './auth/entities';
 export * from './auth/guards';
 export * from './auth/services';
 export * from './auth/types';
+export * from './auth/utils';
 export * from './auth/auth.module';

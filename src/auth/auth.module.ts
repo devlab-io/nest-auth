@@ -1,6 +1,18 @@
-import { DynamicModule, Global, Module } from '@nestjs/common';
+import { DynamicModule, Global, Module, Provider } from '@nestjs/common';
 import { provideAuthConfig, AuthConfig } from './config';
-import { provideAuthServices } from './auth.provider';
+import { JwtAuthGuard } from './guards';
+import {
+  ActionTokenService,
+  JwtService,
+  RoleService,
+  SessionService,
+  UserService,
+} from './services';
+import {
+  AuthController,
+  UserController,
+  SessionController,
+} from './controllers';
 
 /**
  * Authentication module
@@ -15,11 +27,28 @@ export class AuthModule {
    * @returns Dynamic authentication module
    */
   static forRoot(config?: AuthConfig): DynamicModule {
+    const configProvider: Provider = provideAuthConfig(config);
     return {
       module: AuthModule,
-      controllers: [],
-      providers: [provideAuthConfig(config), ...provideAuthServices()],
-      exports: [provideAuthConfig(config), ...provideAuthServices()],
+      controllers: [AuthController, UserController, SessionController],
+      providers: [
+        configProvider,
+        UserService,
+        ActionTokenService,
+        RoleService,
+        JwtService,
+        SessionService,
+        JwtAuthGuard,
+      ],
+      exports: [
+        configProvider,
+        UserService,
+        ActionTokenService,
+        RoleService,
+        JwtService,
+        SessionService,
+        JwtAuthGuard,
+      ],
     };
   }
 }
