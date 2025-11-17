@@ -6,9 +6,9 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { SessionService } from '../services/session.service';
-import { SessionEntity } from '../entities';
+import { SessionService } from '../services';
 import { SessionQueryParams } from '../types';
+import { SessionDto, DeleteSessionsResponseDto } from '../dtos';
 
 /**
  * Session controller
@@ -41,8 +41,8 @@ export class SessionController {
     type: Boolean,
     description: 'Only active (not expired) sessions',
   })
-  @ApiResponse({ status: 200, type: [SessionEntity] })
-  async search(@Query() query: SessionQueryParams): Promise<SessionEntity[]> {
+  @ApiResponse({ status: 200, type: [SessionDto] })
+  async search(@Query() query: SessionQueryParams): Promise<SessionDto[]> {
     return await this.sessionService.search(query);
   }
 
@@ -53,8 +53,8 @@ export class SessionController {
    */
   @Get('active')
   @ApiOperation({ summary: 'Get all active sessions' })
-  @ApiResponse({ status: 200, type: [SessionEntity] })
-  async findAllActive(): Promise<SessionEntity[]> {
+  @ApiResponse({ status: 200, type: [SessionDto] })
+  async findAllActive(): Promise<SessionDto[]> {
     return await this.sessionService.findAllActive();
   }
 
@@ -67,9 +67,9 @@ export class SessionController {
   @Get(':token')
   @ApiOperation({ summary: 'Get a session by token' })
   @ApiParam({ name: 'token', type: String })
-  @ApiResponse({ status: 200, type: SessionEntity })
+  @ApiResponse({ status: 200, type: SessionDto })
   @ApiResponse({ status: 404, description: 'Session not found' })
-  async getByToken(@Param('token') token: string): Promise<SessionEntity> {
+  async getByToken(@Param('token') token: string): Promise<SessionDto> {
     return await this.sessionService.getByToken(token);
   }
 
@@ -94,8 +94,12 @@ export class SessionController {
    */
   @Delete('expired')
   @ApiOperation({ summary: 'Delete all expired sessions' })
-  @ApiResponse({ status: 200, description: 'Number of deleted sessions' })
-  async deleteExpired(): Promise<{ count: number }> {
+  @ApiResponse({
+    status: 200,
+    description: 'Number of deleted sessions',
+    type: DeleteSessionsResponseDto,
+  })
+  async deleteExpired(): Promise<DeleteSessionsResponseDto> {
     const count = await this.sessionService.deleteExpired();
     return { count };
   }

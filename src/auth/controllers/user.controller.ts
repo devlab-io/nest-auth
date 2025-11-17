@@ -15,17 +15,17 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { UserService } from '../services/user.service';
-import { SessionService } from '../services/session.service';
-import { UserEntity, SessionEntity } from '../entities';
+import { UserService, SessionService } from '../services';
+import { UserQueryParams } from '../types';
 import {
-  CreateUserRequest,
-  PatchUserRequest,
-  UpdateUserRequest,
-  User,
-  UserPage,
-  UserQueryParams,
-} from '../types';
+  CreateUserRequestDto,
+  PatchUserRequestDto,
+  UpdateUserRequestDto,
+  UserDto,
+  UserPageDto,
+  SessionDto,
+  DeleteSessionsResponseDto,
+} from '../dtos';
 
 /**
  * User controller
@@ -56,11 +56,13 @@ export class UserController {
   @ApiOperation({ summary: 'Create a new user' })
   @ApiResponse({
     status: 201,
-    type: UserEntity,
+    type: UserDto,
     description: 'User created successfully',
   })
   @ApiResponse({ status: 400, description: 'Bad request' })
-  async create(@Body() createUserRequest: CreateUserRequest): Promise<User> {
+  async create(
+    @Body() createUserRequest: CreateUserRequestDto,
+  ): Promise<UserDto> {
     return await this.userService.create(createUserRequest);
   }
 
@@ -86,12 +88,16 @@ export class UserController {
     type: Number,
     description: 'Number of users per page (default: 10)',
   })
-  @ApiResponse({ status: 200, description: 'Users page with pagination' })
+  @ApiResponse({
+    status: 200,
+    description: 'Users page with pagination',
+    type: UserPageDto,
+  })
   async search(
     @Query() query: UserQueryParams,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
-  ): Promise<UserPage> {
+  ): Promise<UserPageDto> {
     return await this.userService.search(query, page, limit);
   }
 
@@ -104,8 +110,8 @@ export class UserController {
   @Get('by-id')
   @ApiOperation({ summary: 'Find a user by ID' })
   @ApiQuery({ name: 'id', type: String, description: 'User ID' })
-  @ApiResponse({ status: 200, type: UserEntity })
-  async findById(@Query('id') id: string): Promise<User | null> {
+  @ApiResponse({ status: 200, type: UserDto })
+  async findById(@Query('id') id: string): Promise<UserDto | null> {
     return await this.userService.findById(id);
   }
 
@@ -118,8 +124,8 @@ export class UserController {
   @Get('by-email')
   @ApiOperation({ summary: 'Find a user by email' })
   @ApiQuery({ name: 'email', type: String, description: 'User email' })
-  @ApiResponse({ status: 200, type: UserEntity })
-  async findByEmail(@Query('email') email: string): Promise<User | null> {
+  @ApiResponse({ status: 200, type: UserDto })
+  async findByEmail(@Query('email') email: string): Promise<UserDto | null> {
     return await this.userService.findByEmail(email);
   }
 
@@ -132,9 +138,9 @@ export class UserController {
   @Get(':id')
   @ApiOperation({ summary: 'Get a user by ID' })
   @ApiParam({ name: 'id', type: String, description: 'User ID' })
-  @ApiResponse({ status: 200, type: UserEntity })
+  @ApiResponse({ status: 200, type: UserDto })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async getById(@Param('id') id: string): Promise<User> {
+  async getById(@Param('id') id: string): Promise<UserDto> {
     return await this.userService.getById(id);
   }
 
@@ -162,12 +168,12 @@ export class UserController {
   @Patch(':id')
   @ApiOperation({ summary: 'Partially update a user' })
   @ApiParam({ name: 'id', type: String, description: 'User ID' })
-  @ApiResponse({ status: 200, type: UserEntity })
+  @ApiResponse({ status: 200, type: UserDto })
   @ApiResponse({ status: 404, description: 'User not found' })
   async patch(
     @Param('id') id: string,
-    @Body() patchUserRequest: PatchUserRequest,
-  ): Promise<User> {
+    @Body() patchUserRequest: PatchUserRequestDto,
+  ): Promise<UserDto> {
     return await this.userService.patch(id, patchUserRequest);
   }
 
@@ -181,12 +187,12 @@ export class UserController {
   @Post(':id')
   @ApiOperation({ summary: 'Update a user (full update)' })
   @ApiParam({ name: 'id', type: String, description: 'User ID' })
-  @ApiResponse({ status: 200, type: UserEntity })
+  @ApiResponse({ status: 200, type: UserDto })
   @ApiResponse({ status: 404, description: 'User not found' })
   async update(
     @Param('id') id: string,
-    @Body() updateUserRequest: UpdateUserRequest,
-  ): Promise<User> {
+    @Body() updateUserRequest: UpdateUserRequestDto,
+  ): Promise<UserDto> {
     return await this.userService.update(id, updateUserRequest);
   }
 
@@ -199,9 +205,9 @@ export class UserController {
   @Patch(':id/enable')
   @ApiOperation({ summary: 'Enable a user account' })
   @ApiParam({ name: 'id', type: String, description: 'User ID' })
-  @ApiResponse({ status: 200, type: UserEntity })
+  @ApiResponse({ status: 200, type: UserDto })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async enable(@Param('id') id: string): Promise<User> {
+  async enable(@Param('id') id: string): Promise<UserDto> {
     return await this.userService.enable(id);
   }
 
@@ -214,9 +220,9 @@ export class UserController {
   @Patch(':id/disable')
   @ApiOperation({ summary: 'Disable a user account' })
   @ApiParam({ name: 'id', type: String, description: 'User ID' })
-  @ApiResponse({ status: 200, type: UserEntity })
+  @ApiResponse({ status: 200, type: UserDto })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async disable(@Param('id') id: string): Promise<User> {
+  async disable(@Param('id') id: string): Promise<UserDto> {
     return await this.userService.disable(id);
   }
 
@@ -244,9 +250,9 @@ export class UserController {
   @Get(':id/sessions')
   @ApiOperation({ summary: 'Get all sessions for a user' })
   @ApiParam({ name: 'id', type: String, description: 'User ID' })
-  @ApiResponse({ status: 200, type: [SessionEntity] })
+  @ApiResponse({ status: 200, type: [SessionDto] })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async getUserSessions(@Param('id') id: string): Promise<SessionEntity[]> {
+  async getUserSessions(@Param('id') id: string): Promise<SessionDto[]> {
     return await this.sessionService.findByUserId(id);
   }
 
@@ -259,11 +265,9 @@ export class UserController {
   @Get(':id/sessions/active')
   @ApiOperation({ summary: 'Get all active sessions for a user' })
   @ApiParam({ name: 'id', type: String, description: 'User ID' })
-  @ApiResponse({ status: 200, type: [SessionEntity] })
+  @ApiResponse({ status: 200, type: [SessionDto] })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async getUserActiveSessions(
-    @Param('id') id: string,
-  ): Promise<SessionEntity[]> {
+  async getUserActiveSessions(@Param('id') id: string): Promise<SessionDto[]> {
     return await this.sessionService.findActiveByUserId(id);
   }
 
@@ -276,11 +280,15 @@ export class UserController {
   @Delete(':id/sessions')
   @ApiOperation({ summary: 'Delete all sessions for a user' })
   @ApiParam({ name: 'id', type: String, description: 'User ID' })
-  @ApiResponse({ status: 200, description: 'Number of deleted sessions' })
+  @ApiResponse({
+    status: 200,
+    description: 'Number of deleted sessions',
+    type: DeleteSessionsResponseDto,
+  })
   @ApiResponse({ status: 404, description: 'User not found' })
   async deleteUserSessions(
     @Param('id') id: string,
-  ): Promise<{ count: number }> {
+  ): Promise<DeleteSessionsResponseDto> {
     const count = await this.sessionService.deleteAllByUserId(id);
     return { count };
   }

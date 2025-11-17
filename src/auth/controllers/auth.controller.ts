@@ -2,17 +2,17 @@ import { Body, Controller, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from '../services';
 import {
-  AcceptInvitationRequest,
-  AcceptPrivacyPolicyRequest,
-  AcceptTermsRequest,
-  AuthResponse,
-  CreatePasswordRequest,
-  InviteRequest,
-  ResetPasswordRequest,
-  SignInRequest,
-  SignUpRequest,
-  ValidateEmailRequest,
-} from '../types';
+  InviteRequestDto,
+  SignUpRequestDto,
+  SignInRequestDto,
+  AcceptInvitationRequestDto,
+  ValidateEmailRequestDto,
+  CreatePasswordRequestDto,
+  ResetPasswordRequestDto,
+  AcceptTermsRequestDto,
+  AcceptPrivacyPolicyRequestDto,
+  AuthResponseDto,
+} from '../dtos';
 
 /**
  * Authentication controller
@@ -32,18 +32,22 @@ export class AuthController {
   @ApiOperation({ summary: 'Send an invitation to a user' })
   @ApiResponse({ status: 200, description: 'Invitation sent successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
-  async invite(@Body() inviteRequest: InviteRequest): Promise<void> {
+  async invite(@Body() inviteRequest: InviteRequestDto): Promise<void> {
     return await this.authService.sendInvitation(inviteRequest);
   }
 
   @Post('accept-invitation')
   @ApiOperation({ summary: 'Accept an invitation and create an account' })
-  @ApiResponse({ status: 200, description: 'Invitation accepted successfully' })
+  @ApiResponse({
+    status: 200,
+    description: 'Invitation accepted successfully',
+    type: AuthResponseDto,
+  })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 403, description: 'Invalid or expired token' })
   async acceptInvitation(
-    @Body() acceptInvitationRequest: AcceptInvitationRequest,
-  ): Promise<AuthResponse> {
+    @Body() acceptInvitationRequest: AcceptInvitationRequestDto,
+  ): Promise<AuthResponseDto> {
     return await this.authService.acceptInvitation(acceptInvitationRequest);
   }
 
@@ -51,15 +55,21 @@ export class AuthController {
   @ApiOperation({ summary: 'Register a new user account' })
   @ApiResponse({ status: 200, description: 'User registered successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
-  async signUp(@Body() signUpRequest: SignUpRequest): Promise<void> {
+  async signUp(@Body() signUpRequest: SignUpRequestDto): Promise<void> {
     return await this.authService.signUp(signUpRequest);
   }
 
   @Post('sign-in')
   @ApiOperation({ summary: 'Sign in and authenticate a user' })
-  @ApiResponse({ status: 200, description: 'Authentication successful' })
+  @ApiResponse({
+    status: 200,
+    description: 'Authentication successful',
+    type: AuthResponseDto,
+  })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  async signIn(@Body() signInRequest: SignInRequest): Promise<AuthResponse> {
+  async signIn(
+    @Body() signInRequest: SignInRequestDto,
+  ): Promise<AuthResponseDto> {
     return await this.authService.signIn(signInRequest);
   }
 
@@ -84,7 +94,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Email validated successfully' })
   @ApiResponse({ status: 403, description: 'Invalid or expired token' })
   async acceptEmailValidation(
-    @Body() validateEmailRequest: ValidateEmailRequest,
+    @Body() validateEmailRequest: ValidateEmailRequestDto,
   ): Promise<void> {
     return await this.authService.acceptEmailValidation(validateEmailRequest);
   }
@@ -103,7 +113,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Password created successfully' })
   @ApiResponse({ status: 403, description: 'Invalid or expired token' })
   async acceptCreatePassword(
-    @Body() createPasswordRequest: CreatePasswordRequest,
+    @Body() createPasswordRequest: CreatePasswordRequestDto,
   ): Promise<void> {
     return await this.authService.acceptCreatePassword(createPasswordRequest);
   }
@@ -122,7 +132,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Password reset successfully' })
   @ApiResponse({ status: 403, description: 'Invalid or expired token' })
   async acceptResetPassword(
-    @Body() resetPasswordRequest: ResetPasswordRequest,
+    @Body() resetPasswordRequest: ResetPasswordRequestDto,
   ): Promise<void> {
     return await this.authService.acceptResetPassword(resetPasswordRequest);
   }
@@ -141,7 +151,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Terms accepted successfully' })
   @ApiResponse({ status: 403, description: 'Invalid or expired token' })
   async acceptTerms(
-    @Body() acceptTermsRequest: AcceptTermsRequest,
+    @Body() acceptTermsRequest: AcceptTermsRequestDto,
   ): Promise<void> {
     return await this.authService.acceptTerms(acceptTermsRequest);
   }
@@ -163,7 +173,7 @@ export class AuthController {
   })
   @ApiResponse({ status: 403, description: 'Invalid or expired token' })
   async acceptPrivacyPolicy(
-    @Body() acceptPrivacyPolicyRequest: AcceptPrivacyPolicyRequest,
+    @Body() acceptPrivacyPolicyRequest: AcceptPrivacyPolicyRequestDto,
   ): Promise<void> {
     return await this.authService.acceptPrivacyPolicy(
       acceptPrivacyPolicyRequest,
