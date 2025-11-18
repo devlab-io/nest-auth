@@ -6,6 +6,14 @@ import {
   TableForeignKey,
   TableCheck,
 } from 'typeorm';
+import { config } from 'dotenv';
+import { resolve } from 'path';
+import * as bcrypt from 'bcryptjs';
+import { UserEntity } from '../../auth/entities/user.entity';
+import { RoleEntity } from '../../auth/entities/role.entity';
+
+// Load environment variables
+config({ path: resolve(process.cwd(), '.env') });
 
 export class CreateAuthSchema1700000000000 implements MigrationInterface {
   public readonly name: string = 'CreateAuthSchema1700000000000';
@@ -427,6 +435,61 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
         columnNames: ['expiration_date'],
       }),
     );
+
+    // Create super administrator
+    await this.createSuperAdmin(queryRunner);
+  }
+
+  /**
+   * Create the super administrator user
+   *
+   * @param queryRunner - The query runner
+   */
+  private async createSuperAdmin(queryRunner: QueryRunner): Promise<void> {
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@devlab.io';
+    const adminPassword = process.env.ADMIN_PASSWORD || 'ChangeMe1234*';
+
+    // Generate username from email (part before @)
+    const username = adminEmail.split('@')[0];
+
+    // Hash the password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(adminPassword, saltRounds);
+
+    // Create or get the admin role using TypeORM
+    let adminRole = await queryRunner.manager.findOne(RoleEntity, {
+      where: { name: 'admin' },
+    });
+
+    if (!adminRole) {
+      // Create admin role
+      adminRole = queryRunner.manager.create(RoleEntity, {
+        name: 'admin',
+        description: 'Super administrator with full access',
+      });
+      adminRole = await queryRunner.manager.save(adminRole);
+    }
+
+    // Check if admin user already exists using TypeORM
+    const existingAdmin = await queryRunner.manager.findOne(UserEntity, {
+      where: { email: adminEmail },
+    });
+
+    if (!existingAdmin) {
+      // Create the admin user using TypeORM
+      const adminUser = queryRunner.manager.create(UserEntity, {
+        username,
+        email: adminEmail,
+        emailValidated: true,
+        password: hashedPassword,
+        enabled: true,
+        acceptedTerms: true,
+        acceptedPrivacyPolicy: true,
+        roles: [adminRole],
+      });
+
+      await queryRunner.manager.save(adminUser);
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

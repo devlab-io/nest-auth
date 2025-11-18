@@ -21,7 +21,21 @@ export const UserConfigToken: symbol = Symbol('UserConfig');
 
 const userConfigSchema = z.object({
   USER_CAN_SIGN_UP: z.boolean().default(true),
-  USER_DEFAULT_ROLES: z.array(z.string()).default([]),
+  USER_DEFAULT_ROLES: z
+    .union([
+      z.string().transform((val) => {
+        // Split by comma and trim each role, filter out empty strings
+        if (!val || val.trim() === '') {
+          return [];
+        }
+        return val
+          .split(',')
+          .map((role) => role.trim())
+          .filter((role) => role.length > 0);
+      }),
+      z.array(z.string()),
+    ])
+    .default([]),
   USER_ACTION_INVITE: z.coerce.number().default(24),
   USER_ACTION_VALIDATE_EMAIL: z.coerce.number().default(24),
   USER_ACTION_ACCEPT_TERMS: z.coerce.number().default(24),

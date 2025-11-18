@@ -8,7 +8,7 @@ import {
 import { JwtConfig, JwtConfigToken } from '../config/jwt.config';
 import { UserService } from '../services/user.service';
 import { SessionService } from '../services/session.service';
-import jwt from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
 import { JwtPayload } from '../types';
 import { UserEntity } from '../entities';
 import { extractTokenFromRequest } from '../utils';

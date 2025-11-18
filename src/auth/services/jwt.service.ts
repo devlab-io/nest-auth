@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { REQUEST } from '@nestjs/core';
 import { Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
 import { UserService } from './user.service';
 import { SessionService } from './session.service';
 import { JwtConfig, JwtConfigToken } from '../config/jwt.config';
