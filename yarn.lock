@@ -345,10 +345,10 @@
   dependencies:
     "@jridgewell/trace-mapping" "0.3.9"
 
-"@devlab-io/nest-mailer@^1.0.0":
-  version "1.0.0"
-  resolved "https://npm.pkg.github.com/download/@devlab-io/nest-mailer/1.0.0/3f852beab3d2935da3a33632250b5348c4a2c115#3f852beab3d2935da3a33632250b5348c4a2c115"
-  integrity sha512-J07d4rWohHDIlDZJLqRsGf1DFslxa6LP/f1rgZa3sBUiTwv4VSuHuFzDFJtmxINWUNUPsyFcE2/f/4mXlT0PTw==
+"@devlab-io/nest-mailer@^0.0.1":
+  version "0.0.1"
+  resolved "https://npm.pkg.github.com/download/@devlab-io/nest-mailer/0.0.1/cb1cc8c63064e7e5929f4b9466660a0c90a6dc31#cb1cc8c63064e7e5929f4b9466660a0c90a6dc31"
+  integrity sha512-wIWv0IpFpIXRhCu5WZ248yczfe/UOp+kgScp8u9MxImYNBLq572eIIzSOmdYuBOBHGj/yh/OSzCguWQ5Z/Vp8A==
   dependencies:
     "@nestjs/common" "^11.1.8"
     nodemailer "^6.9.8"

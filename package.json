@@ -1,6 +1,6 @@
 {
   "name": "@devlab-io/nest-auth",
-  "version": "0.0.1",
+  "version": "0.0.0",
   "description": "NestJS Authentication Module",
   "author": "DevLab",
   "license": "UNLICENSED",
@@ -30,7 +30,7 @@
     "publish": "npm publish"
   },
   "dependencies": {
-    "@devlab-io/nest-mailer": "^1.0.0",
+    "@devlab-io/nest-mailer": "^0.0.1",
     "@nestjs/common": "^11.1.8",
     "@nestjs/swagger": "^11.2.1",
     "@nestjs/typeorm": "^11.0.0",
