@@ -7,22 +7,15 @@ import { SessionService } from './session.service';
 import { JwtConfig, JwtConfigToken } from '../config/jwt.config';
 import { User, JwtToken, JwtPayload } from '../types';
 import * as bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import * as jwt from 'jsonwebtoken';
 import { extractTokenFromRequest } from '../utils';
 
 jest.mock('jsonwebtoken', () => {
   const mockSign = jest.fn();
   const mockVerify = jest.fn();
   return {
-    __esModule: true,
-    default: {
-      get sign() {
-        return mockSign;
-      },
-      get verify() {
-        return mockVerify;
-      },
-    },
+    sign: mockSign,
+    verify: mockVerify,
   };
 });
 

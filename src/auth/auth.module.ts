@@ -1,8 +1,17 @@
 import { DynamicModule, Global, Module, Provider } from '@nestjs/common';
-import { provideAuthConfig, AuthConfig } from './config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import {
+  provideAuthConfig,
+  provideJwtConfig,
+  provideAdminConfig,
+  provideUserConfig,
+  provideGoogleAuthConfig,
+  AuthConfig,
+} from './config';
 import { JwtAuthGuard } from './guards';
 import {
   ActionTokenService,
+  AuthService,
   JwtService,
   RoleService,
   SessionService,
@@ -13,6 +22,12 @@ import {
   UserController,
   SessionController,
 } from './controllers';
+import {
+  UserEntity,
+  RoleEntity,
+  ActionTokenEntity,
+  SessionEntity,
+} from './entities';
 
 /**
  * Authentication module
@@ -27,12 +42,30 @@ export class AuthModule {
    * @returns Dynamic authentication module
    */
   static forRoot(config?: AuthConfig): DynamicModule {
-    const configProvider: Provider = provideAuthConfig(config);
+    const jwtConfigProvider: Provider = provideJwtConfig();
+    const adminConfigProvider: Provider = provideAdminConfig();
+    const userConfigProvider: Provider = provideUserConfig();
+    const googleAuthConfigProvider: Provider = provideGoogleAuthConfig();
+    const authConfigProvider: Provider = provideAuthConfig(config);
+
     return {
       module: AuthModule,
+      imports: [
+        TypeOrmModule.forFeature([
+          UserEntity,
+          RoleEntity,
+          ActionTokenEntity,
+          SessionEntity,
+        ]),
+      ],
       controllers: [AuthController, UserController, SessionController],
       providers: [
-        configProvider,
+        jwtConfigProvider,
+        adminConfigProvider,
+        userConfigProvider,
+        googleAuthConfigProvider,
+        authConfigProvider,
+        AuthService,
         UserService,
         ActionTokenService,
         RoleService,
@@ -41,7 +74,12 @@ export class AuthModule {
         JwtAuthGuard,
       ],
       exports: [
-        configProvider,
+        authConfigProvider,
+        jwtConfigProvider,
+        adminConfigProvider,
+        userConfigProvider,
+        googleAuthConfigProvider,
+        AuthService,
         UserService,
         ActionTokenService,
         RoleService,

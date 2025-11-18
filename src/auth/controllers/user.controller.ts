@@ -26,6 +26,8 @@ import {
   SessionDto,
   DeleteSessionsResponseDto,
 } from '../dtos';
+import { CurrentUser } from '../decorators';
+import { UserEntity } from '../entities';
 
 /**
  * User controller
@@ -127,6 +129,54 @@ export class UserController {
   @ApiResponse({ status: 200, type: UserDto })
   async findByEmail(@Query('email') email: string): Promise<UserDto | null> {
     return await this.userService.findByEmail(email);
+  }
+
+  /**
+   * Get the current authenticated user's profile
+   *
+   * @param user - The current authenticated user
+   * @returns The user profile
+   */
+  @Get('me')
+  @ApiOperation({ summary: 'Get the current authenticated user profile' })
+  @ApiResponse({ status: 200, type: UserDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getMe(@CurrentUser() user: UserEntity): Promise<UserDto> {
+    return user;
+  }
+
+  /**
+   * Update the current authenticated user's profile
+   *
+   * @param user - The current authenticated user
+   * @param updateUserRequest - The update user request
+   * @returns The updated user
+   */
+  @Post('me')
+  @ApiOperation({ summary: 'Update the current authenticated user profile' })
+  @ApiResponse({ status: 200, type: UserDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async updateMe(
+    @CurrentUser() user: UserEntity,
+    @Body() updateUserRequest: UpdateUserRequestDto,
+  ): Promise<UserDto> {
+    return await this.userService.update(user.id, updateUserRequest);
+  }
+
+  /**
+   * Delete the current authenticated user's account
+   *
+   * @param user - The current authenticated user
+   */
+  @Delete('me')
+  @ApiOperation({ summary: 'Delete the current authenticated user account' })
+  @ApiResponse({
+    status: 200,
+    description: 'User account deleted successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async deleteMe(@CurrentUser() user: UserEntity): Promise<void> {
+    return await this.userService.delete(user.id);
   }
 
   /**
