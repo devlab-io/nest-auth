@@ -21,19 +21,19 @@ export const ActionConfigToken: symbol = Symbol('ActionConfig');
 
 const actionConfigSchema = z.object({
   AUTH_ACTION_INVITE: z.coerce.number().default(24),
-  AUTH_ACTION_INVITE_ROUTE: z.string().optional(),
+  AUTH_ACTION_INVITE_ROUTE: z.string().default('auth/accept-invitation'),
   AUTH_ACTION_VALIDATE_EMAIL: z.coerce.number().default(24),
-  AUTH_ACTION_VALIDATE_EMAIL_ROUTE: z.string().optional(),
+  AUTH_ACTION_VALIDATE_EMAIL_ROUTE: z.string().default('auth/validate-email'),
   AUTH_ACTION_ACCEPT_TERMS: z.coerce.number().default(24),
-  AUTH_ACTION_ACCEPT_TERMS_ROUTE: z.string().optional(),
+  AUTH_ACTION_ACCEPT_TERMS_ROUTE: z.string().default('auth/accept-terms'),
   AUTH_ACTION_ACCEPT_PRIVACY_POLICY: z.coerce.number().default(24),
-  AUTH_ACTION_ACCEPT_PRIVACY_POLICY_ROUTE: z.string().optional(),
+  AUTH_ACTION_ACCEPT_PRIVACY_POLICY_ROUTE: z.string().default('auth/accept-privacy-policy'),
   AUTH_ACTION_CREATE_PASSWORD: z.coerce.number().default(24),
-  AUTH_ACTION_CREATE_PASSWORD_ROUTE: z.string().optional(),
+  AUTH_ACTION_CREATE_PASSWORD_ROUTE: z.string().default('auth/create-password'),
   AUTH_ACTION_RESET_PASSWORD: z.coerce.number().default(24),
-  AUTH_ACTION_RESET_PASSWORD_ROUTE: z.string().optional(),
+  AUTH_ACTION_RESET_PASSWORD_ROUTE: z.string().default('auth/reset-password'),
   AUTH_ACTION_CHANGE_EMAIL: z.coerce.number().default(24),
-  AUTH_ACTION_CHANGE_EMAIL_ROUTE: z.string().optional(),
+  AUTH_ACTION_CHANGE_EMAIL_ROUTE: z.string().default('auth/change-email'),
 });
 
 function parseActionConfig(env: NodeJS.ProcessEnv): ActionConfig {

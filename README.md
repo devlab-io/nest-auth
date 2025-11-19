@@ -96,9 +96,13 @@ Import and configure the module in your `AppModule`:
 ```typescript
 import { Module } from '@nestjs/common';
 import { AuthModule } from '@devlab-io/nest-auth';
+import { MailerModule } from '@devlab-io/nest-mailer';
 
 @Module({
 	imports: [
+		MailerModule.forRoot({
+			// Your MailerModule configuration
+		}),
 		AuthModule.forRoot({
 			auth: {
 				admin: {
@@ -110,6 +114,8 @@ import { AuthModule } from '@devlab-io/nest-auth';
 })
 export class AppModule {}
 ```
+
+**Note**: `AuthModule` requires `MailerModule` to be imported in your application. Make sure to import and configure `MailerModule` before `AuthModule` in your `AppModule`.
 
 Environment variables:
 - `ADMIN_EMAIL` - Auth (default: `admin@devlab.io`)
