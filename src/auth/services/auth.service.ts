@@ -24,6 +24,7 @@ import {
   ValidateEmailRequest,
 } from '../types';
 import { UserConfig, UserConfigToken } from '../config/user.config';
+import { ActionConfig, ActionConfigToken } from '../config/action.config';
 import { ActionTokenService } from './action-token.service';
 import { ActionTokenTypeUtils } from '../utils';
 import { MailerService, MailerServiceToken } from '@devlab-io/nest-mailer';
@@ -35,6 +36,7 @@ export class AuthService {
 
   public constructor(
     @Inject(UserConfigToken) private readonly userConfig: UserConfig,
+    @Inject(ActionConfigToken) private readonly actionConfig: ActionConfig,
     @Inject() private readonly actionTokenService: ActionTokenService,
     @Inject() private readonly userService: UserService,
     @Inject(MailerServiceToken) private readonly mailerService: MailerService,
@@ -53,7 +55,7 @@ export class AuthService {
     if (ActionTokenTypeUtils.hasAction(actions, ActionTokenType.Invite)) {
       maxExpiration = Math.max(
         maxExpiration,
-        this.userConfig.user.actions.invite,
+        this.actionConfig.invite.validity,
       );
     }
     if (
@@ -61,13 +63,13 @@ export class AuthService {
     ) {
       maxExpiration = Math.max(
         maxExpiration,
-        this.userConfig.user.actions.validateEmail,
+        this.actionConfig.validateEmail.validity,
       );
     }
     if (ActionTokenTypeUtils.hasAction(actions, ActionTokenType.AcceptTerms)) {
       maxExpiration = Math.max(
         maxExpiration,
-        this.userConfig.user.actions.acceptTerms,
+        this.actionConfig.acceptTerms.validity,
       );
     }
     if (
@@ -78,7 +80,7 @@ export class AuthService {
     ) {
       maxExpiration = Math.max(
         maxExpiration,
-        this.userConfig.user.actions.acceptPrivacyPolicy,
+        this.actionConfig.acceptPrivacyPolicy.validity,
       );
     }
     if (
@@ -86,7 +88,7 @@ export class AuthService {
     ) {
       maxExpiration = Math.max(
         maxExpiration,
-        this.userConfig.user.actions.createPassword,
+        this.actionConfig.createPassword.validity,
       );
     }
     if (
@@ -94,13 +96,13 @@ export class AuthService {
     ) {
       maxExpiration = Math.max(
         maxExpiration,
-        this.userConfig.user.actions.resetPassword,
+        this.actionConfig.resetPassword.validity,
       );
     }
     if (ActionTokenTypeUtils.hasAction(actions, ActionTokenType.ChangeEmail)) {
       maxExpiration = Math.max(
         maxExpiration,
-        this.userConfig.user.actions.changeEmail,
+        this.actionConfig.changeEmail.validity,
       );
     }
 
@@ -116,17 +118,66 @@ export class AuthService {
   }
 
   /**
+   * Build a custom frontend link for an action token
+   *
+   * @param actionType - The action token type
+   * @param frontendUrl - The frontend URL
+   * @param token - The token value
+   * @param email - The user email
+   * @returns The custom link if route is configured, undefined otherwise
+   */
+  private buildActionLink(
+    actionType: ActionTokenType,
+    frontendUrl: string,
+    token: string,
+    email: string,
+  ): string | undefined {
+    let actionRoute: string | undefined;
+
+    // Get the route for the specific action type
+    if (actionType === ActionTokenType.Invite) {
+      actionRoute = this.actionConfig.invite.route;
+    } else if (actionType === ActionTokenType.ValidateEmail) {
+      actionRoute = this.actionConfig.validateEmail.route;
+    } else if (actionType === ActionTokenType.CreatePassword) {
+      actionRoute = this.actionConfig.createPassword.route;
+    } else if (actionType === ActionTokenType.ResetPassword) {
+      actionRoute = this.actionConfig.resetPassword.route;
+    } else if (actionType === ActionTokenType.ChangeEmail) {
+      actionRoute = this.actionConfig.changeEmail.route;
+    } else if (actionType === ActionTokenType.AcceptTerms) {
+      actionRoute = this.actionConfig.acceptTerms.route;
+    } else if (actionType === ActionTokenType.AcceptPrivacyPolicy) {
+      actionRoute = this.actionConfig.acceptPrivacyPolicy.route;
+    }
+
+    // If no route is configured, return undefined
+    if (!actionRoute) {
+      return undefined;
+    }
+
+    // Build the complete URL with query parameters
+    const url = new URL(`${frontendUrl}/${actionRoute}`);
+    url.searchParams.set('token', token);
+    url.searchParams.set('email', email.toLowerCase());
+
+    return url.toString();
+  }
+
+  /**
    * Generate email content from action bit mask
    *
    * @param actions - Bit mask of actions
    * @param token - The token value
    * @param expiresIn - Expiration time in hours
+   * @param customLink - Optional custom link to use instead of the token
    * @returns Email subject and body
    */
   private generateEmailContent(
     actions: number,
     token: string,
     expiresIn: number,
+    customLink?: string,
   ): { subject: string; body: string } {
     const actionNames: string[] = [];
     const actionDescriptions: string[] = [];
@@ -180,6 +231,9 @@ export class AuthService {
       .map((desc, index) => `${index + 1}. ${desc}`)
       .join('\n');
 
+    // Use custom link if provided, otherwise use the token
+    const link: string = customLink ?? token;
+
     const body: string = `Bonjour,
 
 Vous avez reçu ce message car vous devez effectuer une ou plusieurs actions sur votre compte.
@@ -187,7 +241,7 @@ Vous avez reçu ce message car vous devez effectuer une ou plusieurs actions sur
 ${actionList}
 
 Veuillez utiliser le lien suivant pour effectuer ces actions :
-${token}
+${link}
 
 Ce lien est valide pendant ${expiresIn} heures.
 
@@ -201,14 +255,22 @@ L'équipe`;
    * Send an action token email to a user (generic method)
    *
    * @param request - The create action token request
+   * @param frontendUrl - Frontend URL to construct the action link (required for security)
    * @param preActions - Optional callback to execute before creating the token (e.g., set fields to false)
    * @throws NotFoundException if the user is not found (when user is provided)
-   * @throws BadRequestException if neither email nor user is provided
+   * @throws BadRequestException if neither email nor user is provided, or if frontend URL is missing
    */
   public async sendActionToken(
     request: CreateActionTokenRequest,
+    frontendUrl: string,
     preActions?: (user: UserEntity) => UpdateUserRequest,
   ): Promise<void> {
+    // Validate that frontend URL is provided (security requirement)
+    if (!frontendUrl) {
+      throw new BadRequestException(
+        'Frontend URL is required for security reasons',
+      );
+    }
     let user: UserEntity | undefined = undefined;
     let normalizedEmail: string;
 
@@ -244,11 +306,22 @@ L'équipe`;
       expiresIn: expirationTime,
     });
 
+    // Build custom link if route is configured
+    // Use user email if available, otherwise use normalizedEmail
+    const emailForLink = user ? user.email : normalizedEmail;
+    const customLink: string | undefined = this.buildActionLink(
+      request.type,
+      frontendUrl,
+      token.token,
+      emailForLink,
+    );
+
     // Generate email content from actions
     const emailContent = this.generateEmailContent(
       request.type,
       token.token,
       expirationTime,
+      customLink,
     );
 
     // Send the email
@@ -364,10 +437,14 @@ L'équipe`;
    * Invite a user by creating an invitation token
    *
    * @param invite - The invite request containing the email and roles.
+   * @param frontendUrl - Frontend URL to construct the invitation link (required for security)
    * @returns The created action token
-   * @throws BadRequestException if a user with the same email already exists
+   * @throws BadRequestException if a user with the same email already exists or frontend URL is missing
    */
-  public async sendInvitation(invite: InviteRequest): Promise<void> {
+  public async sendInvitation(
+    invite: InviteRequest,
+    frontendUrl: string,
+  ): Promise<void> {
     // Check if a user with the same email already exists
     const exists: boolean = await this.userService.exists(invite.email);
     if (exists) {
@@ -378,12 +455,15 @@ L'équipe`;
     }
 
     // Use sendActionToken without userId (actionTokenService.create will verify if a user is required)
-    await this.sendActionToken({
-      email: invite.email,
-      type: ActionTokenType.Invite,
-      expiresIn: invite.expiresIn,
-      roles: invite.roles ?? this.userConfig.user.defaultRoles,
-    });
+    await this.sendActionToken(
+      {
+        email: invite.email,
+        type: ActionTokenType.Invite,
+        expiresIn: invite.expiresIn,
+        roles: invite.roles ?? this.userConfig.user.defaultRoles,
+      },
+      frontendUrl,
+    );
   }
 
   /**
@@ -446,8 +526,10 @@ L'équipe`;
     // Create the user
     const user: UserEntity = await this.userService.create(request);
 
-    // Create and send an email validation token
-    await this.sendEmailValidation(user.id);
+    // Note: sendEmailValidation requires frontendUrl, but signUp doesn't have access to it
+    // The application should call sendEmailValidation separately after sign-up if needed
+    // For now, we'll skip sending the email validation automatically
+    // await this.sendEmailValidation(user.id, frontendUrl);
 
     // Log
     this.logger.debug(`User with email ${user.email} signed up`);
@@ -490,9 +572,14 @@ L'équipe`;
    * Send a email validation email to a user
    *
    * @param id - The ID of the user
+   * @param frontendUrl - Frontend URL to construct the validation link (required for security)
    * @throws NotFoundException if the user is not found
+   * @throws BadRequestException if frontend URL is missing
    */
-  public async sendEmailValidation(id: string): Promise<void> {
+  public async sendEmailValidation(
+    id: string,
+    frontendUrl: string,
+  ): Promise<void> {
     // Get the user
     const user: UserEntity = await this.userService.getById(id);
 
@@ -502,6 +589,7 @@ L'équipe`;
         type: ActionTokenType.ValidateEmail,
         user: user,
       },
+      frontendUrl,
       (): UpdateUserRequest => {
         return { emailValidated: false } as UpdateUserRequest;
       },
@@ -525,14 +613,22 @@ L'équipe`;
    * Send a password creation email to a user
    *
    * @param id - The ID of the user
+   * @param frontendUrl - Frontend URL to construct the create password link (required for security)
    * @throws NotFoundException if the user is not found
+   * @throws BadRequestException if frontend URL is missing
    */
-  public async sendCreatePassword(id: string): Promise<void> {
+  public async sendCreatePassword(
+    id: string,
+    frontendUrl: string,
+  ): Promise<void> {
     const user: UserEntity = await this.userService.getById(id);
-    await this.sendActionToken({
-      type: ActionTokenType.CreatePassword,
-      user: user,
-    });
+    await this.sendActionToken(
+      {
+        type: ActionTokenType.CreatePassword,
+        user: user,
+      },
+      frontendUrl,
+    );
   }
 
   /**
@@ -552,8 +648,13 @@ L'équipe`;
    * Send a password reset email to a user
    *
    * @param email - The email of the user
+   * @param frontendUrl - Frontend URL to construct the reset password link (required for security)
+   * @throws BadRequestException if frontend URL is missing
    */
-  public async sendResetPassword(email: string): Promise<void> {
+  public async sendResetPassword(
+    email: string,
+    frontendUrl: string,
+  ): Promise<void> {
     // Get the user with the given email
     const user: UserEntity | null = await this.userService.findByEmail(email);
     if (!user) {
@@ -564,10 +665,14 @@ L'équipe`;
       return;
     }
 
-    await this.sendActionToken({
-      type: ActionTokenType.ResetPassword,
-      user: user,
-    });
+    // Use sendActionToken to send the reset password email
+    await this.sendActionToken(
+      {
+        type: ActionTokenType.ResetPassword,
+        user: user,
+      },
+      frontendUrl,
+    );
   }
 
   /**

@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Query } from '@nestjs/common';
+import { Body, Controller, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from '../services';
 import {
@@ -13,6 +13,8 @@ import {
   AcceptPrivacyPolicyRequestDto,
   AuthResponseDto,
 } from '../dtos';
+import { FrontendUrl } from '../decorators';
+import { FrontendUrlGuard } from '../guards';
 
 /**
  * Authentication controller
@@ -29,11 +31,22 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('invite')
+  @UseGuards(FrontendUrlGuard)
   @ApiOperation({ summary: 'Send an invitation to a user' })
   @ApiResponse({ status: 200, description: 'Invitation sent successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  async invite(@Body() inviteRequest: InviteRequestDto): Promise<void> {
-    return await this.authService.sendInvitation(inviteRequest);
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Frontend URL required',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Request origin not allowed',
+  })
+  async invite(
+    @Body() inviteRequest: InviteRequestDto,
+    @FrontendUrl() frontendUrl: string,
+  ): Promise<void> {
+    return await this.authService.sendInvitation(inviteRequest, frontendUrl);
   }
 
   @Post('accept-invitation')
@@ -81,12 +94,24 @@ export class AuthController {
   }
 
   @Post('send-email-validation')
+  @UseGuards(FrontendUrlGuard)
   @ApiOperation({ summary: 'Send an email validation token' })
   @ApiQuery({ name: 'id', type: String, description: 'User ID' })
   @ApiResponse({ status: 200, description: 'Email validation token sent' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Frontend URL required',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Request origin not allowed',
+  })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async sendEmailValidation(@Query('id') id: string): Promise<void> {
-    return await this.authService.sendEmailValidation(id);
+  async sendEmailValidation(
+    @Query('id') id: string,
+    @FrontendUrl() frontendUrl: string,
+  ): Promise<void> {
+    return await this.authService.sendEmailValidation(id, frontendUrl);
   }
 
   @Post('accept-email-validation')
@@ -100,12 +125,24 @@ export class AuthController {
   }
 
   @Post('send-create-password')
+  @UseGuards(FrontendUrlGuard)
   @ApiOperation({ summary: 'Send a create password token' })
   @ApiQuery({ name: 'id', type: String, description: 'User ID' })
   @ApiResponse({ status: 200, description: 'Create password token sent' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Frontend URL required',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Request origin not allowed',
+  })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async sendCreatePassword(@Query('id') id: string): Promise<void> {
-    return await this.authService.sendCreatePassword(id);
+  async sendCreatePassword(
+    @Query('id') id: string,
+    @FrontendUrl() frontendUrl: string,
+  ): Promise<void> {
+    return await this.authService.sendCreatePassword(id, frontendUrl);
   }
 
   @Post('accept-create-password')
@@ -119,12 +156,24 @@ export class AuthController {
   }
 
   @Post('send-reset-password')
+  @UseGuards(FrontendUrlGuard)
   @ApiOperation({ summary: 'Send a password reset token' })
   @ApiQuery({ name: 'email', type: String, description: 'User email' })
   @ApiResponse({ status: 200, description: 'Password reset token sent' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Frontend URL required or route not configured',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden - Request origin not allowed',
+  })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async sendResetPassword(@Query('email') email: string): Promise<void> {
-    return await this.authService.sendResetPassword(email);
+  async sendResetPassword(
+    @FrontendUrl() frontendUrl: string,
+    @Query('email') email: string,
+  ): Promise<void> {
+    return await this.authService.sendResetPassword(email, frontendUrl);
   }
 
   @Post('accept-reset-password')

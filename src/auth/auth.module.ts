@@ -6,9 +6,10 @@ import {
   provideAdminConfig,
   provideUserConfig,
   provideGoogleAuthConfig,
+  provideActionConfig,
   AuthConfig,
 } from './config';
-import { JwtAuthGuard } from './guards';
+import { JwtAuthGuard, FrontendUrlGuard } from './guards';
 import {
   ActionTokenService,
   AuthService,
@@ -42,6 +43,7 @@ export class AuthModule {
    * @returns Dynamic authentication module
    */
   static forRoot(config?: AuthConfig): DynamicModule {
+    const actionConfigProvider: Provider = provideActionConfig();
     const jwtConfigProvider: Provider = provideJwtConfig();
     const adminConfigProvider: Provider = provideAdminConfig();
     const userConfigProvider: Provider = provideUserConfig();
@@ -60,6 +62,7 @@ export class AuthModule {
       ],
       controllers: [AuthController, UserController, SessionController],
       providers: [
+        actionConfigProvider,
         jwtConfigProvider,
         adminConfigProvider,
         userConfigProvider,
@@ -72,8 +75,10 @@ export class AuthModule {
         JwtService,
         SessionService,
         JwtAuthGuard,
+        FrontendUrlGuard,
       ],
       exports: [
+        actionConfigProvider,
         authConfigProvider,
         jwtConfigProvider,
         adminConfigProvider,
@@ -86,6 +91,7 @@ export class AuthModule {
         JwtService,
         SessionService,
         JwtAuthGuard,
+        FrontendUrlGuard,
       ],
     };
   }

@@ -33,15 +33,6 @@ describe('UserService', () => {
     user: {
       canSignUp: true,
       defaultRoles: ['user'],
-      actions: {
-        invite: 24,
-        validateEmail: 24,
-        acceptTerms: 24,
-        acceptPrivacyPolicy: 24,
-        createPassword: 24,
-        resetPassword: 24,
-        changeEmail: 24,
-      },
     },
   };
 

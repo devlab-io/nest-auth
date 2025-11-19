@@ -3,9 +3,10 @@ import { AdminConfig, AdminConfigToken } from './admin.config';
 import { JwtConfig, JwtConfigToken } from './jwt.config';
 import { GoogleAuthConfig, GoogleAuthConfigToken } from './google-auth.config';
 import { UserConfig, UserConfigToken } from './user.config';
+import { ActionConfig, ActionConfigToken } from './action.config';
 
 export interface AuthConfig {
-  auth: JwtConfig & AdminConfig & UserConfig & GoogleAuthConfig;
+  auth: JwtConfig & AdminConfig & UserConfig & GoogleAuthConfig & ActionConfig;
 }
 
 export const AuthConfigToken: symbol = Symbol('AuthConfig');
@@ -18,12 +19,14 @@ export function provideAuthConfig(config?: AuthConfig): Provider {
       AdminConfigToken,
       UserConfigToken,
       GoogleAuthConfigToken,
+      ActionConfigToken,
     ],
     useFactory: (
       jwtConfig: JwtConfig,
       adminConfig: AdminConfig,
       userConfig: UserConfig,
       googleAuthConfig: GoogleAuthConfig,
+      actionConfig: ActionConfig,
     ): AuthConfig => {
       return {
         auth: {
@@ -31,6 +34,7 @@ export function provideAuthConfig(config?: AuthConfig): Provider {
           ...adminConfig,
           ...userConfig,
           ...googleAuthConfig,
+          ...actionConfig,
         },
         ...config,
       };

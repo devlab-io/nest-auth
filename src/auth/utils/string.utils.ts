@@ -28,3 +28,23 @@ export function capitalize(str: string): string {
     )
     .join(' ');
 }
+
+/**
+ * Clean a route by removing leading and trailing slashes
+ * This ensures consistent route formatting (e.g., 'auth/reset-password' instead of '/auth/reset-password/')
+ * Can also be used for URLs to remove trailing slashes (e.g., 'https://example.com' instead of 'https://example.com/')
+ *
+ * @param url - The route or URL to clean
+ * @returns The cleaned route/URL without leading/trailing slashes
+ */
+export function route(url: string | undefined): string {
+  if (!url) {
+    return '';
+  }
+  // Remove leading slash if present
+  url = url.startsWith('/') ? url.slice(1) : url;
+  // Remove trailing slash if present
+  url = url.endsWith('/') ? url.slice(0, -1) : url;
+  // Done
+  return url;
+}
