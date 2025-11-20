@@ -2,6 +2,7 @@ import { config } from 'dotenv';
 import { resolve } from 'path';
 import { z } from 'zod';
 import { Provider } from '@nestjs/common';
+import { parseExpiresIn } from '../utils';
 
 // Load environment variables
 config({ path: resolve(process.cwd(), '.env') });
@@ -9,7 +10,7 @@ config({ path: resolve(process.cwd(), '.env') });
 export interface JwtConfig {
   jwt: {
     secret: string;
-    expiresIn: string;
+    expiresIn: number;
   };
 }
 
@@ -20,7 +21,8 @@ const jwtConfigSchema = z.object({
   AUTH_JWT_EXPIRES_IN: z
     .string()
     .regex(/^\d+[smhd]$/, 'Must be a valid duration (e.g., 1s, 1m, 1h, 1d)')
-    .default('1h'), // 1 hour
+    .default('1h') // 1 hour
+    .transform((val): number => parseExpiresIn(val)),
 });
 
 function parseJwtConfig(env: NodeJS.ProcessEnv): JwtConfig {

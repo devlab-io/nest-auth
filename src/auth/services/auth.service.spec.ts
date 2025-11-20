@@ -75,7 +75,7 @@ describe('AuthService', () => {
 
   const mockJwtToken: JwtToken = {
     accessToken: 'access-token',
-    expiresIn: '3600',
+    expiresIn: 3600, // 1h
   };
 
   beforeEach(async () => {

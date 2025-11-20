@@ -132,11 +132,6 @@ export class JwtService {
     // Store the user in the request context
     this.setUserInContext(user);
 
-    // Log
-    this.logger.debug(
-      `User with email ${user.email} authenticated successfully`,
-    );
-
     // Done
     return token;
   }
@@ -163,9 +158,6 @@ export class JwtService {
 
     // Remove the user from the request context
     this.removeUserFromContext();
-
-    // Log
-    this.logger.debug('User logged out successfully');
   }
 
   /**
@@ -184,8 +176,9 @@ export class JwtService {
     };
 
     // Generate the token
+    // jwt.sign() accepts expiresIn in seconds, so convert from milliseconds
     const options: jwt.SignOptions = {
-      expiresIn: this.jwtConfig.jwt.expiresIn,
+      expiresIn: Math.floor(this.jwtConfig.jwt.expiresIn / 1000),
     } as jwt.SignOptions;
     const accessToken: string = jwt.sign(
       payload,
@@ -283,9 +276,8 @@ export class JwtService {
   private setCookie(token: string): void {
     const response: Response = this.request.res as Response;
     if (response) {
-      // Parse expiresIn to get expiration time in milliseconds
-      const expiresInMs = this.parseExpiresIn(this.jwtConfig.jwt.expiresIn);
-      const expires = new Date(Date.now() + expiresInMs);
+      // Use expiresIn (already parsed in config, in milliseconds)
+      const expires: Date = new Date(Date.now() + this.jwtConfig.jwt.expiresIn);
 
       response.cookie(this.COOKIE_NAME, token, {
         httpOnly: true,
@@ -301,7 +293,7 @@ export class JwtService {
    * Clear the authentication cookie
    */
   private clearCookie(): void {
-    const response = this.request.res as Response;
+    const response: Response = this.request.res as Response;
     if (response) {
       response.clearCookie(this.COOKIE_NAME, {
         httpOnly: true,
@@ -309,36 +301,6 @@ export class JwtService {
         sameSite: 'strict',
         path: '/',
       });
-    }
-  }
-
-  /**
-   * Parse expiresIn string to milliseconds
-   *
-   * @param expiresIn - Expiration string (e.g., "1h", "30m", "7d")
-   * @returns Expiration time in milliseconds
-   */
-  private parseExpiresIn(expiresIn: string): number {
-    const match: RegExpMatchArray | null = expiresIn.match(/^(\d+)([smhd])$/);
-    if (!match) {
-      // Default to 1 hour if parsing fails
-      return 60 * 60 * 1000;
-    }
-
-    const value: number = parseInt(match[1], 10);
-    const unit: string = match[2];
-
-    switch (unit) {
-      case 's':
-        return value * 1000;
-      case 'm':
-        return value * 60 * 1000;
-      case 'h':
-        return value * 60 * 60 * 1000;
-      case 'd':
-        return value * 24 * 60 * 60 * 1000;
-      default:
-        return 60 * 60 * 1000;
     }
   }
 

@@ -20,7 +20,7 @@ describe('SessionService', () => {
   const mockJwtConfig: JwtConfig = {
     jwt: {
       secret: 'test-secret',
-      expiresIn: '1h',
+      expiresIn: 3600, // 1h
     },
   };
 

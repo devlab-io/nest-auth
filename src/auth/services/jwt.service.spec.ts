@@ -43,7 +43,7 @@ describe('JwtService', () => {
   const mockJwtConfig: JwtConfig = {
     jwt: {
       secret: 'test-secret',
-      expiresIn: '1h',
+      expiresIn: 3600, // 1h
     },
   };
 
@@ -190,7 +190,7 @@ describe('JwtService', () => {
       const token = 'jwt-token';
       const jwtToken: JwtToken = {
         accessToken: token,
-        expiresIn: '1h',
+        expiresIn: 3600, // 1h
       };
 
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);

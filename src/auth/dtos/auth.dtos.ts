@@ -267,10 +267,10 @@ export class JwtTokenDto implements JwtToken {
   accessToken: string;
 
   @ApiProperty({
-    example: '1h',
-    description: 'Token expiration time',
+    example: 3600000,
+    description: 'Token expiration time in milliseconds',
   })
-  expiresIn: string;
+  expiresIn: number;
 }
 
 export class AuthResponseDto implements AuthResponse {

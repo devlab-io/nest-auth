@@ -197,7 +197,7 @@ export interface AuthResponse {
 
 export interface JwtToken {
   accessToken: string;
-  expiresIn: string;
+  expiresIn: number; // Expiration time in milliseconds
 }
 
 export interface JwtPayload {

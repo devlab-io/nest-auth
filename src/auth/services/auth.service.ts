@@ -27,8 +27,8 @@ import { UserConfig, UserConfigToken } from '../config/user.config';
 import { ActionConfig, ActionConfigToken } from '../config/action.config';
 import { ActionTokenService } from './action-token.service';
 import { ActionTokenTypeUtils } from '../utils';
-import { MailerService, MailerServiceToken } from '@devlab-io/nest-mailer';
 import { JwtService } from './jwt.service';
+import { NotificationService } from './notification.service';
 
 @Injectable()
 export class AuthService {
@@ -39,7 +39,7 @@ export class AuthService {
     @Inject(ActionConfigToken) private readonly actionConfig: ActionConfig,
     @Inject() private readonly actionTokenService: ActionTokenService,
     @Inject() private readonly userService: UserService,
-    @Inject(MailerServiceToken) private readonly mailerService: MailerService,
+    @Inject() private readonly notificationService: NotificationService,
     @Inject() private readonly jwtService: JwtService,
   ) {}
 
@@ -118,140 +118,6 @@ export class AuthService {
   }
 
   /**
-   * Build a custom frontend link for an action token
-   *
-   * @param actionType - The action token type
-   * @param frontendUrl - The frontend URL
-   * @param token - The token value
-   * @param email - The user email
-   * @returns The custom link if route is configured, undefined otherwise
-   */
-  private buildActionLink(
-    actionType: ActionTokenType,
-    frontendUrl: string,
-    token: string,
-    email: string,
-  ): string | undefined {
-    let actionRoute: string | undefined;
-
-    // Get the route for the specific action type
-    if (actionType === ActionTokenType.Invite) {
-      actionRoute = this.actionConfig.invite.route;
-    } else if (actionType === ActionTokenType.ValidateEmail) {
-      actionRoute = this.actionConfig.validateEmail.route;
-    } else if (actionType === ActionTokenType.CreatePassword) {
-      actionRoute = this.actionConfig.createPassword.route;
-    } else if (actionType === ActionTokenType.ResetPassword) {
-      actionRoute = this.actionConfig.resetPassword.route;
-    } else if (actionType === ActionTokenType.ChangeEmail) {
-      actionRoute = this.actionConfig.changeEmail.route;
-    } else if (actionType === ActionTokenType.AcceptTerms) {
-      actionRoute = this.actionConfig.acceptTerms.route;
-    } else if (actionType === ActionTokenType.AcceptPrivacyPolicy) {
-      actionRoute = this.actionConfig.acceptPrivacyPolicy.route;
-    }
-
-    // If no route is configured, return undefined
-    if (!actionRoute) {
-      return undefined;
-    }
-
-    // Build the complete URL with query parameters
-    const url = new URL(`${frontendUrl}/${actionRoute}`);
-    url.searchParams.set('token', token);
-    url.searchParams.set('email', email.toLowerCase());
-
-    return url.toString();
-  }
-
-  /**
-   * Generate email content from action bit mask
-   *
-   * @param actions - Bit mask of actions
-   * @param token - The token value
-   * @param expiresIn - Expiration time in hours
-   * @param customLink - Optional custom link to use instead of the token
-   * @returns Email subject and body
-   */
-  private generateEmailContent(
-    actions: number,
-    token: string,
-    expiresIn: number,
-    customLink?: string,
-  ): { subject: string; body: string } {
-    const actionNames: string[] = [];
-    const actionDescriptions: string[] = [];
-
-    if (ActionTokenTypeUtils.hasAction(actions, ActionTokenType.Invite)) {
-      actionNames.push('Invitation');
-      actionDescriptions.push("Rejoindre l'application");
-    }
-    if (
-      ActionTokenTypeUtils.hasAction(actions, ActionTokenType.ValidateEmail)
-    ) {
-      actionNames.push('Validation Email');
-      actionDescriptions.push('Valider votre adresse email');
-    }
-    if (ActionTokenTypeUtils.hasAction(actions, ActionTokenType.AcceptTerms)) {
-      actionNames.push('Acceptation CGU');
-      actionDescriptions.push("Accepter les conditions d'utilisation");
-    }
-    if (
-      ActionTokenTypeUtils.hasAction(
-        actions,
-        ActionTokenType.AcceptPrivacyPolicy,
-      )
-    ) {
-      actionNames.push('Acceptation Politique de Confidentialité');
-      actionDescriptions.push('Accepter la politique de confidentialité');
-    }
-    if (
-      ActionTokenTypeUtils.hasAction(actions, ActionTokenType.CreatePassword)
-    ) {
-      actionNames.push('Création Mot de Passe');
-      actionDescriptions.push('Créer votre mot de passe');
-    }
-    if (
-      ActionTokenTypeUtils.hasAction(actions, ActionTokenType.ResetPassword)
-    ) {
-      actionNames.push('Réinitialisation Mot de Passe');
-      actionDescriptions.push('Réinitialiser votre mot de passe');
-    }
-    if (ActionTokenTypeUtils.hasAction(actions, ActionTokenType.ChangeEmail)) {
-      actionNames.push('Changement Email');
-      actionDescriptions.push('Changer votre adresse email');
-    }
-
-    const subject: string =
-      actionNames.length === 1
-        ? actionNames[0]
-        : `Actions Requises: ${actionNames.join(', ')}`;
-
-    const actionList: string = actionDescriptions
-      .map((desc, index) => `${index + 1}. ${desc}`)
-      .join('\n');
-
-    // Use custom link if provided, otherwise use the token
-    const link: string = customLink ?? token;
-
-    const body: string = `Bonjour,
-
-Vous avez reçu ce message car vous devez effectuer une ou plusieurs actions sur votre compte.
-
-${actionList}
-
-Veuillez utiliser le lien suivant pour effectuer ces actions :
-${link}
-
-Ce lien est valide pendant ${expiresIn} heures.
-
-Cordialement,
-L'équipe`;
-
-    return { subject, body };
-  }
-
-  /**
    * Send an action token email to a user (generic method)
    *
    * @param request - The create action token request
@@ -306,34 +172,12 @@ L'équipe`;
       expiresIn: expirationTime,
     });
 
-    // Build custom link if route is configured
-    // Use user email if available, otherwise use normalizedEmail
-    const emailForLink = user ? user.email : normalizedEmail;
-    const customLink: string | undefined = this.buildActionLink(
-      request.type,
-      frontendUrl,
-      token.token,
-      emailForLink,
-    );
-
-    // Generate email content from actions
-    const emailContent = this.generateEmailContent(
-      request.type,
-      token.token,
-      expirationTime,
-      customLink,
-    );
-
-    // Send the email
-    await this.mailerService.send(
+    // Send the email using NotificationService
+    await this.notificationService.sendActionTokenEmail(
       normalizedEmail,
-      emailContent.subject,
-      emailContent.body,
-    );
-
-    // Log
-    this.logger.debug(
-      `Action token sent to ${normalizedEmail} for actions: ${request.type}`,
+      token,
+      frontendUrl,
+      expirationTime,
     );
   }
 

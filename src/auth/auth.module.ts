@@ -17,6 +17,7 @@ import {
   RoleService,
   SessionService,
   UserService,
+  NotificationService,
 } from './services';
 import {
   AuthController,
@@ -74,6 +75,7 @@ export class AuthModule {
         RoleService,
         JwtService,
         SessionService,
+        NotificationService,
         JwtAuthGuard,
         FrontendUrlGuard,
       ],
@@ -90,6 +92,7 @@ export class AuthModule {
         RoleService,
         JwtService,
         SessionService,
+        NotificationService,
         JwtAuthGuard,
         FrontendUrlGuard,
       ],

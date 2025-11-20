@@ -1,12 +1,18 @@
 import { Repository } from 'typeorm';
-import { Injectable, NotFoundException, Inject, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  Inject,
+  Logger,
+  OnModuleInit,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { SessionEntity } from '../entities';
 import { SessionQueryParams } from '../types';
 import { JwtConfig, JwtConfigToken } from '../config/jwt.config';
 
 @Injectable()
-export class SessionService {
+export class SessionService implements OnModuleInit {
   private readonly logger: Logger = new Logger(SessionService.name);
 
   public constructor(
@@ -16,17 +22,37 @@ export class SessionService {
   ) {}
 
   /**
+   * Called when the module is initialized
+   * Deletes all expired sessions on application startup
+   */
+  public async onModuleInit(): Promise<void> {
+    const deletedCount = await this.deleteExpired();
+    if (deletedCount > 0) {
+      this.logger.log(
+        `Cleaned up ${deletedCount} expired session(s) on startup`,
+      );
+    }
+  }
+
+  /**
    * Create a new session
+   * Deletes all other sessions for the user before creating a new one
    *
    * @param token - The JWT token
    * @param userId - The user ID
    * @returns The created session
    */
   public async create(token: string, userId: string): Promise<SessionEntity> {
-    // Calculate expiration date from expiresIn
-    const expirationDate = this.calculateExpirationDate(
-      this.jwtConfig.jwt.expiresIn,
-    );
+    // Delete all other sessions for this user
+    const deletedCount = await this.deleteAllByUserId(userId);
+    if (deletedCount > 0) {
+      this.logger.debug(
+        `Deleted ${deletedCount} existing session(s) for user ${userId}`,
+      );
+    }
+
+    // Calculate expiration date from expiresIn (already parsed in config, in milliseconds)
+    const expirationDate = new Date(Date.now() + this.jwtConfig.jwt.expiresIn);
 
     // Create session
     let session: SessionEntity = this.sessionRepository.create({
@@ -38,9 +64,6 @@ export class SessionService {
 
     // Save session
     session = await this.sessionRepository.save(session);
-
-    // Log
-    this.logger.debug(`Session created for user ${userId}`);
 
     // Done
     return session;
@@ -83,7 +106,6 @@ export class SessionService {
   public async deleteByToken(token: string): Promise<void> {
     const session = await this.getByToken(token);
     await this.sessionRepository.remove(session);
-    this.logger.debug(`Session deleted for token`);
   }
 
   /**
@@ -224,42 +246,5 @@ export class SessionService {
   public isActive(session: SessionEntity): boolean {
     const now = new Date();
     return session.expirationDate > now;
-  }
-
-  /**
-   * Calculate expiration date from expiresIn string
-   *
-   * @param expiresIn - Expiration string (e.g., "1h", "30m", "7d")
-   * @returns Expiration date
-   */
-  private calculateExpirationDate(expiresIn: string): Date {
-    const match = expiresIn.match(/^(\d+)([smhd])$/);
-    if (!match) {
-      // Default to 1 hour if parsing fails
-      return new Date(Date.now() + 60 * 60 * 1000);
-    }
-
-    const value = parseInt(match[1], 10);
-    const unit = match[2];
-    let milliseconds = 0;
-
-    switch (unit) {
-      case 's':
-        milliseconds = value * 1000;
-        break;
-      case 'm':
-        milliseconds = value * 60 * 1000;
-        break;
-      case 'h':
-        milliseconds = value * 60 * 60 * 1000;
-        break;
-      case 'd':
-        milliseconds = value * 24 * 60 * 60 * 1000;
-        break;
-      default:
-        milliseconds = 60 * 60 * 1000; // Default to 1 hour
-    }
-
-    return new Date(Date.now() + milliseconds);
   }
 }
