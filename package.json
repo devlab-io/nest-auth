@@ -1,6 +1,6 @@
 {
   "name": "@devlab-io/nest-auth",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "NestJS Authentication Module",
   "author": "DevLab",
   "license": "UNLICENSED",
