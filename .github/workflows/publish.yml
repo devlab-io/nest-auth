@@ -55,12 +55,34 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Setup npm authentication
+        run: |
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > ~/.npmrc
+          echo "@devlab-io:registry=https://npm.pkg.github.com" >> ~/.npmrc
+
+      - name: Check if version already exists
+        id: check_version
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "Checking if version $VERSION already exists on npm registry..."
+          if npm view @devlab-io/nest-auth@$VERSION version 2>/dev/null; then
+            echo "❌ Version $VERSION already exists on npm registry"
+            echo "Version $VERSION has already been published. Skipping all steps."
+            echo "exists=true" >> $GITHUB_OUTPUT
+            exit 0
+          else
+            echo "✓ Version $VERSION does not exist, will proceed with publication"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout and pull develop
+        if: steps.check_version.outputs.exists != 'true'
         run: |
           git checkout develop
           git pull origin develop
 
       - name: Merge develop into main
+        if: steps.check_version.outputs.exists != 'true'
         run: |
           git fetch origin main
           git checkout main
@@ -69,52 +91,64 @@ jobs:
           git push origin main
 
       - name: Install dependencies
+        if: steps.check_version.outputs.exists != 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: yarn install --frozen-lockfile
 
       - name: Build package
+        if: steps.check_version.outputs.exists != 'true'
         run: yarn build
 
       - name: Check code formatting
+        if: steps.check_version.outputs.exists != 'true'
         run: yarn format:check
 
       - name: Run linter
+        if: steps.check_version.outputs.exists != 'true'
         run: yarn lint:check
 
       - name: Type check
+        if: steps.check_version.outputs.exists != 'true'
         run: yarn type-check
 
       - name: Run tests
+        if: steps.check_version.outputs.exists != 'true'
         run: yarn test
 
       - name: Update version in package.json
+        if: steps.check_version.outputs.exists != 'true'
         run: |
           npm version ${{ steps.version.outputs.version }} --no-git-tag-version
 
       - name: Commit and push version update
+        if: steps.check_version.outputs.exists != 'true'
         run: |
           git add package.json package-lock.json 2>/dev/null || git add package.json
           git commit -m "chore: bump version to ${{ steps.version.outputs.version }}" || echo "No changes to commit"
           git push origin main
 
       - name: Create git tag
+        if: steps.check_version.outputs.exists != 'true'
         run: |
           git tag -a ${{ steps.version.outputs.tag }} -m "${{ github.event.inputs.release_description }}"
           git push origin ${{ steps.version.outputs.tag }}
 
       - name: Create release archive
+        if: steps.check_version.outputs.exists != 'true'
         run: |
           mkdir -p release
           tar -czf release/nest-storage-${{ steps.version.outputs.tag }}.tar.gz dist package.json README.md
           zip -r release/nest-storage-${{ steps.version.outputs.tag }}.zip dist package.json README.md
 
       - name: Publish to GitHub Packages
+        if: steps.check_version.outputs.exists != 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm publish
 
       - name: Create GitHub Release with archive
+        if: steps.check_version.outputs.exists != 'true'
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.version.outputs.tag }}
@@ -129,11 +163,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout and pull develop
+        if: steps.check_version.outputs.exists != 'true'
         run: |
           git checkout develop
           git pull origin develop
 
       - name: Merge main into develop
+        if: steps.check_version.outputs.exists != 'true'
         run: |
           git merge origin/main -m "chore: merge main into develop after release ${{ steps.version.outputs.tag }}"
           git push origin develop
