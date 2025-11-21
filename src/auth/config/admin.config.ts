@@ -16,16 +16,16 @@ export interface AdminConfig {
 export const AdminConfigToken: symbol = Symbol('AdminConfig');
 
 const adminConfigSchema = z.object({
-  ADMIN_EMAIL: z.string().default('admin@devlab.io'),
-  ADMIN_PASSWORD: z.string().default('ChangeMe1234*'),
+  AUTH_ADMIN_EMAIL: z.string().default('admin@devlab.io'),
+  AUTH_ADMIN_PASSWORD: z.string().default('ChangeMe1234*'),
 });
 
 function parseAdminConfig(env: NodeJS.ProcessEnv): AdminConfig {
   const config = adminConfigSchema.parse(env);
   return {
     admin: {
-      email: config.ADMIN_EMAIL,
-      password: config.ADMIN_PASSWORD,
+      email: config.AUTH_ADMIN_EMAIL,
+      password: config.AUTH_ADMIN_PASSWORD,
     },
   };
 }

@@ -11,6 +11,10 @@ import { resolve } from 'path';
 import * as bcrypt from 'bcryptjs';
 import { UserEntity } from '../../auth/entities/user.entity';
 import { RoleEntity } from '../../auth/entities/role.entity';
+import { OrganisationEntity } from '../../auth/entities/organisation.entity';
+import { EstablishmentEntity } from '../../auth/entities/establishment.entity';
+import { CredentialEntity } from '../../auth/entities/credential.entity';
+import { UserAccountEntity } from '../../auth/entities/user-account.entity';
 
 // Load environment variables
 config({ path: resolve(process.cwd(), '.env') });
@@ -117,18 +121,6 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
             comment: 'User phone number',
           },
           {
-            name: 'password',
-            type: 'varchar',
-            isNullable: true,
-            comment: 'Hashed password (bcrypt), nullable for OAuth users',
-          },
-          {
-            name: 'googleId',
-            type: 'varchar',
-            isNullable: true,
-            comment: 'Google OAuth ID if user signed in with Google',
-          },
-          {
             name: 'enabled',
             type: 'boolean',
             default: true,
@@ -194,19 +186,225 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
       }),
     );
 
-    // Create user_roles junction table
+    // Create organisations table
     await queryRunner.createTable(
       new Table({
-        name: 'user_roles',
+        name: 'organisations',
         comment:
-          'Junction table for many-to-many relationship between users and roles',
+          'Stores organisations (companies that manage multiple establishments)',
         columns: [
           {
-            name: 'userId',
+            name: 'id',
             type: 'uuid',
             isPrimary: true,
-            primaryKeyConstraintName: 'PK_user_roles_composite',
+            generationStrategy: 'uuid',
+            default: 'uuid_generate_v4()',
+            comment: 'Unique identifier of the organisation',
+            primaryKeyConstraintName: 'PK_organisations_id',
+          },
+          {
+            name: 'name',
+            type: 'varchar',
+            isNullable: false,
+            comment: 'Name of the organisation',
+          },
+        ],
+      }),
+      true,
+    );
+
+    // Create establishments table
+    await queryRunner.createTable(
+      new Table({
+        name: 'establishments',
+        comment: 'Stores establishments (restaurants, stores, etc.)',
+        columns: [
+          {
+            name: 'id',
+            type: 'uuid',
+            isPrimary: true,
+            generationStrategy: 'uuid',
+            default: 'uuid_generate_v4()',
+            comment: 'Unique identifier of the establishment',
+            primaryKeyConstraintName: 'PK_establishments_id',
+          },
+          {
+            name: 'name',
+            type: 'varchar',
+            isNullable: false,
+            comment: 'Name of the establishment',
+          },
+          {
+            name: 'organisation_id',
+            type: 'uuid',
+            isNullable: false,
+            comment: 'Foreign key to organisations.id, cascades on delete',
+          },
+        ],
+      }),
+      true,
+    );
+
+    // Create foreign key for establishments -> organisations
+    await queryRunner.createForeignKey(
+      'establishments',
+      new TableForeignKey({
+        name: 'FK_establishments_organisation_id_organisations_id',
+        columnNames: ['organisation_id'],
+        referencedColumnNames: ['id'],
+        referencedTableName: 'organisations',
+        onDelete: 'CASCADE',
+      }),
+    );
+
+    // Create credentials table
+    await queryRunner.createTable(
+      new Table({
+        name: 'credentials',
+        comment: 'Stores user credentials (password, google OAuth, etc.)',
+        columns: [
+          {
+            name: 'id',
+            type: 'uuid',
+            isPrimary: true,
+            generationStrategy: 'uuid',
+            default: 'uuid_generate_v4()',
+            comment: 'Unique identifier of the credential',
+            primaryKeyConstraintName: 'PK_credentials_id',
+          },
+          {
+            name: 'type',
+            type: 'varchar',
+            isNullable: false,
+            comment: 'Type of credential (password or google)',
+          },
+          {
+            name: 'password',
+            type: 'varchar',
+            isNullable: true,
+            comment: 'Hashed password (bcrypt), only for type=password',
+          },
+          {
+            name: 'googleId',
+            type: 'varchar',
+            isNullable: true,
+            comment: 'Google OAuth ID, only for type=google',
+          },
+          {
+            name: 'user_id',
+            type: 'uuid',
+            isNullable: false,
             comment: 'Foreign key to users.id, cascades on delete',
+          },
+        ],
+        checks: [
+          new TableCheck({
+            name: 'CHK_credentials_type_valid',
+            expression: "type IN ('password', 'google')",
+          }),
+        ],
+      }),
+      true,
+    );
+
+    // Create foreign key for credentials -> users
+    await queryRunner.createForeignKey(
+      'credentials',
+      new TableForeignKey({
+        name: 'FK_credentials_user_id_users_id',
+        columnNames: ['user_id'],
+        referencedColumnNames: ['id'],
+        referencedTableName: 'users',
+        onDelete: 'CASCADE',
+      }),
+    );
+
+    // Create user_accounts table
+    await queryRunner.createTable(
+      new Table({
+        name: 'user_accounts',
+        comment:
+          'Stores user accounts linking users to organisations, establishments and roles',
+        columns: [
+          {
+            name: 'id',
+            type: 'uuid',
+            isPrimary: true,
+            generationStrategy: 'uuid',
+            default: 'uuid_generate_v4()',
+            comment: 'Unique identifier of the user account',
+            primaryKeyConstraintName: 'PK_user_accounts_id',
+          },
+          {
+            name: 'organisation_id',
+            type: 'uuid',
+            isNullable: false,
+            comment: 'Foreign key to organisations.id, cascades on delete',
+          },
+          {
+            name: 'establishment_id',
+            type: 'uuid',
+            isNullable: false,
+            comment: 'Foreign key to establishments.id, cascades on delete',
+          },
+          {
+            name: 'user_id',
+            type: 'uuid',
+            isNullable: false,
+            comment: 'Foreign key to users.id, cascades on delete',
+          },
+        ],
+      }),
+      true,
+    );
+
+    // Create foreign keys for user_accounts
+    await queryRunner.createForeignKey(
+      'user_accounts',
+      new TableForeignKey({
+        name: 'FK_user_accounts_organisation_id_organisations_id',
+        columnNames: ['organisation_id'],
+        referencedColumnNames: ['id'],
+        referencedTableName: 'organisations',
+        onDelete: 'CASCADE',
+      }),
+    );
+
+    await queryRunner.createForeignKey(
+      'user_accounts',
+      new TableForeignKey({
+        name: 'FK_user_accounts_establishment_id_establishments_id',
+        columnNames: ['establishment_id'],
+        referencedColumnNames: ['id'],
+        referencedTableName: 'establishments',
+        onDelete: 'CASCADE',
+      }),
+    );
+
+    await queryRunner.createForeignKey(
+      'user_accounts',
+      new TableForeignKey({
+        name: 'FK_user_accounts_user_id_users_id',
+        columnNames: ['user_id'],
+        referencedColumnNames: ['id'],
+        referencedTableName: 'users',
+        onDelete: 'CASCADE',
+      }),
+    );
+
+    // Create user_account_roles junction table
+    await queryRunner.createTable(
+      new Table({
+        name: 'user_account_roles',
+        comment:
+          'Junction table for many-to-many relationship between user accounts and roles',
+        columns: [
+          {
+            name: 'userAccountId',
+            type: 'uuid',
+            isPrimary: true,
+            primaryKeyConstraintName: 'PK_user_account_roles_composite',
+            comment: 'Foreign key to user_accounts.id, cascades on delete',
           },
           {
             name: 'roleId',
@@ -219,22 +417,22 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
       true,
     );
 
-    // Create foreign keys for user_roles
+    // Create foreign keys for user_account_roles
     await queryRunner.createForeignKey(
-      'user_roles',
+      'user_account_roles',
       new TableForeignKey({
-        name: 'FK_user_roles_userId_users_id',
-        columnNames: ['userId'],
+        name: 'FK_user_account_roles_userAccountId_user_accounts_id',
+        columnNames: ['userAccountId'],
         referencedColumnNames: ['id'],
-        referencedTableName: 'users',
+        referencedTableName: 'user_accounts',
         onDelete: 'CASCADE',
       }),
     );
 
     await queryRunner.createForeignKey(
-      'user_roles',
+      'user_account_roles',
       new TableForeignKey({
-        name: 'FK_user_roles_roleId_roles_id',
+        name: 'FK_user_account_roles_roleId_roles_id',
         columnNames: ['roleId'],
         referencedColumnNames: ['id'],
         referencedTableName: 'roles',
@@ -261,7 +459,7 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
             type: 'integer',
             isNullable: false,
             comment:
-              'Bit mask of ActionTokenType values (Invite, ValidateEmail, ResetPassword, etc.)',
+              'Bit mask of ActionType values (Invite, ValidateEmail, ResetPassword, etc.)',
           },
           {
             name: 'email',
@@ -289,6 +487,20 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
             comment:
               'Foreign key to users.id, nullable (for invitation tokens before user creation)',
           },
+          {
+            name: 'organisation_id',
+            type: 'uuid',
+            isNullable: true,
+            comment:
+              'Foreign key to organisations.id, nullable (for Invite action: organisation to create user account in)',
+          },
+          {
+            name: 'establishment_id',
+            type: 'uuid',
+            isNullable: true,
+            comment:
+              'Foreign key to establishments.id, nullable (for Invite action: establishment to create user account in)',
+          },
         ],
         checks: [
           new TableCheck({
@@ -304,7 +516,7 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
       true,
     );
 
-    // Create foreign key for action_tokens
+    // Create foreign keys for action_tokens
     await queryRunner.createForeignKey(
       'action_tokens',
       new TableForeignKey({
@@ -312,6 +524,28 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
         columnNames: ['user_id'],
         referencedColumnNames: ['id'],
         referencedTableName: 'users',
+        onDelete: 'CASCADE',
+      }),
+    );
+
+    await queryRunner.createForeignKey(
+      'action_tokens',
+      new TableForeignKey({
+        name: 'FK_action_tokens_organisation_id_organisations_id',
+        columnNames: ['organisation_id'],
+        referencedColumnNames: ['id'],
+        referencedTableName: 'organisations',
+        onDelete: 'CASCADE',
+      }),
+    );
+
+    await queryRunner.createForeignKey(
+      'action_tokens',
+      new TableForeignKey({
+        name: 'FK_action_tokens_establishment_id_establishments_id',
+        columnNames: ['establishment_id'],
+        referencedColumnNames: ['id'],
+        referencedTableName: 'establishments',
         onDelete: 'CASCADE',
       }),
     );
@@ -368,7 +602,7 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
     await queryRunner.createTable(
       new Table({
         name: 'sessions',
-        comment: 'Stores active JWT sessions for authenticated users',
+        comment: 'Stores active JWT sessions for authenticated user accounts',
         columns: [
           {
             name: 'token',
@@ -378,10 +612,10 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
             primaryKeyConstraintName: 'PK_sessions_token',
           },
           {
-            name: 'user_id',
+            name: 'user_account_id',
             type: 'uuid',
             isNullable: false,
-            comment: 'Foreign key to users.id, cascades on delete',
+            comment: 'Foreign key to user_accounts.id, cascades on delete',
           },
           {
             name: 'login_date',
@@ -411,10 +645,10 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
     await queryRunner.createForeignKey(
       'sessions',
       new TableForeignKey({
-        name: 'FK_sessions_user_id_users_id',
-        columnNames: ['user_id'],
+        name: 'FK_sessions_user_account_id_user_accounts_id',
+        columnNames: ['user_account_id'],
         referencedColumnNames: ['id'],
-        referencedTableName: 'users',
+        referencedTableName: 'user_accounts',
         onDelete: 'CASCADE',
       }),
     );
@@ -423,8 +657,8 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
     await queryRunner.createIndex(
       'sessions',
       new TableIndex({
-        name: 'IDX_sessions_user_id',
-        columnNames: ['user_id'],
+        name: 'IDX_sessions_user_account_id',
+        columnNames: ['user_account_id'],
       }),
     );
 
@@ -448,9 +682,6 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
   private async createSuperAdmin(queryRunner: QueryRunner): Promise<void> {
     const adminEmail = process.env.ADMIN_EMAIL || 'admin@devlab.io';
     const adminPassword = process.env.ADMIN_PASSWORD || 'ChangeMe1234*';
-
-    // Generate username from email (part before @)
-    const username = adminEmail.split('@')[0];
 
     // Hash the password
     const saltRounds = 10;
@@ -477,18 +708,60 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
 
     if (!existingAdmin) {
       // Create the admin user using TypeORM
-      const adminUser = queryRunner.manager.create(UserEntity, {
-        username,
+      let user: UserEntity = queryRunner.manager.create(UserEntity, {
+        username: 'admin',
         email: adminEmail,
         emailValidated: true,
-        password: hashedPassword,
+        firstName: 'Admin',
+        lastName: 'Devlab',
+        phone: '+689123456789',
         enabled: true,
         acceptedTerms: true,
         acceptedPrivacyPolicy: true,
-        roles: [adminRole],
+        profilePicture: 'https://example.com/profile.jpg',
       });
+      user = await queryRunner.manager.save(user);
 
-      await queryRunner.manager.save(adminUser);
+      // Create password credential for admin user
+      const credential: CredentialEntity = queryRunner.manager.create(
+        CredentialEntity,
+        {
+          type: 'password',
+          password: hashedPassword,
+          user: user,
+        },
+      );
+      await queryRunner.manager.save(credential);
+
+      // Create default organisation and establishment
+      let oganisation: OrganisationEntity = queryRunner.manager.create(
+        OrganisationEntity,
+        {
+          name: 'Devlab',
+        },
+      );
+      oganisation = await queryRunner.manager.save(oganisation);
+
+      let establishment: EstablishmentEntity = queryRunner.manager.create(
+        EstablishmentEntity,
+        {
+          name: 'Devlab',
+          organisation: oganisation,
+        },
+      );
+      establishment = await queryRunner.manager.save(establishment);
+
+      // Create user account with admin role
+      const account: UserAccountEntity = queryRunner.manager.create(
+        UserAccountEntity,
+        {
+          user: user,
+          organisation: oganisation,
+          establishment: establishment,
+          roles: [adminRole],
+        },
+      );
+      await queryRunner.manager.save(account);
     }
   }
 
@@ -497,13 +770,19 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
     await queryRunner.query(
       `DROP INDEX IF EXISTS "IDX_sessions_expiration_date"`,
     );
-    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_sessions_user_id"`);
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "IDX_sessions_user_account_id"`,
+    );
 
     // Drop tables in reverse order (respecting foreign key constraints)
     await queryRunner.dropTable('sessions', true);
+    await queryRunner.dropTable('user_account_roles', true);
+    await queryRunner.dropTable('user_accounts', true);
+    await queryRunner.dropTable('credentials', true);
     await queryRunner.dropTable('action_token_roles', true);
     await queryRunner.dropTable('action_tokens', true);
-    await queryRunner.dropTable('user_roles', true);
+    await queryRunner.dropTable('establishments', true);
+    await queryRunner.dropTable('organisations', true);
     await queryRunner.dropTable('users', true);
     await queryRunner.dropTable('roles', true);
 

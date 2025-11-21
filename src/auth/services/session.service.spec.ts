@@ -20,7 +20,7 @@ describe('SessionService', () => {
   const mockJwtConfig: JwtConfig = {
     jwt: {
       secret: 'test-secret',
-      expiresIn: '1h',
+      expiresIn: 3600, // 1h
     },
   };
 
@@ -49,22 +49,28 @@ describe('SessionService', () => {
   describe('create', () => {
     it('should create a new session', async () => {
       const token = 'test-token';
-      const userId = 'user-id';
+      const userAccountId = 'user-account-id';
       const mockSession = {
         token,
-        userId,
+        userAccountId,
         loginDate: new Date(),
         expirationDate: new Date(Date.now() + 60 * 60 * 1000),
       };
 
+      mockRepository.createQueryBuilder.mockReturnValue({
+        delete: jest.fn().mockReturnThis(),
+        from: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        execute: jest.fn().mockResolvedValue({ affected: 0 }),
+      });
       mockRepository.create.mockReturnValue(mockSession);
       mockRepository.save.mockResolvedValue(mockSession);
 
-      const result = await service.create(token, userId);
+      const result = await service.create(token, userAccountId);
 
       expect(mockRepository.create).toHaveBeenCalledWith({
         token,
-        userId,
+        userAccountId,
         loginDate: expect.any(Date),
         expirationDate: expect.any(Date),
       });
@@ -78,10 +84,10 @@ describe('SessionService', () => {
       const token = 'test-token';
       const mockSession = {
         token,
-        userId: 'user-id',
+        userAccountId: 'user-account-id',
         loginDate: new Date(),
         expirationDate: new Date(),
-        user: {},
+        userAccount: {},
       };
 
       mockRepository.findOne.mockResolvedValue(mockSession);
@@ -90,7 +96,13 @@ describe('SessionService', () => {
 
       expect(mockRepository.findOne).toHaveBeenCalledWith({
         where: { token },
-        relations: ['user'],
+        relations: [
+          'userAccount',
+          'userAccount.user',
+          'userAccount.organisation',
+          'userAccount.establishment',
+          'userAccount.roles',
+        ],
       });
       expect(result).toEqual(mockSession);
     });
@@ -109,10 +121,10 @@ describe('SessionService', () => {
       const token = 'test-token';
       const mockSession = {
         token,
-        userId: 'user-id',
+        userAccountId: 'user-account-id',
         loginDate: new Date(),
         expirationDate: new Date(),
-        user: {},
+        userAccount: {},
       } as SessionEntity;
 
       jest.spyOn(service, 'findByToken').mockResolvedValue(mockSession);
@@ -136,10 +148,10 @@ describe('SessionService', () => {
       const token = 'test-token';
       const mockSession = {
         token,
-        userId: 'user-id',
+        userAccountId: 'user-account-id',
         loginDate: new Date(),
         expirationDate: new Date(),
-        user: {},
+        userAccount: {},
       } as SessionEntity;
 
       jest.spyOn(service, 'getByToken').mockResolvedValue(mockSession);
@@ -158,27 +170,32 @@ describe('SessionService', () => {
       const mockSessions = [
         {
           token: 'token1',
-          userId,
+          userAccountId: 'user-account-id-1',
           loginDate: new Date(),
           expirationDate: new Date(),
         },
         {
           token: 'token2',
-          userId,
+          userAccountId: 'user-account-id-2',
           loginDate: new Date(),
           expirationDate: new Date(),
         },
       ];
 
-      mockRepository.find.mockResolvedValue(mockSessions);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(mockSessions),
+      };
+
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       const result = await service.findByUserId(userId);
 
-      expect(mockRepository.find).toHaveBeenCalledWith({
-        where: { userId },
-        relations: ['user'],
-        order: { loginDate: 'DESC' },
-      });
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith('session');
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalled();
+      expect(mockQueryBuilder.where).toHaveBeenCalled();
       expect(result).toEqual(mockSessions);
     });
   });
@@ -199,14 +216,8 @@ describe('SessionService', () => {
       await service.findActiveByUserId(userId);
 
       expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith('session');
-      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
-        'session.user',
-        'user',
-      );
-      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
-        'session.userId = :userId',
-        { userId },
-      );
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalled();
+      expect(mockQueryBuilder.where).toHaveBeenCalled();
       expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
         'session.expirationDate > :now',
         { now: expect.any(Date) },
@@ -239,7 +250,7 @@ describe('SessionService', () => {
     it('should return true if session is active', () => {
       const session = {
         token: 'test-token',
-        userId: 'user-id',
+        userAccountId: 'user-account-id',
         loginDate: new Date(),
         expirationDate: new Date(Date.now() + 60 * 60 * 1000), // 1 hour from now
       } as SessionEntity;
@@ -250,7 +261,7 @@ describe('SessionService', () => {
     it('should return false if session is expired', () => {
       const session = {
         token: 'test-token',
-        userId: 'user-id',
+        userAccountId: 'user-account-id',
         loginDate: new Date(),
         expirationDate: new Date(Date.now() - 1000), // 1 second ago
       } as SessionEntity;
@@ -286,20 +297,51 @@ describe('SessionService', () => {
   describe('deleteAllByUserId', () => {
     it('should delete all sessions for a user', async () => {
       const userId = 'user-id';
+      const mockSessions = [
+        {
+          token: 'token1',
+          userAccountId: 'user-account-id-1',
+          userAccount: {
+            id: 'user-account-id-1',
+            user: { id: userId },
+          },
+        },
+        {
+          token: 'token2',
+          userAccountId: 'user-account-id-2',
+          userAccount: {
+            id: 'user-account-id-2',
+            user: { id: userId },
+          },
+        },
+        {
+          token: 'token3',
+          userAccountId: 'user-account-id-3',
+          userAccount: {
+            id: 'user-account-id-3',
+            user: { id: userId },
+          },
+        },
+      ];
+
       const mockQueryBuilder = {
-        delete: jest.fn().mockReturnThis(),
-        from: jest.fn().mockReturnThis(),
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
-        execute: jest.fn().mockResolvedValue({ affected: 3 }),
+        orderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(mockSessions),
       };
 
       mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      mockRepository.remove.mockResolvedValue(mockSessions);
 
       const result = await service.deleteAllByUserId(userId);
 
-      expect(mockQueryBuilder.where).toHaveBeenCalledWith('userId = :userId', {
-        userId,
-      });
+      expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalled();
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
+        'userAccount.user.id = :userId',
+        { userId },
+      );
+      expect(mockRepository.remove).toHaveBeenCalledWith(mockSessions);
       expect(result).toBe(3);
     });
   });

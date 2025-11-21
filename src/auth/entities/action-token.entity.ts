@@ -8,17 +8,17 @@ import {
   ManyToOne,
   PrimaryColumn,
 } from 'typeorm';
-import { ActionToken } from '../types';
+import { Action } from '../types';
 import { UserEntity } from './user.entity';
 import { RoleEntity } from './role.entity';
 
 @Entity({ name: 'action_tokens' })
-export class ActionTokenEntity implements ActionToken {
+export class ActionEntity implements Action {
   @PrimaryColumn({ type: 'text' })
   token: string;
 
   @Column({ type: 'integer' })
-  type: number; // Bit mask of ActionTokenType values
+  type: number; // Bit mask of ActionType values
 
   @Column({ type: 'text' })
   email: string;
@@ -29,7 +29,7 @@ export class ActionTokenEntity implements ActionToken {
   @Column({ type: 'timestamp', name: 'expires_at', nullable: true })
   expiresAt?: Date;
 
-  @ManyToOne(() => UserEntity, (user) => user.actionsTokens, {
+  @ManyToOne(() => UserEntity, (user) => user.actions, {
     nullable: true,
     onDelete: 'CASCADE',
   })
@@ -50,5 +50,11 @@ export class ActionTokenEntity implements ActionToken {
       referencedColumnName: 'id',
     },
   })
-  roles?: RoleEntity[];
+  roles: RoleEntity[];
+
+  @Column({ name: 'organisation_id', type: 'uuid', nullable: true })
+  organisationId?: string;
+
+  @Column({ name: 'establishment_id', type: 'uuid', nullable: true })
+  establishmentId?: string;
 }

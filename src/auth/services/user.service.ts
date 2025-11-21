@@ -7,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { UserEntity, RoleEntity } from '../entities';
+import { UserEntity } from '../entities';
 import {
   UserQueryParams,
   UpdateUserRequest,
@@ -16,10 +16,11 @@ import {
   CreateUserRequest,
   PatchUserRequest,
 } from '../types';
-import * as bcrypt from 'bcryptjs';
-import { RoleService } from './role.service';
+import { CredentialService } from './credential.service';
+import { ActionService } from './action.service';
 import { UserConfig, UserConfigToken } from '../config/user.config';
 import { capitalize, normalize } from '../utils';
+import { ActionType, CreateActionRequest } from '../types';
 
 @Injectable()
 export class UserService {
@@ -30,25 +31,16 @@ export class UserService {
    *
    * @param userConfig - The user configuration
    * @param userRepository - The user repository
-   * @param roleService - The role service
+   * @param credentialService - The credential service
+   * @param actionService - The action service
    */
   public constructor(
     @Inject(UserConfigToken) private readonly userConfig: UserConfig,
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
-    @Inject() private readonly roleService: RoleService,
+    @Inject() private readonly credentialService: CredentialService,
+    @Inject() private readonly actionService: ActionService,
   ) {}
-
-  /**
-   * Hash a password using bcrypt
-   *
-   * @param password - The plain text password to hash
-   * @returns The hashed password
-   */
-  private async hashPassword(password: string): Promise<string> {
-    const saltRounds: number = 10;
-    return await bcrypt.hash(password, saltRounds);
-  }
 
   /**
    * Generate a random 6-digit suffix
@@ -116,20 +108,11 @@ export class UserService {
     // Generate username if not provided
     const username: string = await this.generateUsername(request);
 
-    // Get the roles and verify they all exist
-    const roles: RoleEntity[] = await this.roleService.getAllByNames(
-      this.userConfig.user.defaultRoles,
-    );
-
-    // Hash password
-    const hashedPassword: string = await this.hashPassword(request.password);
-
-    // Create new user
+    // Create new user (without credentials)
     let user: UserEntity = this.userRepository.create({
       email: request.email.toLowerCase(),
       emailValidated: false,
       username: username,
-      password: hashedPassword,
       firstName: request.firstName ? capitalize(request.firstName) : undefined,
       lastName: request.lastName?.toUpperCase(),
       phone: request.phone?.toUpperCase(),
@@ -137,11 +120,42 @@ export class UserService {
       acceptedTerms: request.acceptedTerms,
       acceptedPrivacyPolicy: request.acceptedPrivacyPolicy,
       enabled: true,
-      roles: roles,
     });
 
-    // Save the user
+    // Save the user first
     user = await this.userRepository.save(user);
+
+    // Create credentials if provided
+    if (request.credentials && request.credentials.length > 0) {
+      for (const credential of request.credentials) {
+        if (credential.type === 'password' && credential.password) {
+          await this.credentialService.createPasswordCredential(
+            user.id,
+            credential.password,
+          );
+        } else if (credential.type === 'google' && credential.googleId) {
+          await this.credentialService.createGoogleCredential(
+            user.id,
+            credential.googleId,
+          );
+        }
+      }
+    }
+
+    // Create actions if provided
+    if (request.actions && request.actions.length > 0) {
+      for (const action of request.actions) {
+        await this.actionService.create({
+          type: action.type,
+          user: user,
+          expiresIn: action.expiresIn,
+          roles: action.roles,
+        });
+      }
+      this.logger.debug(
+        `Created ${request.actions.length} action(s) for user ${user.id}`,
+      );
+    }
 
     // Log
     this.logger.debug(`User with email ${user.email} created`);
@@ -176,9 +190,6 @@ export class UserService {
     }
     if (request.profilePicture !== undefined) {
       user.profilePicture = request.profilePicture;
-    }
-    if (request.roles) {
-      user.roles = await this.roleService.getAllByNames(request.roles);
     }
 
     // Save the user
@@ -230,9 +241,6 @@ export class UserService {
     if (request.phone !== undefined) {
       user.phone = request.phone.toUpperCase();
     }
-    if (request.password !== undefined) {
-      user.password = await this.hashPassword(request.password);
-    }
     if (request.enabled !== undefined) {
       user.enabled = request.enabled;
     }
@@ -245,12 +253,33 @@ export class UserService {
     if (request.acceptedPrivacyPolicy !== undefined) {
       user.acceptedPrivacyPolicy = request.acceptedPrivacyPolicy;
     }
-    if (request.roles) {
-      user.roles = await this.roleService.getAllByNames(request.roles);
-    }
 
-    // Save the user
+    // Save the user first
     user = await this.userRepository.save(user);
+
+    // Update credentials if provided
+    if (request.credentials && request.credentials.length > 0) {
+      for (const credential of request.credentials) {
+        if (credential.type === 'password' && credential.password) {
+          // Create or update password credential
+          await this.credentialService.setPasswordCredential(
+            user.id,
+            credential.password,
+          );
+        } else if (credential.type === 'google' && credential.googleId) {
+          // Check if Google credential already exists
+          const existing = await this.credentialService.findGoogleCredential(
+            user.id,
+          );
+          if (!existing) {
+            await this.credentialService.createGoogleCredential(
+              user.id,
+              credential.googleId,
+            );
+          }
+        }
+      }
+    }
 
     // Log
     this.logger.debug(`User with email ${user.email} updated`);
@@ -275,8 +304,10 @@ export class UserService {
     const skip = (page - 1) * limit;
     const queryBuilder = this.userRepository
       .createQueryBuilder('user')
-      .leftJoinAndSelect('user.roles', 'role')
-      .leftJoinAndSelect('user.actionsTokens', 'actionsTokens');
+      .leftJoinAndSelect('user.credentials', 'credentials')
+      .leftJoinAndSelect('user.actions', 'actions')
+      .leftJoinAndSelect('user.accounts', 'accounts')
+      .leftJoinAndSelect('accounts.roles', 'roles');
 
     // Apply basic filters
     if (params.id) {
@@ -331,16 +362,10 @@ export class UserService {
       );
     }
 
-    // Handle roles filter
-    if (params.roles && params.roles.length > 0) {
-      queryBuilder.andWhere('role.name IN (:...roles)', {
-        roles: params.roles,
-      });
-    }
-
     // Handle action tokens filter
-    if (params.actions && params.actions.length > 0) {
-      queryBuilder.andWhere('actionsTokens.type IN (:...actions)', {
+    if (params.actions !== undefined) {
+      // params.actions is a bit mask or single ActionType value
+      queryBuilder.andWhere('actions.type = :actions', {
         actions: params.actions,
       });
     }
@@ -373,7 +398,7 @@ export class UserService {
   public async findByEmail(email: string): Promise<UserEntity | null> {
     return await this.userRepository.findOne({
       where: { email: email.toLowerCase() },
-      relations: ['roles', 'actionsTokens'],
+      relations: ['credentials', 'actions', 'accounts', 'accounts.roles'],
     });
   }
 
@@ -386,7 +411,7 @@ export class UserService {
   public async findById(id: string): Promise<UserEntity | null> {
     return await this.userRepository.findOne({
       where: { id },
-      relations: ['roles', 'actionsTokens'],
+      relations: ['credentials', 'actions', 'accounts', 'accounts.roles'],
     });
   }
 
@@ -470,5 +495,215 @@ export class UserService {
 
     // Delete the user
     await this.userRepository.remove(user);
+  }
+
+  // ==========================================
+  // Credential Management Facade Methods
+  // ==========================================
+
+  /**
+   * Add a password credential to a user
+   *
+   * @param userId - The ID of the user
+   * @param password - The plain text password
+   * @returns The created credential
+   * @throws NotFoundException if the user is not found
+   * @throws BadRequestException if a password credential already exists
+   */
+  public async addPasswordCredential(
+    userId: string,
+    password: string,
+  ): Promise<void> {
+    // Verify user exists
+    await this.getById(userId);
+
+    // Create password credential
+    await this.credentialService.createPasswordCredential(userId, password);
+
+    this.logger.debug(`Password credential added to user ${userId}`);
+  }
+
+  /**
+   * Add a Google credential to a user
+   *
+   * @param userId - The ID of the user
+   * @param googleId - The Google OAuth ID
+   * @returns The created credential
+   * @throws NotFoundException if the user is not found
+   * @throws BadRequestException if a Google credential already exists
+   */
+  public async addGoogleCredential(
+    userId: string,
+    googleId: string,
+  ): Promise<void> {
+    // Verify user exists
+    await this.getById(userId);
+
+    // Create Google credential
+    await this.credentialService.createGoogleCredential(userId, googleId);
+
+    this.logger.debug(`Google credential added to user ${userId}`);
+  }
+
+  /**
+   * Remove a password credential from a user
+   *
+   * @param userId - The ID of the user
+   * @throws NotFoundException if the user is not found
+   */
+  public async removePasswordCredential(userId: string): Promise<void> {
+    // Verify user exists
+    await this.getById(userId);
+
+    // Delete password credential
+    await this.credentialService.deletePasswordCredential(userId);
+
+    this.logger.debug(`Password credential removed from user ${userId}`);
+  }
+
+  /**
+   * Remove a Google credential from a user
+   *
+   * @param userId - The ID of the user
+   * @throws NotFoundException if the user is not found
+   */
+  public async removeGoogleCredential(userId: string): Promise<void> {
+    // Verify user exists
+    await this.getById(userId);
+
+    // Delete Google credential
+    await this.credentialService.deleteGoogleCredential(userId);
+
+    this.logger.debug(`Google credential removed from user ${userId}`);
+  }
+
+  /**
+   * Remove a credential by its ID
+   *
+   * @param userId - The ID of the user (for verification)
+   * @param credentialId - The ID of the credential to remove
+   * @throws NotFoundException if the user or credential is not found
+   */
+  public async removeCredential(
+    userId: string,
+    credentialId: string,
+  ): Promise<void> {
+    // Verify user exists
+    await this.getById(userId);
+
+    // Get all credentials for the user to verify ownership
+    const credentials = await this.credentialService.findByUserId(userId);
+    const credential = credentials.find((c) => c.id === credentialId);
+
+    if (!credential) {
+      throw new NotFoundException(
+        `Credential with ID ${credentialId} not found for user ${userId}`,
+      );
+    }
+
+    // Delete the credential
+    await this.credentialService.delete(credentialId);
+
+    this.logger.debug(`Credential ${credentialId} removed from user ${userId}`);
+  }
+
+  // ==========================================
+  // Action Management Facade Methods
+  // ==========================================
+
+  /**
+   * Add an action to a user (create an action token)
+   *
+   * @param userId - The ID of the user
+   * @param actionType - The action type (bit mask from ActionType enum)
+   * @param expiresIn - Optional expiration time in hours
+   * @param roles - Optional roles to assign with the action
+   * @returns The created action token
+   * @throws NotFoundException if the user is not found
+   */
+  public async addAction(
+    userId: string,
+    actionType: ActionType | number,
+    expiresIn?: number,
+    roles?: string[],
+  ): Promise<string> {
+    // Get the user
+    const user = await this.getById(userId);
+
+    // Create action request
+    const createRequest: CreateActionRequest = {
+      type: actionType,
+      user: user,
+      expiresIn: expiresIn,
+      roles: roles,
+    };
+
+    // Create the action token
+    const action = await this.actionService.create(createRequest);
+
+    this.logger.debug(
+      `Action ${actionType} added to user ${userId} with token ${action.token}`,
+    );
+
+    // Return the token for reference
+    return action.token;
+  }
+
+  /**
+   * Remove an action from a user (revoke an action token)
+   *
+   * @param userId - The ID of the user (for verification)
+   * @param token - The action token to revoke
+   * @throws NotFoundException if the user or token is not found
+   */
+  public async removeAction(userId: string, token: string): Promise<void> {
+    // Verify user exists
+    await this.getById(userId);
+
+    // Find the action token to verify it belongs to the user
+    const action = await this.actionService.findByToken(token);
+    if (!action) {
+      throw new NotFoundException(`Action token ${token} not found`);
+    }
+
+    if (action.user && action.user.id !== userId) {
+      throw new BadRequestException(
+        `Action token ${token} does not belong to user ${userId}`,
+      );
+    }
+
+    // Revoke the action token
+    await this.actionService.revoke(token);
+
+    this.logger.debug(`Action token ${token} removed from user ${userId}`);
+  }
+
+  /**
+   * Remove all actions for a user
+   *
+   * @param userId - The ID of the user
+   * @throws NotFoundException if the user is not found
+   */
+  public async removeAllActions(userId: string): Promise<void> {
+    // Get the user
+    const user = await this.getById(userId);
+
+    // Find all action tokens for this user
+    const actionsPage = await this.actionService.findAll(
+      { username: user.username },
+      1,
+      1000, // Get all actions (assuming reasonable limit)
+    );
+
+    // Revoke all action tokens
+    for (const action of actionsPage.data) {
+      if (action.user && action.user.id === userId) {
+        await this.actionService.revoke(action.token);
+      }
+    }
+
+    this.logger.debug(
+      `All actions removed from user ${userId} (${actionsPage.data.length} tokens)`,
+    );
   }
 }

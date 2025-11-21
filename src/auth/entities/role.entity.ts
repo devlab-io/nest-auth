@@ -1,8 +1,7 @@
 import { Column, Entity, ManyToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Role } from '../types';
-import { UserEntity } from './user.entity';
-import { ActionTokenEntity } from './action-token.entity';
+import { ActionEntity } from './action-token.entity';
 
 @Entity({ name: 'roles' })
 export class RoleEntity implements Role {
@@ -21,15 +20,8 @@ export class RoleEntity implements Role {
   @Column({ nullable: true })
   description?: string;
 
-  @ApiProperty({
-    description: 'Users that have this this role',
-    type: () => [UserEntity],
-  })
-  @ManyToMany(() => UserEntity, (user) => user.roles)
-  users: UserEntity[];
-
-  @ManyToMany(() => ActionTokenEntity, (token) => token.roles, {
+  @ManyToMany(() => ActionEntity, (token) => token.roles, {
     cascade: false,
   })
-  actionTokens: ActionTokenEntity[];
+  actionTokens: ActionEntity[];
 }

@@ -1,225 +1,26 @@
-/**
- * Action Token Type as bit mask
- * Each action is represented by a unique bit position
- */
-export enum ActionTokenType {
-  Invite = 1 << 0, // 1 (00000001)
-  ValidateEmail = 1 << 1, // 2 (00000010)
-  AcceptTerms = 1 << 2, // 4 (00000100)
-  AcceptPrivacyPolicy = 1 << 3, // 8 (00001000)
-  CreatePassword = 1 << 4, // 16 (00010000)
-  ResetPassword = 1 << 5, // 32 (00100000)
-  ChangeEmail = 1 << 6, // 64 (01000000)
-}
+// Action Token
+export * from './action-token.types';
 
-export interface ActionToken {
-  token: string;
-  type: number; // Bit mask of ActionTokenType values
-  email: string;
-  createdAt: Date;
-  expiresAt?: Date;
-  user?: User;
-  roles?: Role[];
-}
+// Role
+export * from './role.types';
 
-export interface ActionTokenPage {
-  data: ActionToken[];
-  total: number;
-  page: number;
-  limit: number;
-}
+// Organisation
+export * from './organisation.types';
 
-export interface ActionTokenQueryParams {
-  type?: number; // Bit mask of ActionTokenType values
-  createdAt?: Date;
-  expiresAt?: Date;
-  email?: string;
-  username?: string;
-  roles?: string[];
-}
+// Establishment
+export * from './establishment.types';
 
-export interface CreateActionTokenRequest {
-  type: number; // Bit mask of ActionTokenType values
-  email?: string; // If user is not provided, email is required
-  expiresIn?: number; // hours
-  user?: User;
-  roles?: string[];
-}
+// Credential
+export * from './credential.types';
 
-export interface Role {
-  id: number;
-  name: string;
-  description?: string;
-}
+// User
+export * from './user.types';
 
-export interface User {
-  id: string;
-  username: string;
-  email: string;
-  emailValidated: boolean;
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
-  password?: string;
-  googleId?: string;
-  enabled: boolean;
-  profilePicture?: string;
-  acceptedTerms: boolean;
-  acceptedPrivacyPolicy: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  roles: Role[];
-  actionsTokens: ActionToken[];
-}
+// User Account
+export * from './user-account.types';
 
-export interface CreateUserRequest {
-  username?: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
-  password: string;
-  enabled: boolean;
-  profilePicture?: string;
-  acceptedTerms: boolean;
-  acceptedPrivacyPolicy: boolean;
-  roles?: string[];
-}
+// Session
+export * from './session.types';
 
-export interface PatchUserRequest {
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
-  profilePicture?: string;
-  roles?: string[];
-}
-
-export interface UpdateUserRequest extends PatchUserRequest {
-  email?: string;
-  emailValidated?: boolean;
-  username?: string;
-  password?: string;
-  enabled?: boolean;
-  acceptedTerms?: boolean;
-  acceptedPrivacyPolicy?: boolean;
-}
-
-export interface UserQueryParams {
-  id?: string;
-  username?: string;
-  email?: string;
-  emailValidated?: boolean;
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
-  enabled?: boolean;
-  acceptedTerms?: boolean;
-  acceptedPrivacyPolicy?: boolean;
-  createdAt?: Date;
-  updatedAt?: Date;
-  roles?: string[];
-  actions?: number[]; // Array of bit masks or single ActionTokenType values
-}
-
-export interface UserPage {
-  data: User[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-export interface GenerateUsernameRequest {
-  email: string;
-  username?: string;
-  firstName?: string;
-  lastName?: string;
-}
-
-export interface InviteRequest {
-  email: string;
-  expiresIn?: number; // hours
-  message?: string;
-  roles?: string[];
-}
-
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface SignUpRequest extends CreateUserRequest {}
-
-export interface ActionRequest {
-  token: string;
-  email: string;
-}
-
-export interface AcceptInvitationRequest extends SignUpRequest, ActionRequest {}
-
-export interface ChangeEmailRequest extends ActionRequest {
-  email: string;
-}
-
-export interface ValidateEmailRequest extends ActionRequest {
-  email: string;
-}
-
-export interface CreatePasswordRequest extends ActionRequest {
-  password: string;
-}
-
-export interface ResetPasswordRequest extends ActionRequest {
-  password: string;
-}
-
-export interface AcceptTermsRequest extends ActionRequest {
-  acceptedTerms: boolean;
-}
-
-export interface AcceptPrivacyPolicyRequest extends ActionRequest {
-  acceptedPrivacyPolicy: boolean;
-}
-
-export type AnyActionRequest =
-  | AcceptInvitationRequest
-  | ChangeEmailRequest
-  | ValidateEmailRequest
-  | CreatePasswordRequest
-  | ResetPasswordRequest
-  | AcceptTermsRequest
-  | AcceptPrivacyPolicyRequest;
-
-export interface SignInRequest {
-  email: string;
-  password: string;
-}
-
-export interface AuthResponse {
-  jwt: JwtToken;
-  user: User;
-}
-
-export interface JwtToken {
-  accessToken: string;
-  expiresIn: string;
-}
-
-export interface JwtPayload {
-  sub: string; // user id
-  email: string;
-  username: string;
-  roles: string[];
-  iat?: number;
-  exp?: number;
-}
-
-export interface Session {
-  token: string;
-  userId: string;
-  loginDate: Date;
-  expirationDate: Date;
-  user?: User;
-}
-
-export interface SessionQueryParams {
-  userId?: string;
-  loginDate?: Date;
-  expirationDate?: Date;
-  active?: boolean; // Only active (not expired) sessions
-}
+// Auth
+export * from './auth.types';

@@ -6,27 +6,40 @@ import {
   provideAdminConfig,
   provideUserConfig,
   provideGoogleAuthConfig,
+  provideActionConfig,
   AuthConfig,
 } from './config';
-import { JwtAuthGuard } from './guards';
+import { JwtAuthGuard, FrontendUrlGuard } from './guards';
 import {
-  ActionTokenService,
+  ActionService,
   AuthService,
   JwtService,
   RoleService,
   SessionService,
   UserService,
+  NotificationService,
+  OrganisationService,
+  EstablishmentService,
+  UserAccountService,
+  CredentialService,
 } from './services';
 import {
   AuthController,
   UserController,
   SessionController,
+  OrganisationController,
+  EstablishmentController,
+  RoleController,
 } from './controllers';
 import {
   UserEntity,
   RoleEntity,
-  ActionTokenEntity,
+  ActionEntity,
   SessionEntity,
+  OrganisationEntity,
+  EstablishmentEntity,
+  CredentialEntity,
+  UserAccountEntity,
 } from './entities';
 
 /**
@@ -42,6 +55,7 @@ export class AuthModule {
    * @returns Dynamic authentication module
    */
   static forRoot(config?: AuthConfig): DynamicModule {
+    const actionConfigProvider: Provider = provideActionConfig();
     const jwtConfigProvider: Provider = provideJwtConfig();
     const adminConfigProvider: Provider = provideAdminConfig();
     const userConfigProvider: Provider = provideUserConfig();
@@ -54,12 +68,24 @@ export class AuthModule {
         TypeOrmModule.forFeature([
           UserEntity,
           RoleEntity,
-          ActionTokenEntity,
+          ActionEntity,
           SessionEntity,
+          OrganisationEntity,
+          EstablishmentEntity,
+          CredentialEntity,
+          UserAccountEntity,
         ]),
       ],
-      controllers: [AuthController, UserController, SessionController],
+      controllers: [
+        AuthController,
+        UserController,
+        SessionController,
+        OrganisationController,
+        EstablishmentController,
+        RoleController,
+      ],
       providers: [
+        actionConfigProvider,
         jwtConfigProvider,
         adminConfigProvider,
         userConfigProvider,
@@ -67,13 +93,20 @@ export class AuthModule {
         authConfigProvider,
         AuthService,
         UserService,
-        ActionTokenService,
+        ActionService,
         RoleService,
         JwtService,
         SessionService,
+        NotificationService,
+        OrganisationService,
+        EstablishmentService,
+        UserAccountService,
+        CredentialService,
         JwtAuthGuard,
+        FrontendUrlGuard,
       ],
       exports: [
+        actionConfigProvider,
         authConfigProvider,
         jwtConfigProvider,
         adminConfigProvider,
@@ -81,11 +114,17 @@ export class AuthModule {
         googleAuthConfigProvider,
         AuthService,
         UserService,
-        ActionTokenService,
+        ActionService,
         RoleService,
         JwtService,
         SessionService,
+        NotificationService,
+        OrganisationService,
+        EstablishmentService,
+        UserAccountService,
+        CredentialService,
         JwtAuthGuard,
+        FrontendUrlGuard,
       ],
     };
   }

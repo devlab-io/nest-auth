@@ -2,8 +2,6 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  JoinTable,
-  ManyToMany,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -11,9 +9,9 @@ import {
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { User } from '../types';
-import { RoleEntity } from './role.entity';
-import { ActionTokenEntity } from './action-token.entity';
-import { SessionEntity } from './session.entity';
+import { ActionEntity } from './action-token.entity';
+import { CredentialEntity } from './credential.entity';
+import { UserAccountEntity } from './user-account.entity';
 
 @Entity('users')
 @Unique('unique_email', ['email'])
@@ -72,22 +70,6 @@ export class UserEntity implements User {
   phone?: string;
 
   @ApiProperty({
-    example: 'hashedPassword123',
-    description: 'Hashed password of the user',
-    nullable: true,
-  })
-  @Column({ nullable: true })
-  password?: string;
-
-  @ApiProperty({
-    example: '123456789',
-    description: 'Google ID of the user if signed in with Google',
-    nullable: true,
-  })
-  @Column({ nullable: true })
-  googleId?: string;
-
-  @ApiProperty({
     example: true,
     description: 'Indicates if the user account is enabled',
   })
@@ -131,30 +113,29 @@ export class UserEntity implements User {
   updatedAt: Date;
 
   @ApiProperty({
-    description: 'Roles assigned to the user',
-    type: () => [RoleEntity],
+    description: 'Credentials for authentication (password, google, etc.)',
+    type: () => [CredentialEntity],
   })
-  @ManyToMany(() => RoleEntity, (role) => role.users, { eager: true })
-  @JoinTable({
-    name: 'user_roles',
-    joinColumn: {
-      name: 'userId',
-      referencedColumnName: 'id',
-    },
-    inverseJoinColumn: {
-      name: 'roleId',
-      referencedColumnName: 'id',
-    },
-  })
-  roles: RoleEntity[];
-
-  @OneToMany(() => ActionTokenEntity, (token) => token.user, {
+  @OneToMany(() => CredentialEntity, (credential) => credential.user, {
     cascade: false,
   })
-  actionsTokens: ActionTokenEntity[];
+  credentials: CredentialEntity[];
 
-  @OneToMany(() => SessionEntity, (session) => session.user, {
+  @ApiProperty({
+    description: 'Action tokens associated with this user',
+    type: () => [ActionEntity],
+  })
+  @OneToMany(() => ActionEntity, (token) => token.user, {
     cascade: false,
   })
-  sessions: SessionEntity[];
+  actions: ActionEntity[];
+
+  @ApiProperty({
+    description: 'User accounts associated with this user',
+    type: () => [UserAccountEntity],
+  })
+  @OneToMany(() => UserAccountEntity, (userAccount) => userAccount.user, {
+    cascade: false,
+  })
+  accounts: UserAccountEntity[];
 }

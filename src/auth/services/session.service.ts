@@ -1,12 +1,18 @@
 import { Repository } from 'typeorm';
-import { Injectable, NotFoundException, Inject, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  Inject,
+  Logger,
+  OnModuleInit,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { SessionEntity } from '../entities';
 import { SessionQueryParams } from '../types';
 import { JwtConfig, JwtConfigToken } from '../config/jwt.config';
 
 @Injectable()
-export class SessionService {
+export class SessionService implements OnModuleInit {
   private readonly logger: Logger = new Logger(SessionService.name);
 
   public constructor(
@@ -16,31 +22,51 @@ export class SessionService {
   ) {}
 
   /**
+   * Called when the module is initialized
+   * Deletes all expired sessions on application startup
+   */
+  public async onModuleInit(): Promise<void> {
+    const deletedCount = await this.deleteExpired();
+    if (deletedCount > 0) {
+      this.logger.log(
+        `Cleaned up ${deletedCount} expired session(s) on startup`,
+      );
+    }
+  }
+
+  /**
    * Create a new session
+   * Deletes all other sessions for the user account before creating a new one
    *
    * @param token - The JWT token
-   * @param userId - The user ID
+   * @param userAccountId - The user account ID
    * @returns The created session
    */
-  public async create(token: string, userId: string): Promise<SessionEntity> {
-    // Calculate expiration date from expiresIn
-    const expirationDate = this.calculateExpirationDate(
-      this.jwtConfig.jwt.expiresIn,
-    );
+  public async create(
+    token: string,
+    userAccountId: string,
+  ): Promise<SessionEntity> {
+    // Delete all other sessions for this user account
+    const deletedCount = await this.deleteAllByUserAccountId(userAccountId);
+    if (deletedCount > 0) {
+      this.logger.debug(
+        `Deleted ${deletedCount} existing session(s) for user account ${userAccountId}`,
+      );
+    }
+
+    // Calculate expiration date from expiresIn (already parsed in config, in milliseconds)
+    const expirationDate = new Date(Date.now() + this.jwtConfig.jwt.expiresIn);
 
     // Create session
     let session: SessionEntity = this.sessionRepository.create({
       token,
-      userId,
+      userAccountId,
       loginDate: new Date(),
       expirationDate,
     });
 
     // Save session
     session = await this.sessionRepository.save(session);
-
-    // Log
-    this.logger.debug(`Session created for user ${userId}`);
 
     // Done
     return session;
@@ -55,7 +81,13 @@ export class SessionService {
   public async findByToken(token: string): Promise<SessionEntity | null> {
     return await this.sessionRepository.findOne({
       where: { token },
-      relations: ['user'],
+      relations: [
+        'userAccount',
+        'userAccount.user',
+        'userAccount.organisation',
+        'userAccount.establishment',
+        'userAccount.roles',
+      ],
     });
   }
 
@@ -83,25 +115,76 @@ export class SessionService {
   public async deleteByToken(token: string): Promise<void> {
     const session = await this.getByToken(token);
     await this.sessionRepository.remove(session);
-    this.logger.debug(`Session deleted for token`);
   }
 
   /**
-   * Find all sessions for a user
+   * Find all sessions for a user account
    *
-   * @param userId - The user ID
+   * @param userAccountId - The user account ID
    * @returns Array of sessions
    */
-  public async findByUserId(userId: string): Promise<SessionEntity[]> {
+  public async findByUserAccountId(
+    userAccountId: string,
+  ): Promise<SessionEntity[]> {
     return await this.sessionRepository.find({
-      where: { userId },
-      relations: ['user'],
+      where: { userAccountId },
+      relations: [
+        'userAccount',
+        'userAccount.user',
+        'userAccount.organisation',
+        'userAccount.establishment',
+        'userAccount.roles',
+      ],
       order: { loginDate: 'DESC' },
     });
   }
 
   /**
-   * Find all active sessions for a user (not expired)
+   * Find all active sessions for a user account (not expired)
+   *
+   * @param userAccountId - The user account ID
+   * @returns Array of active sessions
+   */
+  public async findActiveByUserAccountId(
+    userAccountId: string,
+  ): Promise<SessionEntity[]> {
+    const now = new Date();
+    return await this.sessionRepository
+      .createQueryBuilder('session')
+      .leftJoinAndSelect('session.userAccount', 'userAccount')
+      .leftJoinAndSelect('userAccount.user', 'user')
+      .leftJoinAndSelect('userAccount.organisation', 'organisation')
+      .leftJoinAndSelect('userAccount.establishment', 'establishment')
+      .leftJoinAndSelect('userAccount.roles', 'roles')
+      .where('session.userAccountId = :userAccountId', { userAccountId })
+      .andWhere('session.expirationDate > :now', { now })
+      .orderBy('session.loginDate', 'DESC')
+      .getMany();
+  }
+
+  /**
+   * Find all sessions for a user (by user ID, for backward compatibility)
+   * Note: This method searches all user accounts for the given user ID
+   *
+   * @param userId - The user ID
+   * @returns Array of sessions
+   */
+  public async findByUserId(userId: string): Promise<SessionEntity[]> {
+    return await this.sessionRepository
+      .createQueryBuilder('session')
+      .leftJoinAndSelect('session.userAccount', 'userAccount')
+      .leftJoinAndSelect('userAccount.user', 'user')
+      .leftJoinAndSelect('userAccount.organisation', 'organisation')
+      .leftJoinAndSelect('userAccount.establishment', 'establishment')
+      .leftJoinAndSelect('userAccount.roles', 'roles')
+      .where('userAccount.user.id = :userId', { userId })
+      .orderBy('session.loginDate', 'DESC')
+      .getMany();
+  }
+
+  /**
+   * Find all active sessions for a user (by user ID, not expired, for backward compatibility)
+   * Note: This method searches all user accounts for the given user ID
    *
    * @param userId - The user ID
    * @returns Array of active sessions
@@ -110,8 +193,12 @@ export class SessionService {
     const now = new Date();
     return await this.sessionRepository
       .createQueryBuilder('session')
-      .leftJoinAndSelect('session.user', 'user')
-      .where('session.userId = :userId', { userId })
+      .leftJoinAndSelect('session.userAccount', 'userAccount')
+      .leftJoinAndSelect('userAccount.user', 'user')
+      .leftJoinAndSelect('userAccount.organisation', 'organisation')
+      .leftJoinAndSelect('userAccount.establishment', 'establishment')
+      .leftJoinAndSelect('userAccount.roles', 'roles')
+      .where('userAccount.user.id = :userId', { userId })
       .andWhere('session.expirationDate > :now', { now })
       .orderBy('session.loginDate', 'DESC')
       .getMany();
@@ -126,10 +213,21 @@ export class SessionService {
   public async search(params: SessionQueryParams): Promise<SessionEntity[]> {
     const queryBuilder = this.sessionRepository
       .createQueryBuilder('session')
-      .leftJoinAndSelect('session.user', 'user');
+      .leftJoinAndSelect('session.userAccount', 'userAccount')
+      .leftJoinAndSelect('userAccount.user', 'user')
+      .leftJoinAndSelect('userAccount.organisation', 'organisation')
+      .leftJoinAndSelect('userAccount.establishment', 'establishment')
+      .leftJoinAndSelect('userAccount.roles', 'roles');
 
+    if (params.userAccountId) {
+      queryBuilder.andWhere('session.userAccountId = :userAccountId', {
+        userAccountId: params.userAccountId,
+      });
+    }
+
+    // For backward compatibility: search by userId (userAccount.user.id)
     if (params.userId) {
-      queryBuilder.andWhere('session.userId = :userId', {
+      queryBuilder.andWhere('userAccount.user.id = :userId', {
         userId: params.userId,
       });
     }
@@ -165,7 +263,11 @@ export class SessionService {
     const now = new Date();
     return await this.sessionRepository
       .createQueryBuilder('session')
-      .leftJoinAndSelect('session.user', 'user')
+      .leftJoinAndSelect('session.userAccount', 'userAccount')
+      .leftJoinAndSelect('userAccount.user', 'user')
+      .leftJoinAndSelect('userAccount.organisation', 'organisation')
+      .leftJoinAndSelect('userAccount.establishment', 'establishment')
+      .leftJoinAndSelect('userAccount.roles', 'roles')
       .where('session.expirationDate > :now', { now })
       .orderBy('session.loginDate', 'DESC')
       .getMany();
@@ -194,20 +296,50 @@ export class SessionService {
   }
 
   /**
-   * Delete all sessions for a user
+   * Delete all sessions for a user account
+   *
+   * @param userAccountId - The user account ID
+   * @returns Number of deleted sessions
+   */
+  public async deleteAllByUserAccountId(
+    userAccountId: string,
+  ): Promise<number> {
+    const result = await this.sessionRepository
+      .createQueryBuilder()
+      .delete()
+      .from(SessionEntity)
+      .where('userAccountId = :userAccountId', { userAccountId })
+      .execute();
+
+    const count = result.affected || 0;
+    if (count > 0) {
+      this.logger.debug(
+        `Deleted ${count} sessions for user account ${userAccountId}`,
+      );
+    }
+
+    return count;
+  }
+
+  /**
+   * Delete all sessions for a user (by user ID, for backward compatibility)
+   * Note: This method deletes all sessions for all user accounts of the given user ID
    *
    * @param userId - The user ID
    * @returns Number of deleted sessions
    */
   public async deleteAllByUserId(userId: string): Promise<number> {
-    const result = await this.sessionRepository
-      .createQueryBuilder()
-      .delete()
-      .from(SessionEntity)
-      .where('userId = :userId', { userId })
-      .execute();
+    // First, find all sessions for this user
+    const sessions = await this.findByUserId(userId);
 
-    const count = result.affected || 0;
+    if (sessions.length === 0) {
+      return 0;
+    }
+
+    // Delete all found sessions
+    await this.sessionRepository.remove(sessions);
+
+    const count = sessions.length;
     if (count > 0) {
       this.logger.debug(`Deleted ${count} sessions for user ${userId}`);
     }
@@ -224,42 +356,5 @@ export class SessionService {
   public isActive(session: SessionEntity): boolean {
     const now = new Date();
     return session.expirationDate > now;
-  }
-
-  /**
-   * Calculate expiration date from expiresIn string
-   *
-   * @param expiresIn - Expiration string (e.g., "1h", "30m", "7d")
-   * @returns Expiration date
-   */
-  private calculateExpirationDate(expiresIn: string): Date {
-    const match = expiresIn.match(/^(\d+)([smhd])$/);
-    if (!match) {
-      // Default to 1 hour if parsing fails
-      return new Date(Date.now() + 60 * 60 * 1000);
-    }
-
-    const value = parseInt(match[1], 10);
-    const unit = match[2];
-    let milliseconds = 0;
-
-    switch (unit) {
-      case 's':
-        milliseconds = value * 1000;
-        break;
-      case 'm':
-        milliseconds = value * 60 * 1000;
-        break;
-      case 'h':
-        milliseconds = value * 60 * 60 * 1000;
-        break;
-      case 'd':
-        milliseconds = value * 24 * 60 * 60 * 1000;
-        break;
-      default:
-        milliseconds = 60 * 60 * 1000; // Default to 1 hour
-    }
-
-    return new Date(Date.now() + milliseconds);
   }
 }

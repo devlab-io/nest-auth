@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { Session } from '../types';
-import { UserEntity } from './user.entity';
+import { UserAccountEntity } from './user-account.entity';
 
 @Entity({ name: 'sessions' })
 export class SessionEntity implements Session {
@@ -21,10 +21,10 @@ export class SessionEntity implements Session {
 
   @ApiProperty({
     example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'ID of the user who owns this session',
+    description: 'ID of the user account that owns this session',
   })
-  @Column({ name: 'user_id', type: 'uuid' })
-  userId: string;
+  @Column({ name: 'user_account_id', type: 'uuid' })
+  userAccountId: string;
 
   @ApiProperty({
     example: '2024-02-20T10:00:00.000Z',
@@ -40,9 +40,14 @@ export class SessionEntity implements Session {
   @Column({ type: 'timestamp', name: 'expiration_date' })
   expirationDate: Date;
 
-  @ManyToOne(() => UserEntity, (user) => user.sessions, {
+  @ApiProperty({
+    description: 'User account associated with this session',
+    type: () => UserAccountEntity,
+  })
+  @ManyToOne(() => UserAccountEntity, {
+    nullable: false,
     onDelete: 'CASCADE',
   })
-  @JoinColumn({ name: 'user_id' })
-  user: UserEntity;
+  @JoinColumn({ name: 'user_account_id' })
+  userAccount: UserAccountEntity;
 }

@@ -1,6 +1,11 @@
-export { ActionTokenService } from './action-token.service';
+export { ActionService } from './action.service';
+export { OrganisationService } from './organisation.service';
+export { EstablishmentService } from './establishment.service';
+export { UserAccountService } from './user-account.service';
+export { CredentialService } from './credential.service';
 export { UserService } from './user.service';
 export { RoleService } from './role.service';
 export { JwtService } from './jwt.service';
 export { SessionService } from './session.service';
 export { AuthService } from './auth.service';
+export { NotificationService } from './notification.service';
