@@ -131,7 +131,7 @@ export class UserDto implements User {
     description: 'User accounts associated with the user',
     type: Array,
   })
-  userAccounts: any[];
+  accounts: any[];
 }
 
 export class CreateUserRequestDto implements CreateUserRequest {

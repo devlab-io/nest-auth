@@ -70,7 +70,7 @@ describe('AuthService', () => {
     id: 'est-id',
     name: 'Test Establishment',
     organisation: { ...mockOrganisation, id: 'org-id' },
-    userAccounts: [],
+    accounts: [],
   } as EstablishmentEntity;
 
   const mockUser: UserEntity = {
@@ -87,7 +87,7 @@ describe('AuthService', () => {
     updatedAt: new Date(),
     credentials: [],
     actions: [],
-    userAccounts: [],
+    accounts: [],
   } as UserEntity;
 
   const mockUserAccount: UserAccountEntity = {

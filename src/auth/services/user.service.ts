@@ -305,8 +305,8 @@ export class UserService {
     const queryBuilder = this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.credentials', 'credentials')
-      .leftJoinAndSelect('user.actionsTokens', 'actionsTokens')
-      .leftJoinAndSelect('user.userAccounts', 'userAccounts');
+      .leftJoinAndSelect('user.actions', 'actions')
+      .leftJoinAndSelect('user.accounts', 'accounts');
 
     // Apply basic filters
     if (params.id) {
@@ -364,7 +364,7 @@ export class UserService {
     // Handle action tokens filter
     if (params.actions !== undefined) {
       // params.actions is a bit mask or single ActionType value
-      queryBuilder.andWhere('actionsTokens.type = :actions', {
+      queryBuilder.andWhere('actions.type = :actions', {
         actions: params.actions,
       });
     }
@@ -397,7 +397,7 @@ export class UserService {
   public async findByEmail(email: string): Promise<UserEntity | null> {
     return await this.userRepository.findOne({
       where: { email: email.toLowerCase() },
-      relations: ['credentials', 'actionsTokens', 'userAccounts'],
+      relations: ['credentials', 'actions', 'accounts'],
     });
   }
 
@@ -410,7 +410,7 @@ export class UserService {
   public async findById(id: string): Promise<UserEntity | null> {
     return await this.userRepository.findOne({
       where: { id },
-      relations: ['credentials', 'actionsTokens', 'userAccounts'],
+      relations: ['credentials', 'actions', 'accounts'],
     });
   }
 

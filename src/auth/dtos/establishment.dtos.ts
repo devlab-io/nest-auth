@@ -31,7 +31,7 @@ export class EstablishmentDto implements Establishment {
     description: 'User accounts associated with this establishment',
     type: [Object],
   })
-  userAccounts: any[];
+  accounts: any[];
 }
 
 export class CreateEstablishmentRequestDto

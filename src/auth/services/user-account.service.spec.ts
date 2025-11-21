@@ -58,7 +58,7 @@ describe('UserAccountService', () => {
     updatedAt: new Date(),
     credentials: [],
     actions: [],
-    userAccounts: [],
+    accounts: [],
   } as UserEntity;
 
   const mockOrganisation: OrganisationEntity = {
@@ -71,7 +71,7 @@ describe('UserAccountService', () => {
     id: 'est-id',
     name: 'Test Establishment',
     organisation: mockOrganisation,
-    userAccounts: [],
+    accounts: [],
   } as EstablishmentEntity;
 
   const mockRoles: RoleEntity[] = [
@@ -300,7 +300,7 @@ describe('UserAccountService', () => {
       const params: UserAccountQueryParams = {
         userId: 'user-id',
       };
-      const userAccounts = [
+      const accounts = [
         {
           id: 'user-account-id',
           user: mockUser,
@@ -317,7 +317,7 @@ describe('UserAccountService', () => {
         skip: jest.fn().mockReturnThis(),
         take: jest.fn().mockReturnThis(),
         orderBy: jest.fn().mockReturnThis(),
-        getManyAndCount: jest.fn().mockResolvedValue([userAccounts, 1]),
+        getManyAndCount: jest.fn().mockResolvedValue([accounts, 1]),
       };
 
       mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
@@ -331,7 +331,7 @@ describe('UserAccountService', () => {
         'user.id = :userId',
         { userId: 'user-id' },
       );
-      expect(result.data).toEqual(userAccounts);
+      expect(result.data).toEqual(accounts);
       expect(result.total).toBe(1);
     });
   });
@@ -377,7 +377,7 @@ describe('UserAccountService', () => {
         id: 'new-est-id',
         name: 'New Establishment',
         organisation: newOrganisation,
-        userAccounts: [],
+        accounts: [],
       } as EstablishmentEntity;
       const request: UpdateUserAccountRequest = {
         organisationId: 'new-org-id',

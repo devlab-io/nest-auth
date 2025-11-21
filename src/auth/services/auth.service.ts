@@ -437,20 +437,20 @@ export class AuthService {
     }
 
     // Find user accounts for this user
-    const userAccounts = await this.userAccountService.search(
+    const accounts = await this.userAccountService.search(
       { userId: user.id },
       1,
       1,
     );
 
-    if (userAccounts.data.length === 0) {
+    if (accounts.data.length === 0) {
       throw new BadRequestException(
         'No user account found for this user. Please contact an administrator.',
       );
     }
 
     // Use the first user account (in a real scenario, you might want to choose based on context)
-    const userAccount = userAccounts.data[0];
+    const userAccount = accounts.data[0];
 
     // Authenticate using UserAccount
     const token: JwtToken = await this.jwtService.authenticate(

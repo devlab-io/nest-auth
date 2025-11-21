@@ -104,7 +104,7 @@ export class EstablishmentService {
   public async findById(id: string): Promise<EstablishmentEntity | null> {
     return await this.establishmentRepository.findOne({
       where: { id },
-      relations: ['organisation', 'userAccounts'],
+      relations: ['organisation', 'accounts'],
     });
   }
 
@@ -124,7 +124,7 @@ export class EstablishmentService {
         name,
         organisation: { id: organisationId },
       },
-      relations: ['organisation', 'userAccounts'],
+      relations: ['organisation', 'accounts'],
     });
   }
 
@@ -158,7 +158,7 @@ export class EstablishmentService {
     const queryBuilder = this.establishmentRepository
       .createQueryBuilder('establishment')
       .leftJoinAndSelect('establishment.organisation', 'organisation')
-      .leftJoinAndSelect('establishment.userAccounts', 'userAccounts');
+      .leftJoinAndSelect('establishment.accounts', 'accounts');
 
     // Apply filters
     if (params.id) {

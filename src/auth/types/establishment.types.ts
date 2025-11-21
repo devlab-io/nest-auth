@@ -5,7 +5,7 @@ export interface Establishment {
   id: string;
   name: string;
   organisation: Organisation;
-  userAccounts: UserAccount[];
+  accounts: UserAccount[];
 }
 
 export interface CreateEstablishmentRequest {

@@ -61,7 +61,7 @@ describe('EstablishmentService', () => {
         id: 'est-id',
         name: 'Test Establishment',
         organisation: mockOrganisation,
-        userAccounts: [],
+        accounts: [],
       } as EstablishmentEntity;
 
       mockOrganisationService.getById.mockResolvedValue(mockOrganisation);
@@ -77,7 +77,7 @@ describe('EstablishmentService', () => {
           name: request.name,
           organisation: { id: 'org-id' },
         },
-        relations: ['organisation', 'userAccounts'],
+        relations: ['organisation', 'accounts'],
       });
       expect(mockRepository.create).toHaveBeenCalledWith({
         name: request.name,
@@ -130,7 +130,7 @@ describe('EstablishmentService', () => {
         id,
         name: 'Test Establishment',
         organisation: mockOrganisation,
-        userAccounts: [],
+        accounts: [],
       } as EstablishmentEntity;
 
       mockRepository.findOne.mockResolvedValue(establishment);
@@ -139,7 +139,7 @@ describe('EstablishmentService', () => {
 
       expect(mockRepository.findOne).toHaveBeenCalledWith({
         where: { id },
-        relations: ['organisation', 'userAccounts'],
+        relations: ['organisation', 'accounts'],
       });
       expect(result).toEqual(establishment);
     });
@@ -163,7 +163,7 @@ describe('EstablishmentService', () => {
         id,
         name: 'Test Establishment',
         organisation: mockOrganisation,
-        userAccounts: [],
+        accounts: [],
       } as EstablishmentEntity;
 
       mockRepository.findOne.mockResolvedValue(establishment);
@@ -172,7 +172,7 @@ describe('EstablishmentService', () => {
 
       expect(mockRepository.findOne).toHaveBeenCalledWith({
         where: { id },
-        relations: ['organisation', 'userAccounts'],
+        relations: ['organisation', 'accounts'],
       });
       expect(result).toEqual(establishment);
     });
@@ -196,7 +196,7 @@ describe('EstablishmentService', () => {
         id: 'est-id',
         name,
         organisation: mockOrganisation,
-        userAccounts: [],
+        accounts: [],
       } as EstablishmentEntity;
 
       mockRepository.findOne.mockResolvedValue(establishment);
@@ -211,7 +211,7 @@ describe('EstablishmentService', () => {
           name,
           organisation: { id: organisationId },
         },
-        relations: ['organisation', 'userAccounts'],
+        relations: ['organisation', 'accounts'],
       });
       expect(result).toEqual(establishment);
     });
@@ -252,7 +252,7 @@ describe('EstablishmentService', () => {
           id: 'est-id-1',
           name: 'Test Establishment 1',
           organisation: mockOrganisation,
-          userAccounts: [],
+          accounts: [],
         },
       ] as EstablishmentEntity[];
 
@@ -292,7 +292,7 @@ describe('EstablishmentService', () => {
         id,
         name: 'Test Establishment',
         organisation: mockOrganisation,
-        userAccounts: [],
+        accounts: [],
       } as EstablishmentEntity;
       const updatedEstablishment = {
         ...existingEstablishment,
@@ -324,7 +324,7 @@ describe('EstablishmentService', () => {
         id,
         name: 'Test Establishment',
         organisation: mockOrganisation,
-        userAccounts: [],
+        accounts: [],
       } as EstablishmentEntity;
 
       mockRepository.findOne.mockResolvedValue(existingEstablishment);
@@ -351,13 +351,13 @@ describe('EstablishmentService', () => {
         id,
         name: 'Test Establishment',
         organisation: mockOrganisation,
-        userAccounts: [],
+        accounts: [],
       } as EstablishmentEntity;
       const conflictingEstablishment = {
         id: 'other-est-id',
         name: 'Existing Establishment',
         organisation: mockOrganisation,
-        userAccounts: [],
+        accounts: [],
       } as EstablishmentEntity;
 
       mockRepository.findOne
@@ -383,7 +383,7 @@ describe('EstablishmentService', () => {
         id,
         name: 'Test Establishment',
         organisation: mockOrganisation,
-        userAccounts: [],
+        accounts: [],
       } as EstablishmentEntity;
 
       mockRepository.findOne.mockResolvedValue(establishment);
@@ -393,7 +393,7 @@ describe('EstablishmentService', () => {
 
       expect(mockRepository.findOne).toHaveBeenCalledWith({
         where: { id },
-        relations: ['organisation', 'userAccounts'],
+        relations: ['organisation', 'accounts'],
       });
       expect(mockRepository.remove).toHaveBeenCalledWith(establishment);
     });

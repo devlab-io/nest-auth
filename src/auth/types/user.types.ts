@@ -18,7 +18,7 @@ export interface User {
   updatedAt: Date;
   credentials: Credential[];
   actions: Action[];
-  userAccounts: UserAccount[];
+  accounts: UserAccount[];
 }
 
 export interface CreateUserRequest {

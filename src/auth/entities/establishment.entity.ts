@@ -53,5 +53,5 @@ export class EstablishmentEntity implements Establishment {
       cascade: false,
     },
   )
-  userAccounts: UserAccountEntity[];
+  accounts: UserAccountEntity[];
 }

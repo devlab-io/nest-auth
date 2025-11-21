@@ -57,7 +57,7 @@ describe('UserService', () => {
       updatedAt: now,
       credentials: [],
       actions: [],
-      userAccounts: [],
+      accounts: [],
       ...overrides,
     } as UserEntity;
   };
@@ -272,7 +272,7 @@ describe('UserService', () => {
 
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
         where: { id: userId },
-        relations: ['credentials', 'actionsTokens', 'userAccounts'],
+        relations: ['credentials', 'actions', 'accounts'],
       });
       expect(result.firstName).toBe('Jane');
       expect(result.lastName).toBe('SMITH');
@@ -443,7 +443,7 @@ describe('UserService', () => {
 
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
         where: { email: 'test@example.com' },
-        relations: ['credentials', 'actionsTokens', 'userAccounts'],
+        relations: ['credentials', 'actions', 'accounts'],
       });
       expect(result).toEqual(user);
     });
@@ -457,7 +457,7 @@ describe('UserService', () => {
 
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
         where: { email: 'test@example.com' },
-        relations: ['credentials', 'actionsTokens', 'userAccounts'],
+        relations: ['credentials', 'actions', 'accounts'],
       });
     });
 
@@ -480,7 +480,7 @@ describe('UserService', () => {
 
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
         where: { id: 'user-id' },
-        relations: ['credentials', 'actionsTokens', 'userAccounts'],
+        relations: ['credentials', 'actions', 'accounts'],
       });
       expect(result).toEqual(user);
     });

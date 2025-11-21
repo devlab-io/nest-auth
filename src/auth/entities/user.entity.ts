@@ -137,5 +137,5 @@ export class UserEntity implements User {
   @OneToMany(() => UserAccountEntity, (userAccount) => userAccount.user, {
     cascade: false,
   })
-  userAccounts: UserAccountEntity[];
+  accounts: UserAccountEntity[];
 }
