@@ -6,12 +6,12 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { ActionTokenService } from './action-token.service';
-import { ActionTokenEntity, RoleEntity, UserEntity } from '../entities';
-import { ActionTokenType, CreateActionTokenRequest } from '../types';
+import { ActionService } from './action.service';
+import { ActionEntity, RoleEntity, UserEntity } from '../entities';
+import { ActionType, CreateActionRequest } from '../types';
 
-describe('ActionTokenService', () => {
-  let service: ActionTokenService;
+describe('ActionService', () => {
+  let service: ActionService;
 
   const mockActionTokenRepository = {
     findOne: jest.fn(),
@@ -34,9 +34,9 @@ describe('ActionTokenService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        ActionTokenService,
+        ActionService,
         {
-          provide: getRepositoryToken(ActionTokenEntity),
+          provide: getRepositoryToken(ActionEntity),
           useValue: mockActionTokenRepository,
         },
         {
@@ -50,15 +50,15 @@ describe('ActionTokenService', () => {
       ],
     }).compile();
 
-    service = module.get<ActionTokenService>(ActionTokenService);
+    service = module.get<ActionService>(ActionService);
 
     jest.clearAllMocks();
   });
 
   describe('create', () => {
     it('should create an invite token with email', async () => {
-      const request: CreateActionTokenRequest = {
-        type: ActionTokenType.Invite,
+      const request: CreateActionRequest = {
+        type: ActionType.Invite,
         email: 'test@example.com',
         expiresIn: 24,
       };
@@ -69,7 +69,7 @@ describe('ActionTokenService', () => {
         type: request.type,
         email: email.toLowerCase(),
         expiresAt: expect.any(Date),
-      } as ActionTokenEntity;
+      } as ActionEntity;
 
       mockActionTokenRepository.findOne.mockResolvedValue(null);
       mockActionTokenRepository.create.mockReturnValue(createdToken);
@@ -88,8 +88,8 @@ describe('ActionTokenService', () => {
         id: 'user-id',
         email: 'user@example.com',
       } as UserEntity;
-      const request: CreateActionTokenRequest = {
-        type: ActionTokenType.ResetPassword,
+      const request: CreateActionRequest = {
+        type: ActionType.ResetPassword,
         user: user,
       };
       const token = 'generated-token';
@@ -98,7 +98,7 @@ describe('ActionTokenService', () => {
         type: request.type,
         email: user.email.toLowerCase(),
         user: user,
-      } as ActionTokenEntity;
+      } as ActionEntity;
 
       mockActionTokenRepository.findOne.mockResolvedValue(null);
       mockUserRepository.findOne.mockResolvedValue(user);
@@ -107,10 +107,79 @@ describe('ActionTokenService', () => {
 
       const result = await service.create(request);
 
+      expect(mockActionTokenRepository.findOne).toHaveBeenCalled();
+      expect(mockUserRepository.findOne).toHaveBeenCalled();
+      expect(mockActionTokenRepository.create).toHaveBeenCalled();
+      expect(mockActionTokenRepository.save).toHaveBeenCalled();
+      expect(result.email).toBe(user.email.toLowerCase());
+    });
+
+    it('should create an invite token with organisationId and establishmentId', async () => {
+      const request: CreateActionRequest = {
+        type: ActionType.Invite,
+        email: 'test@example.com',
+        expiresIn: 24,
+        organisationId: 'org-id',
+        establishmentId: 'est-id',
+      };
+      const token = 'generated-token';
+      const email = request.email!;
+      const createdToken = {
+        token,
+        type: request.type,
+        email: email.toLowerCase(),
+        expiresAt: expect.any(Date),
+        organisationId: 'org-id',
+        establishmentId: 'est-id',
+      } as ActionEntity;
+
+      mockActionTokenRepository.findOne.mockResolvedValue(null);
+      mockActionTokenRepository.create.mockReturnValue(createdToken);
+      mockActionTokenRepository.save.mockResolvedValue(createdToken);
+
+      const result = await service.create(request);
+
+      expect(mockActionTokenRepository.findOne).toHaveBeenCalled();
+      expect(mockActionTokenRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          organisationId: 'org-id',
+          establishmentId: 'est-id',
+        }),
+      );
+      expect(mockActionTokenRepository.save).toHaveBeenCalled();
+      expect(result.email).toBe(email.toLowerCase());
+      expect(result.organisationId).toBe('org-id');
+      expect(result.establishmentId).toBe('est-id');
+    });
+
+    it('should create a token with user', async () => {
+      const testUser = {
+        id: 'user-id',
+        email: 'user@example.com',
+      } as UserEntity;
+      const request: CreateActionRequest = {
+        type: ActionType.ResetPassword,
+        user: testUser,
+      };
+      const token = 'generated-token';
+      const createdToken = {
+        token,
+        type: request.type,
+        email: testUser.email.toLowerCase(),
+        user: testUser,
+      } as ActionEntity;
+
+      mockActionTokenRepository.findOne.mockResolvedValue(null);
+      mockUserRepository.findOne.mockResolvedValue(testUser);
+      mockActionTokenRepository.create.mockReturnValue(createdToken);
+      mockActionTokenRepository.save.mockResolvedValue(createdToken);
+
+      const result = await service.create(request);
+
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
-        where: { id: user.id },
+        where: { id: testUser.id },
       });
-      expect(result.user).toEqual(user);
+      expect(result.user).toEqual(testUser);
     });
 
     it('should create a token with roles', async () => {
@@ -118,8 +187,8 @@ describe('ActionTokenService', () => {
         { id: 1, name: 'admin' },
         { id: 2, name: 'user' },
       ] as RoleEntity[];
-      const request: CreateActionTokenRequest = {
-        type: ActionTokenType.Invite,
+      const request: CreateActionRequest = {
+        type: ActionType.Invite,
         email: 'test@example.com',
         roles: ['admin', 'user'],
       };
@@ -130,7 +199,7 @@ describe('ActionTokenService', () => {
         type: request.type,
         email: email.toLowerCase(),
         roles: roles,
-      } as ActionTokenEntity;
+      } as ActionEntity;
 
       mockActionTokenRepository.findOne.mockResolvedValue(null);
       mockRoleRepository.find.mockResolvedValue(roles);
@@ -144,8 +213,8 @@ describe('ActionTokenService', () => {
     });
 
     it('should throw BadRequestException if neither email nor user provided', async () => {
-      const request: CreateActionTokenRequest = {
-        type: ActionTokenType.Invite,
+      const request: CreateActionRequest = {
+        type: ActionType.Invite,
       };
 
       await expect(service.create(request)).rejects.toThrow(
@@ -157,8 +226,8 @@ describe('ActionTokenService', () => {
     });
 
     it('should throw BadRequestException if user-requiring action without user', async () => {
-      const request: CreateActionTokenRequest = {
-        type: ActionTokenType.ResetPassword,
+      const request: CreateActionRequest = {
+        type: ActionType.ResetPassword,
         email: 'test@example.com',
       };
 
@@ -171,8 +240,8 @@ describe('ActionTokenService', () => {
     });
 
     it('should throw BadRequestException if invite combined with user-requiring actions', async () => {
-      const request: CreateActionTokenRequest = {
-        type: ActionTokenType.Invite | ActionTokenType.ResetPassword,
+      const request: CreateActionRequest = {
+        type: ActionType.Invite | ActionType.ResetPassword,
         email: 'test@example.com',
         user: { id: 'user-id', email: 'test@example.com' } as UserEntity,
       };
@@ -186,8 +255,8 @@ describe('ActionTokenService', () => {
     });
 
     it('should throw BadRequestException if roles not found', async () => {
-      const request: CreateActionTokenRequest = {
-        type: ActionTokenType.Invite,
+      const request: CreateActionRequest = {
+        type: ActionType.Invite,
         email: 'test@example.com',
         roles: ['admin', 'nonexistent'],
       };
@@ -207,8 +276,8 @@ describe('ActionTokenService', () => {
 
     it('should throw BadRequestException if user not found', async () => {
       const user = { id: 'user-id' } as UserEntity;
-      const request: CreateActionTokenRequest = {
-        type: ActionTokenType.ResetPassword,
+      const request: CreateActionRequest = {
+        type: ActionType.ResetPassword,
         user: user,
       };
 
@@ -224,8 +293,8 @@ describe('ActionTokenService', () => {
     });
 
     it('should calculate expiration date from expiresIn', async () => {
-      const request: CreateActionTokenRequest = {
-        type: ActionTokenType.Invite,
+      const request: CreateActionRequest = {
+        type: ActionType.Invite,
         email: 'test@example.com',
         expiresIn: 24,
       };
@@ -238,7 +307,7 @@ describe('ActionTokenService', () => {
         type: request.type,
         email: email.toLowerCase(),
         expiresAt: expiresAt,
-      } as ActionTokenEntity;
+      } as ActionEntity;
 
       mockActionTokenRepository.findOne.mockResolvedValue(null);
       mockActionTokenRepository.create.mockReturnValue(createdToken);
@@ -265,9 +334,9 @@ describe('ActionTokenService', () => {
       const token = 'test-token';
       const actionToken = {
         token,
-        type: ActionTokenType.Invite,
+        type: ActionType.Invite,
         email: 'test@example.com',
-      } as ActionTokenEntity;
+      } as ActionEntity;
 
       mockActionTokenRepository.findOne.mockResolvedValue(actionToken);
 
@@ -292,9 +361,9 @@ describe('ActionTokenService', () => {
   describe('findAll', () => {
     it('should return paginated tokens', async () => {
       const tokens = [
-        { token: 'token1', type: ActionTokenType.Invite },
-        { token: 'token2', type: ActionTokenType.ValidateEmail },
-      ] as ActionTokenEntity[];
+        { token: 'token1', type: ActionType.Invite },
+        { token: 'token2', type: ActionType.ValidateEmail },
+      ] as ActionEntity[];
       const total = 2;
 
       mockActionTokenRepository.findAndCount.mockResolvedValue([tokens, total]);
@@ -309,20 +378,16 @@ describe('ActionTokenService', () => {
 
     it('should filter by type', async () => {
       const tokens = [
-        { token: 'token1', type: ActionTokenType.Invite },
-      ] as ActionTokenEntity[];
+        { token: 'token1', type: ActionType.Invite },
+      ] as ActionEntity[];
 
       mockActionTokenRepository.findAndCount.mockResolvedValue([tokens, 1]);
 
-      const result = await service.findAll(
-        { type: ActionTokenType.Invite },
-        1,
-        10,
-      );
+      const result = await service.findAll({ type: ActionType.Invite }, 1, 10);
 
       expect(mockActionTokenRepository.findAndCount).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ type: ActionTokenType.Invite }),
+          where: expect.objectContaining({ type: ActionType.Invite }),
         }),
       );
       expect(result.data).toEqual(tokens);
@@ -335,16 +400,16 @@ describe('ActionTokenService', () => {
       const email = 'test@example.com';
       const actionToken = {
         token,
-        type: ActionTokenType.Invite,
+        type: ActionType.Invite,
         email: email.toLowerCase(),
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      } as ActionTokenEntity;
+      } as ActionEntity;
 
       mockActionTokenRepository.findOne.mockResolvedValue(actionToken);
 
       const result = await service.validate(
         { token, email },
-        ActionTokenType.Invite,
+        ActionType.Invite,
       );
 
       expect(result).toEqual(actionToken);
@@ -356,13 +421,13 @@ describe('ActionTokenService', () => {
       await expect(
         service.validate(
           { token: 'invalid-token', email: 'test@example.com' },
-          ActionTokenType.Invite,
+          ActionType.Invite,
         ),
       ).rejects.toThrow(ForbiddenException);
       await expect(
         service.validate(
           { token: 'invalid-token', email: 'test@example.com' },
-          ActionTokenType.Invite,
+          ActionType.Invite,
         ),
       ).rejects.toThrow('Invalid action token');
     });
@@ -370,16 +435,16 @@ describe('ActionTokenService', () => {
     it('should throw ForbiddenException if email does not match', async () => {
       const actionToken = {
         token: 'valid-token',
-        type: ActionTokenType.Invite,
+        type: ActionType.Invite,
         email: 'other@example.com',
-      } as ActionTokenEntity;
+      } as ActionEntity;
 
       mockActionTokenRepository.findOne.mockResolvedValue(actionToken);
 
       await expect(
         service.validate(
           { token: 'valid-token', email: 'test@example.com' },
-          ActionTokenType.Invite,
+          ActionType.Invite,
         ),
       ).rejects.toThrow(ForbiddenException);
     });
@@ -387,22 +452,22 @@ describe('ActionTokenService', () => {
     it('should throw ForbiddenException if token does not contain required actions', async () => {
       const actionToken = {
         token: 'valid-token',
-        type: ActionTokenType.Invite,
+        type: ActionType.Invite,
         email: 'test@example.com',
-      } as ActionTokenEntity;
+      } as ActionEntity;
 
       mockActionTokenRepository.findOne.mockResolvedValue(actionToken);
 
       await expect(
         service.validate(
           { token: 'valid-token', email: 'test@example.com' },
-          ActionTokenType.ValidateEmail,
+          ActionType.ValidateEmail,
         ),
       ).rejects.toThrow(ForbiddenException);
       await expect(
         service.validate(
           { token: 'valid-token', email: 'test@example.com' },
-          ActionTokenType.ValidateEmail,
+          ActionType.ValidateEmail,
         ),
       ).rejects.toThrow('Token does not contain all required actions');
     });
@@ -410,10 +475,10 @@ describe('ActionTokenService', () => {
     it('should throw ForbiddenException and delete token if expired', async () => {
       const actionToken = {
         token: 'expired-token',
-        type: ActionTokenType.Invite,
+        type: ActionType.Invite,
         email: 'test@example.com',
         expiresAt: new Date(Date.now() - 1000),
-      } as ActionTokenEntity;
+      } as ActionEntity;
 
       mockActionTokenRepository.findOne.mockResolvedValue(actionToken);
       mockActionTokenRepository.remove.mockResolvedValue(actionToken);
@@ -421,7 +486,7 @@ describe('ActionTokenService', () => {
       await expect(
         service.validate(
           { token: 'expired-token', email: 'test@example.com' },
-          ActionTokenType.Invite,
+          ActionType.Invite,
         ),
       ).rejects.toThrow(ForbiddenException);
 
@@ -436,8 +501,8 @@ describe('ActionTokenService', () => {
       const token = 'token-to-revoke';
       const actionToken = {
         token,
-        type: ActionTokenType.Invite,
-      } as ActionTokenEntity;
+        type: ActionType.Invite,
+      } as ActionEntity;
 
       mockActionTokenRepository.findOne.mockResolvedValue(actionToken);
       mockActionTokenRepository.remove.mockResolvedValue(actionToken);

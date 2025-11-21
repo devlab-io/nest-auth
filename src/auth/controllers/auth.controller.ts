@@ -7,7 +7,7 @@ import {
   SignInRequestDto,
   AcceptInvitationRequestDto,
   ValidateEmailRequestDto,
-  CreatePasswordRequestDto,
+  ChangePasswordRequestDto,
   ResetPasswordRequestDto,
   AcceptTermsRequestDto,
   AcceptPrivacyPolicyRequestDto,
@@ -124,11 +124,11 @@ export class AuthController {
     return await this.authService.acceptEmailValidation(validateEmailRequest);
   }
 
-  @Post('send-create-password')
+  @Post('send-change-password')
   @UseGuards(FrontendUrlGuard)
-  @ApiOperation({ summary: 'Send a create password token' })
+  @ApiOperation({ summary: 'Send a change password token' })
   @ApiQuery({ name: 'id', type: String, description: 'User ID' })
-  @ApiResponse({ status: 200, description: 'Create password token sent' })
+  @ApiResponse({ status: 200, description: 'Change password token sent' })
   @ApiResponse({
     status: 400,
     description: 'Bad request - Frontend URL required',
@@ -138,21 +138,21 @@ export class AuthController {
     description: 'Forbidden - Request origin not allowed',
   })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async sendCreatePassword(
+  async sendChangePassword(
     @Query('id') id: string,
     @FrontendUrl() frontendUrl: string,
   ): Promise<void> {
-    return await this.authService.sendCreatePassword(id, frontendUrl);
+    return await this.authService.sendChangePassword(id, frontendUrl);
   }
 
-  @Post('accept-create-password')
-  @ApiOperation({ summary: 'Create a password using a token' })
-  @ApiResponse({ status: 200, description: 'Password created successfully' })
+  @Post('accept-change-password')
+  @ApiOperation({ summary: 'Change a password using a token' })
+  @ApiResponse({ status: 200, description: 'Password changed successfully' })
   @ApiResponse({ status: 403, description: 'Invalid or expired token' })
-  async acceptCreatePassword(
-    @Body() createPasswordRequest: CreatePasswordRequestDto,
+  async acceptChangePassword(
+    @Body() changePasswordRequest: ChangePasswordRequestDto,
   ): Promise<void> {
-    return await this.authService.acceptCreatePassword(createPasswordRequest);
+    return await this.authService.acceptChangePassword(changePasswordRequest);
   }
 
   @Post('send-reset-password')

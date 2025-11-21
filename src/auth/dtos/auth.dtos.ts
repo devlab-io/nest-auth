@@ -16,7 +16,7 @@ import {
   SignInRequest,
   AcceptInvitationRequest,
   ValidateEmailRequest,
-  CreatePasswordRequest,
+  ChangePasswordRequest,
   ResetPasswordRequest,
   AcceptTermsRequest,
   AcceptPrivacyPolicyRequest,
@@ -32,6 +32,20 @@ export class InviteRequestDto implements InviteRequest {
   })
   @IsEmail({}, { message: 'Email must be a valid email address' })
   email: string;
+
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'ID of the organisation to create user account in',
+  })
+  @IsString({ message: 'organisationId must be a string' })
+  organisationId: string;
+
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'ID of the establishment to create user account in',
+  })
+  @IsString({ message: 'establishmentId must be a string' })
+  establishmentId: string;
 
   @ApiPropertyOptional({
     example: 24,
@@ -103,14 +117,18 @@ export class SignUpRequestDto implements SignUpRequest {
   @IsString({ message: 'phone must be a string' })
   phone?: string;
 
-  @ApiProperty({
-    example: 'SecurePassword123!',
-    description: 'Password of the user',
-    minLength: 8,
+  @ApiPropertyOptional({
+    example: [{ type: 'password', password: 'SecurePassword123!' }],
+    description: 'Credentials for the user',
+    type: Array,
   })
-  @IsString({ message: 'password must be a string' })
-  @MinLength(8, { message: 'password must be at least 8 characters long' })
-  password: string;
+  @IsOptional()
+  @IsArray({ message: 'credentials must be an array' })
+  credentials?: Array<{
+    type: 'password' | 'google';
+    password?: string;
+    googleId?: string;
+  }>;
 
   @ApiProperty({
     example: true,
@@ -142,14 +160,17 @@ export class SignUpRequestDto implements SignUpRequest {
   acceptedPrivacyPolicy: boolean;
 
   @ApiPropertyOptional({
-    example: ['user'],
-    description: 'Array of role names to assign to the user',
-    type: [String],
+    example: [{ type: 1, expiresIn: 24, roles: ['user'] }],
+    description: 'Actions to create for the user',
+    type: Array,
   })
   @IsOptional()
-  @IsArray({ message: 'roles must be an array' })
-  @IsString({ each: true, message: 'Each role must be a string' })
-  roles?: string[];
+  @IsArray({ message: 'actions must be an array' })
+  actions?: Array<{
+    type: number;
+    expiresIn?: number;
+    roles?: string[];
+  }>;
 }
 
 export class SignInRequestDto implements SignInRequest {
@@ -207,18 +228,27 @@ export class ValidateEmailRequestDto
   extends ActionRequestDto
   implements ValidateEmailRequest {}
 
-export class CreatePasswordRequestDto
+export class ChangePasswordRequestDto
   extends ActionRequestDto
-  implements CreatePasswordRequest
+  implements ChangePasswordRequest
 {
+  @ApiProperty({
+    example: 'SecurePassword123!',
+    description: 'Old password',
+    minLength: 8,
+  })
+  @IsString({ message: 'Old password must be a string' })
+  @MinLength(8, { message: 'Old password must be at least 8 characters long' })
+  oldPassword: string;
+
   @ApiProperty({
     example: 'SecurePassword123!',
     description: 'New password',
     minLength: 8,
   })
-  @IsString({ message: 'password must be a string' })
-  @MinLength(8, { message: 'password must be at least 8 characters long' })
-  password: string;
+  @IsString({ message: 'New password must be a string' })
+  @MinLength(8, { message: 'New password must be at least 8 characters long' })
+  newPassword: string;
 }
 
 export class ResetPasswordRequestDto
@@ -232,7 +262,7 @@ export class ResetPasswordRequestDto
   })
   @IsString({ message: 'password must be a string' })
   @MinLength(8, { message: 'password must be at least 8 characters long' })
-  password: string;
+  newPassword: string;
 }
 
 export class AcceptTermsRequestDto
@@ -281,8 +311,14 @@ export class AuthResponseDto implements AuthResponse {
   jwt: JwtTokenDto;
 
   @ApiProperty({
+    description: 'User account information',
+    type: Object,
+  })
+  userAccount: any;
+
+  @ApiProperty({
     type: UserDto,
-    description: 'User information',
+    description: 'User information (for backward compatibility)',
   })
   user: UserDto;
 }

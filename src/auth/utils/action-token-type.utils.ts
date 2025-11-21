@@ -1,7 +1,7 @@
 /**
  * Action Token Type Bit Mask Utilities
  */
-export class ActionTokenTypeUtils {
+export class ActionTypeUtils {
   /**
    * Check if a bit mask contains a specific action
    *

@@ -2,8 +2,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { UserService } from './user.service';
-import { RoleService } from './role.service';
-import { UserEntity, RoleEntity } from '../entities';
+import { CredentialService } from './credential.service';
+import { ActionService } from './action.service';
+import { UserEntity } from '../entities';
 import {
   CreateUserRequest,
   PatchUserRequest,
@@ -11,7 +12,6 @@ import {
   UserQueryParams,
 } from '../types';
 import { UserConfig, UserConfigToken } from '../config/user.config';
-import * as bcrypt from 'bcryptjs';
 
 describe('UserService', () => {
   let service: UserService;
@@ -25,8 +25,14 @@ describe('UserService', () => {
     createQueryBuilder: jest.fn(),
   };
 
-  const mockRoleService = {
-    getAllByNames: jest.fn(),
+  const mockCredentialService = {
+    createPasswordCredential: jest.fn(),
+    createGoogleCredential: jest.fn(),
+    setPasswordCredential: jest.fn(),
+  };
+
+  const mockActionService = {
+    create: jest.fn(),
   };
 
   const mockUserConfig: UserConfig = {
@@ -36,11 +42,25 @@ describe('UserService', () => {
     },
   };
 
-  const mockDefaultRole: RoleEntity = {
-    id: 1,
-    name: 'user',
-    description: 'Default user role',
-  } as RoleEntity;
+  // Helper function to create a complete mock UserEntity
+  const createMockUser = (overrides: Partial<UserEntity> = {}): UserEntity => {
+    const now = new Date();
+    return {
+      id: 'user-id',
+      email: 'test@example.com',
+      username: 'testuser#123456',
+      emailValidated: false,
+      enabled: true,
+      acceptedTerms: true,
+      acceptedPrivacyPolicy: true,
+      createdAt: now,
+      updatedAt: now,
+      credentials: [],
+      actions: [],
+      userAccounts: [],
+      ...overrides,
+    } as UserEntity;
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -51,8 +71,12 @@ describe('UserService', () => {
           useValue: mockUserRepository,
         },
         {
-          provide: RoleService,
-          useValue: mockRoleService,
+          provide: CredentialService,
+          useValue: mockCredentialService,
+        },
+        {
+          provide: ActionService,
+          useValue: mockActionService,
         },
         {
           provide: UserConfigToken,
@@ -67,10 +91,10 @@ describe('UserService', () => {
   });
 
   describe('create', () => {
-    it('should create a new user with generated username', async () => {
+    it('should create a new user with generated username and credentials', async () => {
       const request: CreateUserRequest = {
         email: 'test@example.com',
-        password: 'password123',
+        credentials: [{ type: 'password', password: 'password123' }],
         firstName: 'John',
         lastName: 'Doe',
         acceptedTerms: true,
@@ -78,32 +102,29 @@ describe('UserService', () => {
         enabled: true,
       };
 
-      const hashedPassword = 'hashedPassword123';
       const generatedUsername = 'johndoe#123456';
-      const createdUser = {
+      const createdUser = createMockUser({
         id: 'user-id',
         email: 'test@example.com',
         username: generatedUsername,
-        password: hashedPassword,
         firstName: 'John',
         lastName: 'DOE',
-        roles: [mockDefaultRole],
-      } as UserEntity;
+      });
 
-      jest.spyOn(bcrypt, 'hash').mockResolvedValue(hashedPassword as never);
-      mockRoleService.getAllByNames.mockResolvedValue([mockDefaultRole]);
       mockUserRepository.exists.mockResolvedValue(false);
       mockUserRepository.create.mockReturnValue(createdUser);
       mockUserRepository.save.mockResolvedValue(createdUser);
+      mockCredentialService.createPasswordCredential.mockResolvedValue(
+        undefined,
+      );
 
       const result = await service.create(request);
 
-      expect(mockRoleService.getAllByNames).toHaveBeenCalledWith(
-        mockUserConfig.user.defaultRoles,
-      );
-      expect(bcrypt.hash).toHaveBeenCalledWith(request.password, 10);
       expect(mockUserRepository.create).toHaveBeenCalled();
       expect(mockUserRepository.save).toHaveBeenCalled();
+      expect(
+        mockCredentialService.createPasswordCredential,
+      ).toHaveBeenCalledWith('user-id', 'password123');
       expect(result.email).toBe('test@example.com');
       expect(result.firstName).toBe('John');
       expect(result.lastName).toBe('DOE');
@@ -112,28 +133,26 @@ describe('UserService', () => {
     it('should create user with provided username', async () => {
       const request: CreateUserRequest = {
         email: 'test@example.com',
-        password: 'password123',
+        credentials: [{ type: 'password', password: 'password123' }],
         username: 'johndoe',
         acceptedTerms: true,
         acceptedPrivacyPolicy: true,
         enabled: true,
       };
 
-      const hashedPassword = 'hashedPassword123';
       const generatedUsername = 'johndoe#123456';
-      const createdUser = {
+      const createdUser = createMockUser({
         id: 'user-id',
         email: 'test@example.com',
         username: generatedUsername,
-        password: hashedPassword,
-        roles: [mockDefaultRole],
-      } as UserEntity;
+      });
 
-      jest.spyOn(bcrypt, 'hash').mockResolvedValue(hashedPassword as never);
-      mockRoleService.getAllByNames.mockResolvedValue([mockDefaultRole]);
       mockUserRepository.exists.mockResolvedValue(false);
       mockUserRepository.create.mockReturnValue(createdUser);
       mockUserRepository.save.mockResolvedValue(createdUser);
+      mockCredentialService.createPasswordCredential.mockResolvedValue(
+        undefined,
+      );
 
       await service.create(request);
 
@@ -143,26 +162,24 @@ describe('UserService', () => {
     it('should normalize email to lowercase', async () => {
       const request: CreateUserRequest = {
         email: 'TEST@EXAMPLE.COM',
-        password: 'password123',
+        credentials: [{ type: 'password', password: 'password123' }],
         acceptedTerms: true,
         acceptedPrivacyPolicy: true,
         enabled: true,
       };
 
-      const hashedPassword = 'hashedPassword123';
-      const createdUser = {
+      const createdUser = createMockUser({
         id: 'user-id',
         email: 'test@example.com',
         username: 'testexamplecom#123456',
-        password: hashedPassword,
-        roles: [mockDefaultRole],
-      } as UserEntity;
+      });
 
-      jest.spyOn(bcrypt, 'hash').mockResolvedValue(hashedPassword as never);
-      mockRoleService.getAllByNames.mockResolvedValue([mockDefaultRole]);
       mockUserRepository.exists.mockResolvedValue(false);
       mockUserRepository.create.mockReturnValue(createdUser);
       mockUserRepository.save.mockResolvedValue(createdUser);
+      mockCredentialService.createPasswordCredential.mockResolvedValue(
+        undefined,
+      );
 
       const result = await service.create(request);
 
@@ -172,7 +189,7 @@ describe('UserService', () => {
     it('should capitalize firstName and uppercase lastName', async () => {
       const request: CreateUserRequest = {
         email: 'test@example.com',
-        password: 'password123',
+        credentials: [{ type: 'password', password: 'password123' }],
         firstName: 'john',
         lastName: 'doe',
         acceptedTerms: true,
@@ -180,22 +197,20 @@ describe('UserService', () => {
         enabled: true,
       };
 
-      const hashedPassword = 'hashedPassword123';
-      const createdUser = {
+      const createdUser = createMockUser({
         id: 'user-id',
         email: 'test@example.com',
         username: 'johndoe#123456',
-        password: hashedPassword,
         firstName: 'John',
         lastName: 'DOE',
-        roles: [mockDefaultRole],
-      } as UserEntity;
+      });
 
-      jest.spyOn(bcrypt, 'hash').mockResolvedValue(hashedPassword as never);
-      mockRoleService.getAllByNames.mockResolvedValue([mockDefaultRole]);
       mockUserRepository.exists.mockResolvedValue(false);
       mockUserRepository.create.mockReturnValue(createdUser);
       mockUserRepository.save.mockResolvedValue(createdUser);
+      mockCredentialService.createPasswordCredential.mockResolvedValue(
+        undefined,
+      );
 
       const result = await service.create(request);
 
@@ -206,14 +221,12 @@ describe('UserService', () => {
     it('should throw BadRequestException if unable to generate unique username', async () => {
       const request: CreateUserRequest = {
         email: 'test@example.com',
-        password: 'password123',
+        credentials: [{ type: 'password', password: 'password123' }],
         acceptedTerms: true,
         acceptedPrivacyPolicy: true,
         enabled: true,
       };
 
-      jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashed' as never);
-      mockRoleService.getAllByNames.mockResolvedValue([mockDefaultRole]);
       mockUserRepository.exists.mockResolvedValue(true); // Always exists
 
       await expect(service.create(request)).rejects.toThrow(
@@ -228,15 +241,14 @@ describe('UserService', () => {
   describe('patch', () => {
     it('should patch user fields', async () => {
       const userId = 'user-id';
-      const existingUser = {
+      const existingUser = createMockUser({
         id: userId,
         email: 'test@example.com',
         firstName: 'John',
         lastName: 'DOE',
         phone: '1234567890',
         profilePicture: 'old-picture.jpg',
-        roles: [mockDefaultRole],
-      } as UserEntity;
+      });
 
       const request: PatchUserRequest = {
         firstName: 'Jane',
@@ -260,43 +272,11 @@ describe('UserService', () => {
 
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
         where: { id: userId },
-        relations: ['roles', 'actionsTokens'],
+        relations: ['credentials', 'actionsTokens', 'userAccounts'],
       });
       expect(result.firstName).toBe('Jane');
       expect(result.lastName).toBe('SMITH');
       expect(result.phone).toBe('9876543210');
-    });
-
-    it('should update roles', async () => {
-      const userId = 'user-id';
-      const existingUser = {
-        id: userId,
-        email: 'test@example.com',
-        roles: [mockDefaultRole],
-      } as UserEntity;
-
-      const newRole: RoleEntity = {
-        id: 2,
-        name: 'admin',
-      } as RoleEntity;
-
-      const request: PatchUserRequest = {
-        roles: ['admin'],
-      };
-
-      const updatedUser = {
-        ...existingUser,
-        roles: [newRole],
-      } as UserEntity;
-
-      mockUserRepository.findOne.mockResolvedValue(existingUser);
-      mockRoleService.getAllByNames.mockResolvedValue([newRole]);
-      mockUserRepository.save.mockResolvedValue(updatedUser);
-
-      const result = await service.patch(userId, request);
-
-      expect(mockRoleService.getAllByNames).toHaveBeenCalledWith(['admin']);
-      expect(result.roles).toEqual([newRole]);
     });
 
     it('should throw NotFoundException if user not found', async () => {
@@ -311,48 +291,48 @@ describe('UserService', () => {
   describe('update', () => {
     it('should update all user fields', async () => {
       const userId = 'user-id';
-      const existingUser = {
+      const existingUser = createMockUser({
         id: userId,
         email: 'old@example.com',
         username: 'olduser#123456',
         firstName: 'John',
         lastName: 'DOE',
-        password: 'oldPassword',
         enabled: true,
         acceptedTerms: false,
         acceptedPrivacyPolicy: false,
-      } as UserEntity;
+      });
 
       const request: UpdateUserRequest = {
         email: 'new@example.com',
         firstName: 'Jane',
         lastName: 'Smith',
-        password: 'newPassword',
+        credentials: [{ type: 'password', password: 'newPassword' }],
         enabled: false,
         acceptedTerms: true,
         acceptedPrivacyPolicy: true,
       };
 
-      const hashedPassword = 'hashedNewPassword';
       const updatedUser = {
         ...existingUser,
         email: 'new@example.com',
         firstName: 'Jane',
         lastName: 'SMITH',
-        password: hashedPassword,
         enabled: false,
         acceptedTerms: true,
         acceptedPrivacyPolicy: true,
       } as UserEntity;
 
-      jest.spyOn(bcrypt, 'hash').mockResolvedValue(hashedPassword as never);
       mockUserRepository.findOne.mockResolvedValue(existingUser);
       mockUserRepository.exists.mockResolvedValue(false);
       mockUserRepository.save.mockResolvedValue(updatedUser);
+      mockCredentialService.setPasswordCredential.mockResolvedValue(undefined);
 
       const result = await service.update(userId, request);
 
-      expect(bcrypt.hash).toHaveBeenCalledWith('newPassword', 10);
+      expect(mockCredentialService.setPasswordCredential).toHaveBeenCalledWith(
+        userId,
+        'newPassword',
+      );
       expect(result.email).toBe('new@example.com');
       expect(result.firstName).toBe('Jane');
       expect(result.enabled).toBe(false);
@@ -450,24 +430,12 @@ describe('UserService', () => {
       mockUserRepository.createQueryBuilder.mockReturnValue(
         mockQueryBuilder as any,
       );
-
-      const params: UserQueryParams = { roles: ['admin', 'user'] };
-      await service.search(params, 1, 10);
-
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'role.name IN (:...roles)',
-        { roles: ['admin', 'user'] },
-      );
     });
   });
 
   describe('findByEmail', () => {
     it('should return user by email', async () => {
-      const user = {
-        id: 'user-id',
-        email: 'test@example.com',
-        roles: [mockDefaultRole],
-      } as UserEntity;
+      const user = createMockUser();
 
       mockUserRepository.findOne.mockResolvedValue(user);
 
@@ -475,16 +443,13 @@ describe('UserService', () => {
 
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
         where: { email: 'test@example.com' },
-        relations: ['roles', 'actionsTokens'],
+        relations: ['credentials', 'actionsTokens', 'userAccounts'],
       });
       expect(result).toEqual(user);
     });
 
     it('should normalize email to lowercase', async () => {
-      const user = {
-        id: 'user-id',
-        email: 'test@example.com',
-      } as UserEntity;
+      const user = createMockUser();
 
       mockUserRepository.findOne.mockResolvedValue(user);
 
@@ -492,7 +457,7 @@ describe('UserService', () => {
 
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
         where: { email: 'test@example.com' },
-        relations: ['roles', 'actionsTokens'],
+        relations: ['credentials', 'actionsTokens', 'userAccounts'],
       });
     });
 
@@ -507,11 +472,7 @@ describe('UserService', () => {
 
   describe('findById', () => {
     it('should return user by id', async () => {
-      const user = {
-        id: 'user-id',
-        email: 'test@example.com',
-        roles: [mockDefaultRole],
-      } as UserEntity;
+      const user = createMockUser();
 
       mockUserRepository.findOne.mockResolvedValue(user);
 
@@ -519,7 +480,7 @@ describe('UserService', () => {
 
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
         where: { id: 'user-id' },
-        relations: ['roles', 'actionsTokens'],
+        relations: ['credentials', 'actionsTokens', 'userAccounts'],
       });
       expect(result).toEqual(user);
     });
@@ -535,10 +496,7 @@ describe('UserService', () => {
 
   describe('getById', () => {
     it('should return user by id', async () => {
-      const user = {
-        id: 'user-id',
-        email: 'test@example.com',
-      } as UserEntity;
+      const user = createMockUser();
 
       mockUserRepository.findOne.mockResolvedValue(user);
 
@@ -592,16 +550,8 @@ describe('UserService', () => {
 
   describe('enable', () => {
     it('should enable a user', async () => {
-      const user = {
-        id: 'user-id',
-        email: 'test@example.com',
-        enabled: false,
-      } as UserEntity;
-
-      const enabledUser = {
-        ...user,
-        enabled: true,
-      } as UserEntity;
+      const user = createMockUser({ enabled: false });
+      const enabledUser = createMockUser({ enabled: true });
 
       mockUserRepository.findOne.mockResolvedValue(user);
       mockUserRepository.save.mockResolvedValue(enabledUser);
@@ -625,16 +575,8 @@ describe('UserService', () => {
 
   describe('disable', () => {
     it('should disable a user', async () => {
-      const user = {
-        id: 'user-id',
-        email: 'test@example.com',
-        enabled: true,
-      } as UserEntity;
-
-      const disabledUser = {
-        ...user,
-        enabled: false,
-      } as UserEntity;
+      const user = createMockUser({ enabled: true });
+      const disabledUser = createMockUser({ enabled: false });
 
       mockUserRepository.findOne.mockResolvedValue(user);
       mockUserRepository.save.mockResolvedValue(disabledUser);
@@ -658,10 +600,7 @@ describe('UserService', () => {
 
   describe('delete', () => {
     it('should delete a user', async () => {
-      const user = {
-        id: 'user-id',
-        email: 'test@example.com',
-      } as UserEntity;
+      const user = createMockUser();
 
       mockUserRepository.findOne.mockResolvedValue(user);
       mockUserRepository.remove.mockResolvedValue(user);

@@ -4,17 +4,17 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
-import { ActionTokenEntity, UserEntity } from '../entities';
+import { ActionEntity, UserEntity } from '../entities';
 import { UserService } from './user.service';
 import {
   AcceptInvitationRequest,
   AcceptPrivacyPolicyRequest,
   AcceptTermsRequest,
-  ActionTokenType,
+  ActionType,
   AnyActionRequest,
   AuthResponse,
-  CreateActionTokenRequest,
-  CreatePasswordRequest,
+  CreateActionRequest,
+  ChangePasswordRequest,
   InviteRequest,
   JwtToken,
   ResetPasswordRequest,
@@ -25,8 +25,12 @@ import {
 } from '../types';
 import { UserConfig, UserConfigToken } from '../config/user.config';
 import { ActionConfig, ActionConfigToken } from '../config/action.config';
-import { ActionTokenService } from './action-token.service';
-import { ActionTokenTypeUtils } from '../utils';
+import { ActionService } from './action.service';
+import { UserAccountService } from './user-account.service';
+import { CredentialService } from './credential.service';
+import { OrganisationService } from './organisation.service';
+import { EstablishmentService } from './establishment.service';
+import { ActionTypeUtils } from '../utils';
 import { JwtService } from './jwt.service';
 import { NotificationService } from './notification.service';
 
@@ -37,8 +41,12 @@ export class AuthService {
   public constructor(
     @Inject(UserConfigToken) private readonly userConfig: UserConfig,
     @Inject(ActionConfigToken) private readonly actionConfig: ActionConfig,
-    @Inject() private readonly actionTokenService: ActionTokenService,
+    @Inject() private readonly actionService: ActionService,
     @Inject() private readonly userService: UserService,
+    @Inject() private readonly userAccountService: UserAccountService,
+    @Inject() private readonly credentialService: CredentialService,
+    @Inject() private readonly organisationService: OrganisationService,
+    @Inject() private readonly establishmentService: EstablishmentService,
     @Inject() private readonly notificationService: NotificationService,
     @Inject() private readonly jwtService: JwtService,
   ) {}
@@ -52,54 +60,43 @@ export class AuthService {
   private getMaxExpirationTime(actions: number): number {
     let maxExpiration: number = 0;
 
-    if (ActionTokenTypeUtils.hasAction(actions, ActionTokenType.Invite)) {
+    if (ActionTypeUtils.hasAction(actions, ActionType.Invite)) {
       maxExpiration = Math.max(
         maxExpiration,
         this.actionConfig.invite.validity,
       );
     }
-    if (
-      ActionTokenTypeUtils.hasAction(actions, ActionTokenType.ValidateEmail)
-    ) {
+    if (ActionTypeUtils.hasAction(actions, ActionType.ValidateEmail)) {
       maxExpiration = Math.max(
         maxExpiration,
         this.actionConfig.validateEmail.validity,
       );
     }
-    if (ActionTokenTypeUtils.hasAction(actions, ActionTokenType.AcceptTerms)) {
+    if (ActionTypeUtils.hasAction(actions, ActionType.AcceptTerms)) {
       maxExpiration = Math.max(
         maxExpiration,
         this.actionConfig.acceptTerms.validity,
       );
     }
-    if (
-      ActionTokenTypeUtils.hasAction(
-        actions,
-        ActionTokenType.AcceptPrivacyPolicy,
-      )
-    ) {
+    if (ActionTypeUtils.hasAction(actions, ActionType.AcceptPrivacyPolicy)) {
       maxExpiration = Math.max(
         maxExpiration,
         this.actionConfig.acceptPrivacyPolicy.validity,
       );
     }
-    if (
-      ActionTokenTypeUtils.hasAction(actions, ActionTokenType.CreatePassword)
-    ) {
+    if (ActionTypeUtils.hasAction(actions, ActionType.ChangePassword)) {
       maxExpiration = Math.max(
         maxExpiration,
-        this.actionConfig.createPassword.validity,
+        this.actionConfig.changePassword.validity,
       );
     }
-    if (
-      ActionTokenTypeUtils.hasAction(actions, ActionTokenType.ResetPassword)
-    ) {
+    if (ActionTypeUtils.hasAction(actions, ActionType.ResetPassword)) {
       maxExpiration = Math.max(
         maxExpiration,
         this.actionConfig.resetPassword.validity,
       );
     }
-    if (ActionTokenTypeUtils.hasAction(actions, ActionTokenType.ChangeEmail)) {
+    if (ActionTypeUtils.hasAction(actions, ActionType.ChangeEmail)) {
       maxExpiration = Math.max(
         maxExpiration,
         this.actionConfig.changeEmail.validity,
@@ -127,7 +124,7 @@ export class AuthService {
    * @throws BadRequestException if neither email nor user is provided, or if frontend URL is missing
    */
   public async sendActionToken(
-    request: CreateActionTokenRequest,
+    request: CreateActionRequest,
     frontendUrl: string,
     preActions?: (user: UserEntity) => UpdateUserRequest,
   ): Promise<void> {
@@ -163,8 +160,8 @@ export class AuthService {
     const expirationTime: number =
       request.expiresIn ?? this.getMaxExpirationTime(request.type);
 
-    // Create the action token (actionTokenService.create will verify if a user is required)
-    const token: ActionTokenEntity = await this.actionTokenService.create({
+    // Create the action token (ActionService.create will verify if a user is required)
+    const token: ActionEntity = await this.actionService.create({
       type: request.type,
       email: normalizedEmail,
       user: user,
@@ -194,7 +191,7 @@ export class AuthService {
     requiredActions: number,
   ): Promise<void> {
     // Validate the action token
-    const token: ActionTokenEntity = await this.actionTokenService.validate(
+    const token: ActionEntity = await this.actionService.validate(
       request,
       requiredActions,
     );
@@ -205,32 +202,28 @@ export class AuthService {
 
     // Process each action in the bit mask
     if (
-      ActionTokenTypeUtils.hasAnyAction(
+      ActionTypeUtils.hasAnyAction(
         requiredActions,
-        ActionTokenType.CreatePassword | ActionTokenType.ResetPassword,
+        ActionType.ChangePassword | ActionType.ResetPassword,
       )
     ) {
-      if (!('password' in request) || !request.password) {
-        throw new BadRequestException('Password is required for this action');
+      if (!('newPassword' in request) || !request.newPassword) {
+        throw new BadRequestException(
+          'New password is required for this action',
+        );
       }
-      userUpdateRequest.password = request.password;
+      // Use CredentialService to set password credential
+      await this.userService.addPasswordCredential(
+        user.id,
+        request.newPassword,
+      );
     }
 
-    if (
-      ActionTokenTypeUtils.hasAction(
-        requiredActions,
-        ActionTokenType.ValidateEmail,
-      )
-    ) {
+    if (ActionTypeUtils.hasAction(requiredActions, ActionType.ValidateEmail)) {
       userUpdateRequest.emailValidated = true;
     }
 
-    if (
-      ActionTokenTypeUtils.hasAction(
-        requiredActions,
-        ActionTokenType.AcceptTerms,
-      )
-    ) {
+    if (ActionTypeUtils.hasAction(requiredActions, ActionType.AcceptTerms)) {
       if (!('acceptedTerms' in request)) {
         throw new BadRequestException(
           'acceptedTerms is required for this action',
@@ -246,10 +239,7 @@ export class AuthService {
     }
 
     if (
-      ActionTokenTypeUtils.hasAction(
-        requiredActions,
-        ActionTokenType.AcceptPrivacyPolicy,
-      )
+      ActionTypeUtils.hasAction(requiredActions, ActionType.AcceptPrivacyPolicy)
     ) {
       if (!('acceptedPrivacyPolicy' in request)) {
         throw new BadRequestException(
@@ -265,11 +255,13 @@ export class AuthService {
       userUpdateRequest.acceptedPrivacyPolicy = true;
     }
 
-    // Save the user
-    await this.userService.update(user.id, userUpdateRequest);
+    // Save the user (only if there are updates other than password)
+    if (Object.keys(userUpdateRequest).length > 0) {
+      await this.userService.update(user.id, userUpdateRequest);
+    }
 
     // Revoke the action token
-    await this.actionTokenService.revoke(request.token);
+    await this.actionService.revoke(request.token);
 
     // Log
     this.logger.debug(
@@ -298,13 +290,30 @@ export class AuthService {
       );
     }
 
-    // Use sendActionToken without userId (actionTokenService.create will verify if a user is required)
+    // Verify that the organisation exists
+    await this.organisationService.getById(invite.organisationId);
+
+    // Verify that the establishment exists
+    const establishment = await this.establishmentService.getById(
+      invite.establishmentId,
+    );
+
+    // Verify that the establishment belongs to the organisation
+    if (establishment.organisation.id !== invite.organisationId) {
+      throw new BadRequestException(
+        `Establishment ${invite.establishmentId} does not belong to organisation ${invite.organisationId}`,
+      );
+    }
+
+    // Use sendActionToken with organisationId and establishmentId
     await this.sendActionToken(
       {
         email: invite.email,
-        type: ActionTokenType.Invite,
+        type: ActionType.Invite,
         expiresIn: invite.expiresIn,
         roles: invite.roles ?? this.userConfig.user.defaultRoles,
+        organisationId: invite.organisationId,
+        establishmentId: invite.establishmentId,
       },
       frontendUrl,
     );
@@ -323,22 +332,52 @@ export class AuthService {
     request: AcceptInvitationRequest,
   ): Promise<AuthResponse> {
     // Validate the action token
-    const actionToken: ActionTokenEntity =
-      await this.actionTokenService.validate(
-        request,
-        ActionTokenType.Invite as number,
-      );
+    const actionToken: ActionEntity = await this.actionService.validate(
+      request,
+      ActionType.Invite as number,
+    );
 
-    // Create the user
-    const user: UserEntity = await this.userService.create(request);
+    // Extract password from credentials if provided
+    const passwordCredential = request.credentials?.find(
+      (c) => c.type === 'password' && c.password,
+    );
+    const password = passwordCredential?.password;
+
+    // Verify that organisationId and establishmentId are provided in the action token
+    if (!actionToken.organisationId || !actionToken.establishmentId) {
+      throw new BadRequestException(
+        'Invitation action token must include organisation and establishment information',
+      );
+    }
+
+    // Create the user (with credentials if provided)
+    const createUserRequest: SignUpRequest = {
+      ...request,
+      credentials: request.credentials,
+    };
+    const user: UserEntity = await this.userService.create(createUserRequest);
+
+    // Create UserAccount for the user using organisation and establishment from action token
+    const userAccount = await this.userAccountService.create({
+      userId: user.id,
+      organisationId: actionToken.organisationId,
+      establishmentId: actionToken.establishmentId,
+      roles: actionToken.roles?.map((role) => role.name) ?? [],
+    });
 
     // Revoke the action token
-    await this.actionTokenService.revoke(actionToken.token);
+    await this.actionService.revoke(actionToken.token);
 
-    // Authenticate the user
+    // Authenticate using UserAccount (password is required for invitation acceptance)
+    if (!password) {
+      throw new BadRequestException(
+        'Password is required to accept invitation',
+      );
+    }
+
     const jwtToken: JwtToken = await this.jwtService.authenticate(
-      user,
-      request.password,
+      userAccount,
+      password,
     );
 
     // Log
@@ -347,6 +386,7 @@ export class AuthService {
     // Done
     return {
       jwt: jwtToken,
+      userAccount: userAccount,
       user: user,
     };
   }
@@ -396,9 +436,25 @@ export class AuthService {
       throw new BadRequestException('Invalid credentials');
     }
 
-    // Authenticate the user
+    // Find user accounts for this user
+    const userAccounts = await this.userAccountService.search(
+      { userId: user.id },
+      1,
+      1,
+    );
+
+    if (userAccounts.data.length === 0) {
+      throw new BadRequestException(
+        'No user account found for this user. Please contact an administrator.',
+      );
+    }
+
+    // Use the first user account (in a real scenario, you might want to choose based on context)
+    const userAccount = userAccounts.data[0];
+
+    // Authenticate using UserAccount
     const token: JwtToken = await this.jwtService.authenticate(
-      user,
+      userAccount,
       request.password,
     );
 
@@ -408,6 +464,7 @@ export class AuthService {
     // Done
     return {
       jwt: token,
+      userAccount: userAccount,
       user: user,
     };
   }
@@ -430,7 +487,7 @@ export class AuthService {
     // Create an action token and send an email to the user
     await this.sendActionToken(
       {
-        type: ActionTokenType.ValidateEmail,
+        type: ActionType.ValidateEmail,
         user: user,
       },
       frontendUrl,
@@ -450,25 +507,25 @@ export class AuthService {
   public async acceptEmailValidation(
     request: ValidateEmailRequest,
   ): Promise<void> {
-    await this.processActionToken(request, ActionTokenType.ValidateEmail);
+    await this.processActionToken(request, ActionType.ValidateEmail);
   }
 
   /**
-   * Send a password creation email to a user
+   * Send a password change email to a user
    *
    * @param id - The ID of the user
-   * @param frontendUrl - Frontend URL to construct the create password link (required for security)
+   * @param frontendUrl - Frontend URL to construct the change password link (required for security)
    * @throws NotFoundException if the user is not found
    * @throws BadRequestException if frontend URL is missing
    */
-  public async sendCreatePassword(
+  public async sendChangePassword(
     id: string,
     frontendUrl: string,
   ): Promise<void> {
     const user: UserEntity = await this.userService.getById(id);
     await this.sendActionToken(
       {
-        type: ActionTokenType.CreatePassword,
+        type: ActionType.ChangePassword,
         user: user,
       },
       frontendUrl,
@@ -476,16 +533,16 @@ export class AuthService {
   }
 
   /**
-   * Create a user's password
+   * Change a user's password
    *
    * @param request - The create password request containing the new password.
    * @returns The updated user
    * @throws ForbiddenException if the action token is not valid
    */
-  public async acceptCreatePassword(
-    request: CreatePasswordRequest,
+  public async acceptChangePassword(
+    request: ChangePasswordRequest,
   ): Promise<void> {
-    await this.processActionToken(request, ActionTokenType.CreatePassword);
+    await this.processActionToken(request, ActionType.ChangePassword);
   }
 
   /**
@@ -512,7 +569,7 @@ export class AuthService {
     // Use sendActionToken to send the reset password email
     await this.sendActionToken(
       {
-        type: ActionTokenType.ResetPassword,
+        type: ActionType.ResetPassword,
         user: user,
       },
       frontendUrl,
@@ -529,7 +586,7 @@ export class AuthService {
   public async acceptResetPassword(
     request: ResetPasswordRequest,
   ): Promise<void> {
-    await this.processActionToken(request, ActionTokenType.ResetPassword);
+    await this.processActionToken(request, ActionType.ResetPassword);
   }
 
   /**
@@ -540,8 +597,8 @@ export class AuthService {
    */
   public async addAcceptTerms(id: string): Promise<void> {
     const user: UserEntity = await this.userService.getById(id);
-    await this.actionTokenService.create({
-      type: ActionTokenType.AcceptTerms,
+    await this.actionService.create({
+      type: ActionType.AcceptTerms,
       user: user,
     });
   }
@@ -555,9 +612,9 @@ export class AuthService {
    */
   public async acceptTerms(request: AcceptTermsRequest): Promise<void> {
     // Validate the action token
-    const token: ActionTokenEntity = await this.actionTokenService.validate(
+    const token: ActionEntity = await this.actionService.validate(
       request,
-      ActionTokenType.AcceptTerms,
+      ActionType.AcceptTerms,
     );
 
     // Set the accepted terms to true
@@ -574,8 +631,8 @@ export class AuthService {
    */
   public async addAcceptPrivacyPolicy(id: string): Promise<void> {
     const user: UserEntity = await this.userService.getById(id);
-    await this.actionTokenService.create({
-      type: ActionTokenType.AcceptPrivacyPolicy,
+    await this.actionService.create({
+      type: ActionType.AcceptPrivacyPolicy,
       user: user,
     });
   }
@@ -591,9 +648,9 @@ export class AuthService {
     request: AcceptPrivacyPolicyRequest,
   ): Promise<void> {
     // Validate the action token
-    const token: ActionTokenEntity = await this.actionTokenService.validate(
+    const token: ActionEntity = await this.actionService.validate(
       request,
-      ActionTokenType.AcceptPrivacyPolicy,
+      ActionType.AcceptPrivacyPolicy,
     );
 
     // Set the accepted terms to true

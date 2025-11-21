@@ -1,6 +1,9 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { Session } from '../types';
-import { UserDto } from './user.dtos';
+import { UserAccountDto } from './user-account.dtos';
+
+// Forward declaration to avoid circular dependency
+export type UserAccountDtoType = UserAccountDto;
 
 export class SessionDto implements Session {
   @ApiProperty({
@@ -11,9 +14,9 @@ export class SessionDto implements Session {
 
   @ApiProperty({
     example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'ID of the user who owns this session',
+    description: 'ID of the user account who owns this session',
   })
-  userId: string;
+  userAccountId: string;
 
   @ApiProperty({
     example: '2024-02-20T10:00:00.000Z',
@@ -27,11 +30,11 @@ export class SessionDto implements Session {
   })
   expirationDate: Date;
 
-  @ApiPropertyOptional({
-    type: UserDto,
-    description: 'User information associated with this session',
+  @ApiProperty({
+    description: 'User account information associated with this session',
+    type: Object,
   })
-  user?: UserDto;
+  userAccount: any;
 }
 
 export class DeleteSessionsResponseDto {

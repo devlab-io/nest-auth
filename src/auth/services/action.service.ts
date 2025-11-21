@@ -13,21 +13,21 @@ import {
   FindOptionsWhere,
   DeleteResult,
 } from 'typeorm';
-import { ActionTokenEntity, RoleEntity, UserEntity } from '../entities';
+import { ActionEntity, RoleEntity, UserEntity } from '../entities';
 import {
-  CreateActionTokenRequest,
-  ActionTokenType,
-  ActionTokenQueryParams,
-  ActionTokenPage,
+  CreateActionRequest,
+  ActionType,
+  ActionQueryParams,
+  ActionPage,
   ActionRequest,
 } from '../types';
-import { ActionTokenTypeUtils } from '../utils';
+import { ActionTypeUtils } from '../utils';
 import { randomBytes } from 'crypto';
 import { Logger } from '@nestjs/common';
 
 @Injectable()
-export class ActionTokenService {
-  private readonly logger: Logger = new Logger(ActionTokenService.name);
+export class ActionService {
+  private readonly logger: Logger = new Logger(ActionService.name);
 
   /**
    * Constructor
@@ -37,8 +37,8 @@ export class ActionTokenService {
    * @param userRepository - The user repository
    */
   public constructor(
-    @InjectRepository(ActionTokenEntity)
-    private readonly actionTokenRepository: Repository<ActionTokenEntity>,
+    @InjectRepository(ActionEntity)
+    private readonly actionTokenRepository: Repository<ActionEntity>,
     @InjectRepository(RoleEntity)
     private readonly roleRepository: Repository<RoleEntity>,
     @InjectRepository(UserEntity)
@@ -60,9 +60,7 @@ export class ActionTokenService {
    * @throws BadRequestException if the request is invalid
    * @throws InternalServerErrorException if the token generation fails
    */
-  public async create(
-    create: CreateActionTokenRequest,
-  ): Promise<ActionTokenEntity> {
+  public async create(create: CreateActionRequest): Promise<ActionEntity> {
     // Email is required for all action tokens
     if (!create.email && !create.user) {
       throw new BadRequestException(
@@ -72,16 +70,16 @@ export class ActionTokenService {
     // Validate the create action token request
     // Actions that require an existing user
     const actionsRequiringUser =
-      ActionTokenType.ResetPassword |
-      ActionTokenType.AcceptTerms |
-      ActionTokenType.AcceptPrivacyPolicy |
-      ActionTokenType.ValidateEmail |
-      ActionTokenType.CreatePassword |
-      ActionTokenType.ChangeEmail;
+      ActionType.ResetPassword |
+      ActionType.AcceptTerms |
+      ActionType.AcceptPrivacyPolicy |
+      ActionType.ValidateEmail |
+      ActionType.ChangePassword |
+      ActionType.ChangeEmail;
 
     // Check if the bit mask contains any action that requires a user
     if (
-      ActionTokenTypeUtils.hasAnyAction(create.type, actionsRequiringUser) &&
+      ActionTypeUtils.hasAnyAction(create.type, actionsRequiringUser) &&
       !create.user
     ) {
       throw new BadRequestException(
@@ -91,8 +89,8 @@ export class ActionTokenService {
 
     // Invite action cannot be combined with user-requiring actions
     if (
-      ActionTokenTypeUtils.hasAction(create.type, ActionTokenType.Invite) &&
-      ActionTokenTypeUtils.hasAnyAction(create.type, actionsRequiringUser)
+      ActionTypeUtils.hasAction(create.type, ActionType.Invite) &&
+      ActionTypeUtils.hasAnyAction(create.type, actionsRequiringUser)
     ) {
       throw new BadRequestException(
         'Invite action cannot be combined with actions requiring an existing user',
@@ -101,7 +99,7 @@ export class ActionTokenService {
 
     // Generate a unique token
     let token: string;
-    let entity: ActionTokenEntity | null;
+    let entity: ActionEntity | null;
 
     // Ensure token is unique
     let count = 0;
@@ -151,13 +149,15 @@ export class ActionTokenService {
     }
 
     // Create the token
-    const actionToken: ActionTokenEntity = this.actionTokenRepository.create({
+    const actionToken: ActionEntity = this.actionTokenRepository.create({
       token,
       type: create.type,
       email: create.email!.toLowerCase(), // we use either the provided email or the user email, it is defined above
       user: user ?? undefined,
       roles: roles.length > 0 ? roles : undefined,
       expiresAt: expiresAt,
+      organisationId: create.organisationId,
+      establishmentId: create.establishmentId,
     });
 
     // Save the token
@@ -170,7 +170,7 @@ export class ActionTokenService {
    * @param token - The token value
    * @returns The action token, or null if not found
    */
-  public async findByToken(token: string): Promise<ActionTokenEntity | null> {
+  public async findByToken(token: string): Promise<ActionEntity | null> {
     return await this.actionTokenRepository.findOne({
       where: { token },
       relations: ['user', 'roles'],
@@ -184,11 +184,11 @@ export class ActionTokenService {
    * @returns The action tokens
    */
   public async findAll(
-    params: ActionTokenQueryParams,
+    params: ActionQueryParams,
     page: number = 1,
     limit: number = 10,
-  ): Promise<ActionTokenPage> {
-    const where: FindOptionsWhere<ActionTokenEntity> = {};
+  ): Promise<ActionPage> {
+    const where: FindOptionsWhere<ActionEntity> = {};
     if (params.type) {
       where.type = params.type;
     }
@@ -208,7 +208,7 @@ export class ActionTokenService {
       where.user = { username: params.username };
     }
     const skip: number = (page - 1) * limit;
-    const [data, total]: [ActionTokenEntity[], number] =
+    const [data, total]: [ActionEntity[], number] =
       await this.actionTokenRepository.findAndCount({
         where,
         skip,
@@ -236,9 +236,9 @@ export class ActionTokenService {
   public async validate(
     request: ActionRequest,
     requiredActions: number,
-  ): Promise<ActionTokenEntity> {
+  ): Promise<ActionEntity> {
     // Look for the token
-    const actionToken: ActionTokenEntity | null = await this.findByToken(
+    const actionToken: ActionEntity | null = await this.findByToken(
       request.token,
     );
 
@@ -253,9 +253,7 @@ export class ActionTokenService {
     }
 
     // Check if the token contains all required actions
-    if (
-      !ActionTokenTypeUtils.hasAllActions(actionToken.type, requiredActions)
-    ) {
+    if (!ActionTypeUtils.hasAllActions(actionToken.type, requiredActions)) {
       throw new ForbiddenException(
         'Token does not contain all required actions',
       );
@@ -282,7 +280,7 @@ export class ActionTokenService {
    */
   public async revoke(token: string): Promise<void> {
     // Look for the token
-    const actionToken: ActionTokenEntity | null =
+    const actionToken: ActionEntity | null =
       await this.actionTokenRepository.findOne({
         where: { token },
       });

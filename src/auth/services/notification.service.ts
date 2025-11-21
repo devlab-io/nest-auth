@@ -1,8 +1,8 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { MailerService, MailerServiceToken } from '@devlab-io/nest-mailer';
-import { ActionTokenType, ActionToken } from '../types';
+import { ActionType, Action } from '../types';
 import { ActionConfig, ActionConfigToken } from '../config/action.config';
-import { ActionTokenTypeUtils } from '../utils';
+import { ActionTypeUtils } from '../utils';
 
 /**
  * Service responsible for sending notifications (emails)
@@ -26,7 +26,7 @@ export class NotificationService {
    * @returns The custom link if route is configured, undefined otherwise
    */
   public buildActionLink(
-    actionType: ActionTokenType,
+    actionType: ActionType,
     frontendUrl: string,
     token: string,
     email: string,
@@ -34,19 +34,19 @@ export class NotificationService {
     let actionRoute: string | undefined;
 
     // Get the route for the specific action type
-    if (actionType === ActionTokenType.Invite) {
+    if (actionType === ActionType.Invite) {
       actionRoute = this.actionConfig.invite.route;
-    } else if (actionType === ActionTokenType.ValidateEmail) {
+    } else if (actionType === ActionType.ValidateEmail) {
       actionRoute = this.actionConfig.validateEmail.route;
-    } else if (actionType === ActionTokenType.CreatePassword) {
-      actionRoute = this.actionConfig.createPassword.route;
-    } else if (actionType === ActionTokenType.ResetPassword) {
+    } else if (actionType === ActionType.ChangePassword) {
+      actionRoute = this.actionConfig.changePassword.route;
+    } else if (actionType === ActionType.ResetPassword) {
       actionRoute = this.actionConfig.resetPassword.route;
-    } else if (actionType === ActionTokenType.ChangeEmail) {
+    } else if (actionType === ActionType.ChangeEmail) {
       actionRoute = this.actionConfig.changeEmail.route;
-    } else if (actionType === ActionTokenType.AcceptTerms) {
+    } else if (actionType === ActionType.AcceptTerms) {
       actionRoute = this.actionConfig.acceptTerms.route;
-    } else if (actionType === ActionTokenType.AcceptPrivacyPolicy) {
+    } else if (actionType === ActionType.AcceptPrivacyPolicy) {
       actionRoute = this.actionConfig.acceptPrivacyPolicy.route;
     }
 
@@ -81,42 +81,31 @@ export class NotificationService {
     const actionNames: string[] = [];
     const actionDescriptions: string[] = [];
 
-    if (ActionTokenTypeUtils.hasAction(actions, ActionTokenType.Invite)) {
+    if (ActionTypeUtils.hasAction(actions, ActionType.Invite)) {
       actionNames.push('Invitation');
       actionDescriptions.push("Rejoindre l'application");
     }
-    if (
-      ActionTokenTypeUtils.hasAction(actions, ActionTokenType.ValidateEmail)
-    ) {
+    if (ActionTypeUtils.hasAction(actions, ActionType.ValidateEmail)) {
       actionNames.push('Validation Email');
       actionDescriptions.push('Valider votre adresse email');
     }
-    if (ActionTokenTypeUtils.hasAction(actions, ActionTokenType.AcceptTerms)) {
+    if (ActionTypeUtils.hasAction(actions, ActionType.AcceptTerms)) {
       actionNames.push('Acceptation CGU');
       actionDescriptions.push("Accepter les conditions d'utilisation");
     }
-    if (
-      ActionTokenTypeUtils.hasAction(
-        actions,
-        ActionTokenType.AcceptPrivacyPolicy,
-      )
-    ) {
+    if (ActionTypeUtils.hasAction(actions, ActionType.AcceptPrivacyPolicy)) {
       actionNames.push('Acceptation Politique de Confidentialité');
       actionDescriptions.push('Accepter la politique de confidentialité');
     }
-    if (
-      ActionTokenTypeUtils.hasAction(actions, ActionTokenType.CreatePassword)
-    ) {
-      actionNames.push('Création Mot de Passe');
-      actionDescriptions.push('Créer votre mot de passe');
+    if (ActionTypeUtils.hasAction(actions, ActionType.ChangePassword)) {
+      actionNames.push('Changement de Mot de Passe');
+      actionDescriptions.push('Changez votre mot de passe');
     }
-    if (
-      ActionTokenTypeUtils.hasAction(actions, ActionTokenType.ResetPassword)
-    ) {
+    if (ActionTypeUtils.hasAction(actions, ActionType.ResetPassword)) {
       actionNames.push('Réinitialisation Mot de Passe');
       actionDescriptions.push('Réinitialiser votre mot de passe');
     }
-    if (ActionTokenTypeUtils.hasAction(actions, ActionTokenType.ChangeEmail)) {
+    if (ActionTypeUtils.hasAction(actions, ActionType.ChangeEmail)) {
       actionNames.push('Changement Email');
       actionDescriptions.push('Changer votre adresse email');
     }
@@ -161,7 +150,7 @@ L'équipe`;
    */
   public async sendActionTokenEmail(
     email: string,
-    actionToken: ActionToken,
+    actionToken: Action,
     frontendUrl: string,
     expiresIn: number,
   ): Promise<void> {

@@ -2,11 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { REQUEST } from '@nestjs/core';
 import { UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { JwtService } from './jwt.service';
-import { UserService } from './user.service';
+import { UserAccountService } from './user-account.service';
+import { CredentialService } from './credential.service';
 import { SessionService } from './session.service';
 import { JwtConfig, JwtConfigToken } from '../config/jwt.config';
-import { User, JwtToken, JwtPayload } from '../types';
-import * as bcrypt from 'bcryptjs';
+import { UserAccount, User, JwtToken, JwtPayload } from '../types';
 import * as jwt from 'jsonwebtoken';
 import { extractTokenFromRequest } from '../utils';
 
@@ -19,10 +19,6 @@ jest.mock('jsonwebtoken', () => {
   };
 });
 
-jest.mock('bcryptjs', () => ({
-  compare: jest.fn(),
-}));
-
 jest.mock('../utils', () => ({
   extractTokenFromRequest: jest.fn(),
 }));
@@ -34,6 +30,7 @@ describe('JwtService', () => {
     headers: {},
     cookies: {},
     user: null,
+    userAccount: null,
     res: {
       cookie: jest.fn(),
       clearCookie: jest.fn(),
@@ -43,7 +40,7 @@ describe('JwtService', () => {
   const mockJwtConfig: JwtConfig = {
     jwt: {
       secret: 'test-secret',
-      expiresIn: 3600, // 1h
+      expiresIn: 3600000, // 1h in milliseconds
     },
   };
 
@@ -57,17 +54,43 @@ describe('JwtService', () => {
     acceptedPrivacyPolicy: true,
     createdAt: new Date(),
     updatedAt: new Date(),
-    password: 'hashed-password',
-    roles: [
-      { id: 1, name: 'user' },
-      { id: 2, name: 'admin' },
-    ],
-    actionsTokens: [],
+    credentials: [],
+    actions: [],
+    userAccounts: [],
   };
 
-  const mockUserService = {
+  const mockOrganisation = {
+    id: 'org-id',
+    name: 'Test Organisation',
+    establishments: [],
+  };
+
+  const mockEstablishment = {
+    id: 'est-id',
+    name: 'Test Establishment',
+    organisation: mockOrganisation,
+    userAccounts: [],
+  };
+
+  const mockRoles = [
+    { id: 1, name: 'user' },
+    { id: 2, name: 'admin' },
+  ];
+
+  const mockUserAccount: UserAccount = {
+    id: 'user-account-id',
+    organisation: mockOrganisation,
+    establishment: mockEstablishment,
+    user: mockUser,
+    roles: mockRoles,
+  };
+
+  const mockUserAccountService = {
     getById: jest.fn(),
-    findByEmail: jest.fn(),
+  };
+
+  const mockCredentialService = {
+    verifyPassword: jest.fn(),
   };
 
   const mockSessionService = {
@@ -90,8 +113,12 @@ describe('JwtService', () => {
           useValue: mockJwtConfig,
         },
         {
-          provide: UserService,
-          useValue: mockUserService,
+          provide: UserAccountService,
+          useValue: mockUserAccountService,
+        },
+        {
+          provide: CredentialService,
+          useValue: mockCredentialService,
         },
         {
           provide: SessionService,
@@ -106,17 +133,18 @@ describe('JwtService', () => {
   afterEach(() => {
     jest.clearAllMocks();
     mockRequest.user = null;
+    mockRequest.userAccount = null;
   });
 
   describe('isUserAuthenticated', () => {
-    it('should return true if user is authenticated', () => {
-      mockRequest.user = mockUser;
+    it('should return true if user account is authenticated', () => {
+      mockRequest.userAccount = mockUserAccount;
 
       expect(service.isUserAuthenticated()).toBe(true);
     });
 
-    it('should return false if user is not authenticated', () => {
-      mockRequest.user = null;
+    it('should return false if user account is not authenticated', () => {
+      mockRequest.userAccount = null;
 
       expect(service.isUserAuthenticated()).toBe(false);
     });
@@ -124,15 +152,15 @@ describe('JwtService', () => {
 
   describe('getAuthenticatedUser', () => {
     it('should return the authenticated user', () => {
-      mockRequest.user = mockUser;
+      mockRequest.userAccount = mockUserAccount;
 
       const result = service.getAuthenticatedUser();
 
       expect(result).toEqual(mockUser);
     });
 
-    it('should throw UnauthorizedException if user is not authenticated', () => {
-      mockRequest.user = null;
+    it('should throw UnauthorizedException if user account is not authenticated', () => {
+      mockRequest.userAccount = null;
 
       expect(() => service.getAuthenticatedUser()).toThrow(
         UnauthorizedException,
@@ -141,20 +169,20 @@ describe('JwtService', () => {
   });
 
   describe('userHasAnyRoles', () => {
-    it('should return true if user has at least one of the roles', () => {
-      mockRequest.user = mockUser;
+    it('should return true if user account has at least one of the roles', () => {
+      mockRequest.userAccount = mockUserAccount;
 
       expect(service.userHasAnyRoles(['admin', 'moderator'])).toBe(true);
     });
 
-    it('should return false if user has none of the roles', () => {
-      mockRequest.user = mockUser;
+    it('should return false if user account has none of the roles', () => {
+      mockRequest.userAccount = mockUserAccount;
 
       expect(service.userHasAnyRoles(['moderator', 'guest'])).toBe(false);
     });
 
-    it('should throw UnauthorizedException if user is not authenticated', () => {
-      mockRequest.user = null;
+    it('should throw UnauthorizedException if user account is not authenticated', () => {
+      mockRequest.userAccount = null;
 
       expect(() => service.userHasAnyRoles(['admin'])).toThrow(
         UnauthorizedException,
@@ -163,20 +191,20 @@ describe('JwtService', () => {
   });
 
   describe('userHasAllRoles', () => {
-    it('should return true if user has all the roles', () => {
-      mockRequest.user = mockUser;
+    it('should return true if user account has all the roles', () => {
+      mockRequest.userAccount = mockUserAccount;
 
       expect(service.userHasAllRoles(['user', 'admin'])).toBe(true);
     });
 
-    it('should return false if user does not have all the roles', () => {
-      mockRequest.user = mockUser;
+    it('should return false if user account does not have all the roles', () => {
+      mockRequest.userAccount = mockUserAccount;
 
       expect(service.userHasAllRoles(['user', 'moderator'])).toBe(false);
     });
 
-    it('should throw UnauthorizedException if user is not authenticated', () => {
-      mockRequest.user = null;
+    it('should throw UnauthorizedException if user account is not authenticated', () => {
+      mockRequest.userAccount = null;
 
       expect(() => service.userHasAllRoles(['admin'])).toThrow(
         UnauthorizedException,
@@ -185,58 +213,78 @@ describe('JwtService', () => {
   });
 
   describe('authenticate', () => {
-    it('should authenticate a user and create a session', async () => {
+    it('should authenticate a user account and create a session', async () => {
       const password = 'password123';
       const token = 'jwt-token';
       const jwtToken: JwtToken = {
         accessToken: token,
-        expiresIn: 3600, // 1h
+        expiresIn: 3600000, // 1h in milliseconds
       };
 
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      mockCredentialService.verifyPassword.mockResolvedValue(true);
       (jwt.sign as jest.Mock).mockReturnValue(token);
       mockSessionService.create.mockResolvedValue({} as any);
 
-      const result = await service.authenticate(mockUser, password);
+      const result = await service.authenticate(mockUserAccount, password);
 
-      expect(bcrypt.compare).toHaveBeenCalledWith(password, mockUser.password);
-      expect(jwt.sign).toHaveBeenCalled();
+      expect(mockCredentialService.verifyPassword).toHaveBeenCalledWith(
+        mockUser.id,
+        password,
+      );
+      expect(jwt.sign).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sub: mockUserAccount.id,
+          userId: mockUser.id,
+          email: mockUser.email,
+          username: mockUser.username,
+          roles: ['user', 'admin'],
+          organisationId: mockOrganisation.id,
+          establishmentId: mockEstablishment.id,
+        }),
+        mockJwtConfig.jwt.secret,
+        expect.any(Object),
+      );
       expect(mockSessionService.create).toHaveBeenCalledWith(
         token,
-        mockUser.id,
+        mockUserAccount.id,
       );
-      expect(mockRequest.res.cookie).toHaveBeenCalled();
+      expect(mockRequest.res.cookie).toHaveBeenCalledWith(
+        'access_token',
+        token,
+        expect.objectContaining({
+          httpOnly: true,
+          secure: false,
+          sameSite: 'lax',
+          maxAge: 3600000,
+          expires: expect.any(Date),
+          path: '/',
+        }),
+      );
+      expect(mockRequest.userAccount).toEqual(mockUserAccount);
       expect(mockRequest.user).toEqual(mockUser);
       expect(result).toEqual(jwtToken);
     });
 
     it('should throw BadRequestException if user is disabled', async () => {
       const disabledUser = { ...mockUser, enabled: false };
+      const disabledUserAccount = { ...mockUserAccount, user: disabledUser };
 
       await expect(
-        service.authenticate(disabledUser, 'password'),
+        service.authenticate(disabledUserAccount, 'password'),
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw UnauthorizedException if user has no password', async () => {
-      const userWithoutPassword = { ...mockUser, password: undefined };
-
-      await expect(
-        service.authenticate(userWithoutPassword, 'password'),
-      ).rejects.toThrow(UnauthorizedException);
-    });
-
     it('should throw UnauthorizedException if password is invalid', async () => {
-      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+      mockCredentialService.verifyPassword.mockResolvedValue(false);
 
       await expect(
-        service.authenticate(mockUser, 'wrong-password'),
+        service.authenticate(mockUserAccount, 'wrong-password'),
       ).rejects.toThrow(UnauthorizedException);
     });
   });
 
   describe('logout', () => {
-    it('should logout a user and delete the session', async () => {
+    it('should logout a user account and delete the session', async () => {
       const token = 'jwt-token';
       (extractTokenFromRequest as jest.Mock).mockReturnValue(token);
       mockSessionService.deleteByToken.mockResolvedValue(undefined);
@@ -244,7 +292,16 @@ describe('JwtService', () => {
       await service.logout();
 
       expect(mockSessionService.deleteByToken).toHaveBeenCalledWith(token);
-      expect(mockRequest.res.clearCookie).toHaveBeenCalled();
+      expect(mockRequest.res.clearCookie).toHaveBeenCalledWith(
+        'access_token',
+        expect.objectContaining({
+          httpOnly: true,
+          secure: false,
+          sameSite: 'lax',
+          path: '/',
+        }),
+      );
+      expect(mockRequest.userAccount).toBeUndefined();
       expect(mockRequest.user).toBeUndefined();
     });
 
@@ -274,10 +331,13 @@ describe('JwtService', () => {
     it('should verify and decode a valid token', async () => {
       const token = 'valid-token';
       const payload: JwtPayload = {
-        sub: 'user-id',
+        sub: 'user-account-id',
+        userId: 'user-id',
         email: 'test@example.com',
         username: 'testuser',
-        roles: ['user'],
+        roles: ['user', 'admin'],
+        organisationId: 'org-id',
+        establishmentId: 'est-id',
       };
 
       (jwt.verify as jest.Mock).mockReturnValue(payload);
@@ -302,23 +362,27 @@ describe('JwtService', () => {
   });
 
   describe('loadUserFromToken', () => {
-    it('should load user from token and set in context', async () => {
+    it('should load user account from token and set in context', async () => {
       const token = 'valid-token';
       const payload: JwtPayload = {
-        sub: 'user-id',
+        sub: 'user-account-id',
+        userId: 'user-id',
         email: 'test@example.com',
         username: 'testuser',
-        roles: ['user'],
+        roles: ['user', 'admin'],
+        organisationId: 'org-id',
+        establishmentId: 'est-id',
       };
       const mockSession = {
         token,
-        userId: 'user-id',
+        userAccountId: 'user-account-id',
         loginDate: new Date(),
         expirationDate: new Date(Date.now() + 60 * 60 * 1000),
+        userAccount: mockUserAccount,
       };
 
       jest.spyOn(service, 'verifyToken').mockResolvedValue(payload);
-      mockUserService.getById.mockResolvedValue(mockUser);
+      mockUserAccountService.getById.mockResolvedValue(mockUserAccount);
       mockSessionService.findByToken.mockResolvedValue(mockSession);
       mockSessionService.isActive.mockReturnValue(true);
 
@@ -327,17 +391,21 @@ describe('JwtService', () => {
       expect(service.verifyToken).toHaveBeenCalledWith(token);
       expect(mockSessionService.findByToken).toHaveBeenCalledWith(token);
       expect(mockSessionService.isActive).toHaveBeenCalledWith(mockSession);
-      expect(mockUserService.getById).toHaveBeenCalledWith(payload.sub);
+      expect(mockUserAccountService.getById).toHaveBeenCalledWith(payload.sub);
+      expect(mockRequest.userAccount).toEqual(mockUserAccount);
       expect(mockRequest.user).toEqual(mockUser);
     });
 
     it('should throw UnauthorizedException if session not found', async () => {
       const token = 'valid-token';
       const payload: JwtPayload = {
-        sub: 'user-id',
+        sub: 'user-account-id',
+        userId: 'user-id',
         email: 'test@example.com',
         username: 'testuser',
-        roles: ['user'],
+        roles: ['user', 'admin'],
+        organisationId: 'org-id',
+        establishmentId: 'est-id',
       };
 
       jest.spyOn(service, 'verifyToken').mockResolvedValue(payload);
@@ -351,16 +419,20 @@ describe('JwtService', () => {
     it('should throw UnauthorizedException if session is expired', async () => {
       const token = 'valid-token';
       const payload: JwtPayload = {
-        sub: 'user-id',
+        sub: 'user-account-id',
+        userId: 'user-id',
         email: 'test@example.com',
         username: 'testuser',
-        roles: ['user'],
+        roles: ['user', 'admin'],
+        organisationId: 'org-id',
+        establishmentId: 'est-id',
       };
       const mockSession = {
         token,
-        userId: 'user-id',
+        userAccountId: 'user-account-id',
         loginDate: new Date(),
         expirationDate: new Date(Date.now() - 1000),
+        userAccount: mockUserAccount,
       };
 
       jest.spyOn(service, 'verifyToken').mockResolvedValue(payload);
@@ -375,23 +447,28 @@ describe('JwtService', () => {
     it('should throw UnauthorizedException if user is disabled', async () => {
       const token = 'valid-token';
       const payload: JwtPayload = {
-        sub: 'user-id',
+        sub: 'user-account-id',
+        userId: 'user-id',
         email: 'test@example.com',
         username: 'testuser',
-        roles: ['user'],
+        roles: ['user', 'admin'],
+        organisationId: 'org-id',
+        establishmentId: 'est-id',
       };
       const disabledUser = { ...mockUser, enabled: false };
+      const disabledUserAccount = { ...mockUserAccount, user: disabledUser };
       const mockSession = {
         token,
-        userId: 'user-id',
+        userAccountId: 'user-account-id',
         loginDate: new Date(),
         expirationDate: new Date(Date.now() + 60 * 60 * 1000),
+        userAccount: disabledUserAccount,
       };
 
       jest.spyOn(service, 'verifyToken').mockResolvedValue(payload);
       mockSessionService.findByToken.mockResolvedValue(mockSession);
       mockSessionService.isActive.mockReturnValue(true);
-      mockUserService.getById.mockResolvedValue(disabledUser);
+      mockUserAccountService.getById.mockResolvedValue(disabledUserAccount);
 
       await expect(service.loadUserFromToken(token)).rejects.toThrow(
         UnauthorizedException,

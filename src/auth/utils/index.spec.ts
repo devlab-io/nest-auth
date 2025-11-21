@@ -1,5 +1,5 @@
-import { normalize, capitalize, ActionTokenTypeUtils } from './index';
-import { ActionTokenType } from '../types';
+import { normalize, capitalize, ActionTypeUtils } from './index';
+import { ActionType } from '../types';
 
 describe('Utils', () => {
   describe('normalize', () => {
@@ -62,71 +62,60 @@ describe('Utils', () => {
     });
   });
 
-  describe('ActionTokenTypeUtils', () => {
+  describe('ActionTypeUtils', () => {
     describe('hasAction', () => {
       it('should return true if action is in mask', () => {
-        const mask = ActionTokenType.Invite | ActionTokenType.ValidateEmail;
-        expect(
-          ActionTokenTypeUtils.hasAction(mask, ActionTokenType.Invite),
-        ).toBe(true);
-        expect(
-          ActionTokenTypeUtils.hasAction(mask, ActionTokenType.ValidateEmail),
-        ).toBe(true);
+        const mask = ActionType.Invite | ActionType.ValidateEmail;
+        expect(ActionTypeUtils.hasAction(mask, ActionType.Invite)).toBe(true);
+        expect(ActionTypeUtils.hasAction(mask, ActionType.ValidateEmail)).toBe(
+          true,
+        );
       });
 
       it('should return false if action is not in mask', () => {
-        const mask = ActionTokenType.Invite;
-        expect(
-          ActionTokenTypeUtils.hasAction(mask, ActionTokenType.ValidateEmail),
-        ).toBe(false);
+        const mask = ActionType.Invite;
+        expect(ActionTypeUtils.hasAction(mask, ActionType.ValidateEmail)).toBe(
+          false,
+        );
       });
 
       it('should return false for empty mask', () => {
-        expect(ActionTokenTypeUtils.hasAction(0, ActionTokenType.Invite)).toBe(
-          false,
-        );
+        expect(ActionTypeUtils.hasAction(0, ActionType.Invite)).toBe(false);
       });
     });
 
     describe('addAction', () => {
       it('should add an action to the mask', () => {
-        let mask = ActionTokenType.Invite;
-        mask = ActionTokenTypeUtils.addAction(
-          mask,
-          ActionTokenType.ValidateEmail,
+        let mask = ActionType.Invite;
+        mask = ActionTypeUtils.addAction(mask, ActionType.ValidateEmail);
+        expect(ActionTypeUtils.hasAction(mask, ActionType.Invite)).toBe(true);
+        expect(ActionTypeUtils.hasAction(mask, ActionType.ValidateEmail)).toBe(
+          true,
         );
-        expect(
-          ActionTokenTypeUtils.hasAction(mask, ActionTokenType.Invite),
-        ).toBe(true);
-        expect(
-          ActionTokenTypeUtils.hasAction(mask, ActionTokenType.ValidateEmail),
-        ).toBe(true);
       });
 
       it('should not duplicate actions', () => {
-        let mask = ActionTokenType.Invite;
-        mask = ActionTokenTypeUtils.addAction(mask, ActionTokenType.Invite);
-        expect(mask).toBe(ActionTokenType.Invite);
+        let mask = ActionType.Invite;
+        mask = ActionTypeUtils.addAction(mask, ActionType.Invite);
+        expect(mask).toBe(ActionType.Invite);
       });
     });
 
     describe('removeAction', () => {
       it('should remove an action from the mask', () => {
-        let mask = ActionTokenType.Invite | ActionTokenType.ValidateEmail;
-        mask = ActionTokenTypeUtils.removeAction(mask, ActionTokenType.Invite);
-        expect(
-          ActionTokenTypeUtils.hasAction(mask, ActionTokenType.Invite),
-        ).toBe(false);
-        expect(
-          ActionTokenTypeUtils.hasAction(mask, ActionTokenType.ValidateEmail),
-        ).toBe(true);
+        let mask = ActionType.Invite | ActionType.ValidateEmail;
+        mask = ActionTypeUtils.removeAction(mask, ActionType.Invite);
+        expect(ActionTypeUtils.hasAction(mask, ActionType.Invite)).toBe(false);
+        expect(ActionTypeUtils.hasAction(mask, ActionType.ValidateEmail)).toBe(
+          true,
+        );
       });
 
       it('should not affect mask if action is not present', () => {
-        const mask = ActionTokenType.Invite;
-        const result = ActionTokenTypeUtils.removeAction(
+        const mask = ActionType.Invite;
+        const result = ActionTypeUtils.removeAction(
           mask,
-          ActionTokenType.ValidateEmail,
+          ActionType.ValidateEmail,
         );
         expect(result).toBe(mask);
       });
@@ -134,20 +123,20 @@ describe('Utils', () => {
 
     describe('getActionsList', () => {
       it('should return array of actions in mask', () => {
-        const mask = ActionTokenType.Invite | ActionTokenType.ValidateEmail;
-        const actions = ActionTokenTypeUtils.getActionsList(
+        const mask = ActionType.Invite | ActionType.ValidateEmail;
+        const actions = ActionTypeUtils.getActionsList(
           mask,
-          ActionTokenType as unknown as Record<string, number>,
+          ActionType as unknown as Record<string, number>,
         );
-        expect(actions).toContain(ActionTokenType.Invite);
-        expect(actions).toContain(ActionTokenType.ValidateEmail);
+        expect(actions).toContain(ActionType.Invite);
+        expect(actions).toContain(ActionType.ValidateEmail);
         expect(actions.length).toBe(2);
       });
 
       it('should return empty array for empty mask', () => {
-        const actions = ActionTokenTypeUtils.getActionsList(
+        const actions = ActionTypeUtils.getActionsList(
           0,
-          ActionTokenType as unknown as Record<string, number>,
+          ActionType as unknown as Record<string, number>,
         );
         expect(actions).toEqual([]);
       });
@@ -156,42 +145,39 @@ describe('Utils', () => {
     describe('hasAllActions', () => {
       it('should return true if mask contains all required actions', () => {
         const mask =
-          ActionTokenType.Invite |
-          ActionTokenType.ValidateEmail |
-          ActionTokenType.AcceptTerms;
-        const required = ActionTokenType.Invite | ActionTokenType.ValidateEmail;
-        expect(ActionTokenTypeUtils.hasAllActions(mask, required)).toBe(true);
+          ActionType.Invite | ActionType.ValidateEmail | ActionType.AcceptTerms;
+        const required = ActionType.Invite | ActionType.ValidateEmail;
+        expect(ActionTypeUtils.hasAllActions(mask, required)).toBe(true);
       });
 
       it('should return false if mask is missing any required action', () => {
-        const mask = ActionTokenType.Invite;
-        const required = ActionTokenType.Invite | ActionTokenType.ValidateEmail;
-        expect(ActionTokenTypeUtils.hasAllActions(mask, required)).toBe(false);
+        const mask = ActionType.Invite;
+        const required = ActionType.Invite | ActionType.ValidateEmail;
+        expect(ActionTypeUtils.hasAllActions(mask, required)).toBe(false);
       });
 
       it('should return true for empty required actions', () => {
-        const mask = ActionTokenType.Invite;
-        expect(ActionTokenTypeUtils.hasAllActions(mask, 0)).toBe(true);
+        const mask = ActionType.Invite;
+        expect(ActionTypeUtils.hasAllActions(mask, 0)).toBe(true);
       });
     });
 
     describe('hasAnyAction', () => {
       it('should return true if mask contains at least one action', () => {
-        const mask = ActionTokenType.Invite | ActionTokenType.ValidateEmail;
-        const actions = ActionTokenType.Invite | ActionTokenType.AcceptTerms;
-        expect(ActionTokenTypeUtils.hasAnyAction(mask, actions)).toBe(true);
+        const mask = ActionType.Invite | ActionType.ValidateEmail;
+        const actions = ActionType.Invite | ActionType.AcceptTerms;
+        expect(ActionTypeUtils.hasAnyAction(mask, actions)).toBe(true);
       });
 
       it('should return false if mask contains none of the actions', () => {
-        const mask = ActionTokenType.Invite;
-        const actions =
-          ActionTokenType.ValidateEmail | ActionTokenType.AcceptTerms;
-        expect(ActionTokenTypeUtils.hasAnyAction(mask, actions)).toBe(false);
+        const mask = ActionType.Invite;
+        const actions = ActionType.ValidateEmail | ActionType.AcceptTerms;
+        expect(ActionTypeUtils.hasAnyAction(mask, actions)).toBe(false);
       });
 
       it('should return false for empty mask', () => {
-        const actions = ActionTokenType.Invite;
-        expect(ActionTokenTypeUtils.hasAnyAction(0, actions)).toBe(false);
+        const actions = ActionType.Invite;
+        expect(ActionTypeUtils.hasAnyAction(0, actions)).toBe(false);
       });
     });
   });

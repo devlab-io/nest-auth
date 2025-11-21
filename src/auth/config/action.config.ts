@@ -12,7 +12,7 @@ export interface ActionConfig {
   validateEmail: UnitActionConfig;
   acceptTerms: UnitActionConfig;
   acceptPrivacyPolicy: UnitActionConfig;
-  createPassword: UnitActionConfig;
+  changePassword: UnitActionConfig;
   resetPassword: UnitActionConfig;
   changeEmail: UnitActionConfig;
 }
@@ -30,10 +30,10 @@ const actionConfigSchema = z.object({
   AUTH_ACTION_ACCEPT_PRIVACY_POLICY_ROUTE: z
     .string()
     .default('auth/accept-privacy-policy'),
-  AUTH_ACTION_CREATE_PASSWORD: z.coerce.number().default(24),
-  AUTH_ACTION_CREATE_PASSWORD_ROUTE: z.string().default('auth/create-password'),
   AUTH_ACTION_RESET_PASSWORD: z.coerce.number().default(24),
   AUTH_ACTION_RESET_PASSWORD_ROUTE: z.string().default('auth/reset-password'),
+  AUTH_ACTION_CHANGE_PASSWORD: z.coerce.number().default(24),
+  AUTH_ACTION_CHANGE_PASSWORD_ROUTE: z.string().default('auth/change-password'),
   AUTH_ACTION_CHANGE_EMAIL: z.coerce.number().default(24),
   AUTH_ACTION_CHANGE_EMAIL_ROUTE: z.string().default('auth/change-email'),
 });
@@ -57,13 +57,13 @@ function parseActionConfig(env: NodeJS.ProcessEnv): ActionConfig {
       validity: config.AUTH_ACTION_ACCEPT_PRIVACY_POLICY,
       route: route(config.AUTH_ACTION_ACCEPT_PRIVACY_POLICY_ROUTE),
     },
-    createPassword: {
-      validity: config.AUTH_ACTION_CREATE_PASSWORD,
-      route: route(config.AUTH_ACTION_CREATE_PASSWORD_ROUTE),
-    },
     resetPassword: {
       validity: config.AUTH_ACTION_RESET_PASSWORD,
       route: route(config.AUTH_ACTION_RESET_PASSWORD_ROUTE),
+    },
+    changePassword: {
+      validity: config.AUTH_ACTION_CHANGE_EMAIL,
+      route: route(config.AUTH_ACTION_CHANGE_PASSWORD_ROUTE),
     },
     changeEmail: {
       validity: config.AUTH_ACTION_CHANGE_EMAIL,

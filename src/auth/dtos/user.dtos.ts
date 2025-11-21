@@ -79,19 +79,6 @@ export class UserDto implements User {
   })
   phone?: string;
 
-  @ApiPropertyOptional({
-    example: 'hashedPassword123',
-    description: 'Hashed password of the user',
-    writeOnly: true,
-  })
-  password?: string;
-
-  @ApiPropertyOptional({
-    example: '123456789',
-    description: 'Google ID of the user if signed in with Google',
-  })
-  googleId?: string;
-
   @ApiProperty({
     example: true,
     description: 'Indicates if the user account is enabled',
@@ -129,16 +116,22 @@ export class UserDto implements User {
   updatedAt: Date;
 
   @ApiProperty({
-    description: 'Roles assigned to the user',
-    type: [RoleDto],
+    description: 'Credentials associated with the user',
+    type: Array,
   })
-  roles: RoleDto[];
+  credentials: any[];
 
   @ApiProperty({
     description: 'Action tokens associated with the user',
     type: Array,
   })
-  actionsTokens: any[];
+  actions: any[];
+
+  @ApiProperty({
+    description: 'User accounts associated with the user',
+    type: Array,
+  })
+  userAccounts: any[];
 }
 
 export class CreateUserRequestDto implements CreateUserRequest {
@@ -182,14 +175,18 @@ export class CreateUserRequestDto implements CreateUserRequest {
   @IsString({ message: 'phone must be a string' })
   phone?: string;
 
-  @ApiProperty({
-    example: 'SecurePassword123!',
-    description: 'Password of the user',
-    minLength: 8,
+  @ApiPropertyOptional({
+    example: [{ type: 'password', password: 'SecurePassword123!' }],
+    description: 'Credentials for the user',
+    type: Array,
   })
-  @IsString({ message: 'password must be a string' })
-  @MinLength(8, { message: 'password must be at least 8 characters long' })
-  password: string;
+  @IsOptional()
+  @IsArray({ message: 'credentials must be an array' })
+  credentials?: Array<{
+    type: 'password' | 'google';
+    password?: string;
+    googleId?: string;
+  }>;
 
   @ApiProperty({
     example: true,
@@ -221,14 +218,17 @@ export class CreateUserRequestDto implements CreateUserRequest {
   acceptedPrivacyPolicy: boolean;
 
   @ApiPropertyOptional({
-    example: ['user'],
-    description: 'Array of role names to assign to the user',
-    type: [String],
+    example: [{ type: 1, expiresIn: 24, roles: ['user'] }],
+    description: 'Actions to create for the user',
+    type: Array,
   })
   @IsOptional()
-  @IsArray({ message: 'roles must be an array' })
-  @IsString({ each: true, message: 'Each role must be a string' })
-  roles?: string[];
+  @IsArray({ message: 'actions must be an array' })
+  actions?: Array<{
+    type: number;
+    expiresIn?: number;
+    roles?: string[];
+  }>;
 }
 
 export class PatchUserRequestDto implements PatchUserRequest {
@@ -263,16 +263,6 @@ export class PatchUserRequestDto implements PatchUserRequest {
   @IsOptional()
   @IsString({ message: 'profilePicture must be a string' })
   profilePicture?: string;
-
-  @ApiPropertyOptional({
-    example: ['user', 'admin'],
-    description: 'Array of role names to assign to the user',
-    type: [String],
-  })
-  @IsOptional()
-  @IsArray({ message: 'roles must be an array' })
-  @IsString({ each: true, message: 'Each role must be a string' })
-  roles?: string[];
 }
 
 export class UpdateUserRequestDto
@@ -305,14 +295,17 @@ export class UpdateUserRequestDto
   username?: string;
 
   @ApiPropertyOptional({
-    example: 'SecurePassword123!',
-    description: 'Password of the user',
-    minLength: 8,
+    example: [{ type: 'password', password: 'SecurePassword123!' }],
+    description: 'Credentials for the user',
+    type: Array,
   })
   @IsOptional()
-  @IsString({ message: 'password must be a string' })
-  @MinLength(8, { message: 'password must be at least 8 characters long' })
-  password?: string;
+  @IsArray({ message: 'credentials must be an array' })
+  credentials?: Array<{
+    type: 'password' | 'google';
+    password?: string;
+    googleId?: string;
+  }>;
 
   @ApiPropertyOptional({
     example: true,

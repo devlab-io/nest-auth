@@ -9,11 +9,11 @@ import {
 import { REQUEST } from '@nestjs/core';
 import { Request, Response } from 'express';
 import * as jwt from 'jsonwebtoken';
-import { UserService } from './user.service';
+import { UserAccountService } from './user-account.service';
+import { CredentialService } from './credential.service';
 import { SessionService } from './session.service';
 import { JwtConfig, JwtConfigToken } from '../config/jwt.config';
-import { JwtToken, JwtPayload, User, Role } from '../types';
-import * as bcrypt from 'bcryptjs';
+import { JwtToken, JwtPayload, UserAccount } from '../types';
 import { extractTokenFromRequest } from '../utils';
 
 /**
@@ -27,110 +27,120 @@ export class JwtService {
   public constructor(
     @Inject(REQUEST) private readonly request: Request,
     @Inject(JwtConfigToken) private readonly jwtConfig: JwtConfig,
-    @Inject() private readonly userService: UserService,
+    @Inject() private readonly userAccountService: UserAccountService,
+    @Inject() private readonly credentialService: CredentialService,
     @Inject() private readonly sessionService: SessionService,
   ) {}
 
   /**
-   * Check if a user is authenticated in the current request context
+   * Check if a user account is authenticated in the current request context
    *
-   * @returns True if the user is authenticated, false otherwise
+   * @returns True if the user account is authenticated, false otherwise
    */
   public isUserAuthenticated(): boolean {
-    const user: User | null = this.getUserFromContext();
-    return user !== null;
+    const userAccount: UserAccount | null = this.getUserAccountFromContext();
+    return userAccount !== null;
   }
 
   /**
-   * Get the authenticated user from the current request context
+   * Get the authenticated user account from the current request context
+   *
+   * @returns The authenticated user account
+   * @throws UnauthorizedException if the user account is not authenticated
+   */
+  public getAuthenticatedUserAccount(): UserAccount {
+    const userAccount: UserAccount | null = this.getUserAccountFromContext();
+    if (!userAccount) {
+      throw new UnauthorizedException('User account is not authenticated');
+    }
+    return userAccount;
+  }
+
+  /**
+   * Get the authenticated user from the current request context (backward compatibility)
    *
    * @returns The authenticated user
-   * @throws UnauthorizedException if the user is not authenticated
+   * @throws UnauthorizedException if the user account is not authenticated
    */
-  public getAuthenticatedUser(): User {
-    const user: User | null = this.getUserFromContext();
-    if (!user) {
-      throw new UnauthorizedException('User is not authenticated');
-    }
-    return user;
+  public getAuthenticatedUser() {
+    const userAccount: UserAccount = this.getAuthenticatedUserAccount();
+    return userAccount.user;
   }
 
   /**
-   * Check if the authenticated user has any of the given roles
+   * Check if the authenticated user account has any of the given roles
    *
    * @param roles - Array of role names to check
-   * @returns True if the user has at least one of the roles, false otherwise
-   * @throws UnauthorizedException if the user is not authenticated
+   * @returns True if the user account has at least one of the roles, false otherwise
+   * @throws UnauthorizedException if the user account is not authenticated
    */
   public userHasAnyRoles(roles: string[]): boolean {
-    const user: User = this.getAuthenticatedUser();
-    const userRoles: string[] = user.roles.map(
-      (role: Role): string => role.name,
+    const userAccount: UserAccount = this.getAuthenticatedUserAccount();
+    const userRoles: string[] = userAccount.roles.map(
+      (role): string => role.name,
     );
-    return roles.some((role) => userRoles.includes(role));
+    return roles.some((role: string): boolean => userRoles.includes(role));
   }
 
   /**
-   * Check if the authenticated user has all of the given roles
+   * Check if the authenticated user account has all of the given roles
    *
    * @param roles - Array of role names to check
-   * @returns True if the user has all of the roles, false otherwise
-   * @throws UnauthorizedException if the user is not authenticated
+   * @returns True if the user account has all of the roles, false otherwise
+   * @throws UnauthorizedException if the user account is not authenticated
    */
   public userHasAllRoles(roles: string[]): boolean {
-    const user: User = this.getAuthenticatedUser();
-    const userRoles: string[] = user.roles.map(
-      (role: Role): string => role.name,
+    const userAccount: UserAccount = this.getAuthenticatedUserAccount();
+    const userRoles: string[] = userAccount.roles.map(
+      (role): string => role.name,
     );
-    return roles.every((role) => userRoles.includes(role));
+    return roles.every((role: string): boolean => userRoles.includes(role));
   }
 
   /**
-   * Authenticate a user
+   * Authenticate a user account with password
    *
-   * @param user - The user
+   * @param userAccount - The user account
    * @param password - The user's password
    * @returns The JWT token
    * @throws UnauthorizedException if the credentials are invalid
    * @throws BadRequestException if the user account is disabled
    */
-  public async authenticate(user: User, password: string): Promise<JwtToken> {
+  public async authenticate(
+    userAccount: UserAccount,
+    password: string,
+  ): Promise<JwtToken> {
     // Check if the user is enabled
-    if (!user.enabled) {
+    if (!userAccount.user.enabled) {
       this.logger.warn(
-        `Authentication failed: user with email ${user.email} is disabled`,
+        `Authentication failed: user with email ${userAccount.user.email} is disabled`,
       );
       throw new BadRequestException('User account is disabled');
     }
 
-    // Check if the user has a password
-    if (!user.password) {
-      this.logger.warn(
-        `Authentication failed: user with email ${user.email} has no password`,
-      );
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    // Verify the password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    // Verify the password using CredentialService
+    const isPasswordValid = await this.credentialService.verifyPassword(
+      userAccount.user.id,
+      password,
+    );
     if (!isPasswordValid) {
       this.logger.warn(
-        `Authentication failed: invalid password for user with email ${user.email}`,
+        `Authentication failed: invalid password for user with email ${userAccount.user.email}`,
       );
       throw new UnauthorizedException('Invalid credentials');
     }
 
     // Generate JWT token
-    const token = this.generateToken(user);
+    const token = this.generateToken(userAccount);
 
     // Create session in database
-    await this.sessionService.create(token.accessToken, user.id);
+    await this.sessionService.create(token.accessToken, userAccount.id);
 
     // Set the cookie
     this.setCookie(token.accessToken);
 
-    // Store the user in the request context
-    this.setUserInContext(user);
+    // Store the user account in the request context
+    this.setUserAccountInContext(userAccount);
 
     // Done
     return token;
@@ -161,18 +171,21 @@ export class JwtService {
   }
 
   /**
-   * Generate a JWT token for a user
+   * Generate a JWT token for a user account
    *
-   * @param user - The user entity
+   * @param userAccount - The user account entity
    * @returns The JWT token
    */
-  private generateToken(user: User): JwtToken {
+  private generateToken(userAccount: UserAccount): JwtToken {
     // Create the payload
     const payload: JwtPayload = {
-      sub: user.id,
-      email: user.email,
-      username: user.username,
-      roles: user.roles.map((role: Role): string => role.name),
+      sub: userAccount.id, // userAccount id as subject
+      userId: userAccount.user.id,
+      email: userAccount.user.email,
+      username: userAccount.user.username,
+      roles: userAccount.roles.map((role): string => role.name),
+      organisationId: userAccount.organisation.id,
+      establishmentId: userAccount.establishment.id,
     };
 
     // Generate the token
@@ -210,11 +223,11 @@ export class JwtService {
   }
 
   /**
-   * Load user from token and set it in the request context
+   * Load user account from token and set it in the request context
    * This method is typically called by a guard
    *
    * @param token - The JWT token
-   * @throws UnauthorizedException if the token is invalid or the user is not found
+   * @throws UnauthorizedException if the token is invalid or the user account is not found
    */
   public async loadUserFromToken(token: string): Promise<void> {
     // Parse token
@@ -231,45 +244,52 @@ export class JwtService {
       throw new UnauthorizedException('Session has expired');
     }
 
-    // Get the user
-    const user: User = await this.userService.getById(payload.sub);
+    // Get the user account (payload.sub is the userAccount id)
+    const userAccount: UserAccount = await this.userAccountService.getById(
+      payload.sub,
+    );
 
     // Check if the user is enabled
-    if (!user.enabled) {
+    if (!userAccount.user.enabled) {
       throw new UnauthorizedException('User account is disabled');
     }
 
-    // Set the user in the request context
-    this.setUserInContext(user);
+    // Set the user account in the request context
+    this.setUserAccountInContext(userAccount);
   }
 
   /**
-   * Get the user from the request context
+   * Get the user account from the request context
    *
-   * @returns The user entity or null if not set
+   * @returns The user account entity or null if not set
    */
-  private getUserFromContext(): User | null {
-    return (this.request as any).user || null;
+  private getUserAccountFromContext(): UserAccount | null {
+    return (this.request as any).userAccount || null;
   }
 
   /**
-   * Set the user in the request context
+   * Set the user account in the request context
+   * Also sets user for backward compatibility
    *
-   * @param user - The user entity
+   * @param userAccount - The user account entity
    */
-  private setUserInContext(user: User): void {
-    (this.request as any).user = user;
+  private setUserAccountInContext(userAccount: UserAccount): void {
+    (this.request as any).userAccount = userAccount;
+    // Also set user for backward compatibility
+    (this.request as any).user = userAccount.user;
   }
 
   /**
-   * Remove the user from the request context
+   * Remove the user account from the request context
    */
   private removeUserFromContext(): void {
+    delete (this.request as any).userAccount;
     delete (this.request as any).user;
   }
 
   /**
    * Set the authentication cookie
+   * The cookie will persist even after the browser is closed
    *
    * @param token - The JWT token
    */
@@ -282,8 +302,9 @@ export class JwtService {
       response.cookie(this.COOKIE_NAME, token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: 'lax', // Changed from 'strict' to 'lax' for better persistence
         expires,
+        maxAge: this.jwtConfig.jwt.expiresIn, // Explicit maxAge in milliseconds for persistence
         path: '/',
       });
     }
@@ -298,7 +319,7 @@ export class JwtService {
       response.clearCookie(this.COOKIE_NAME, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: 'lax', // Changed from 'strict' to 'lax' for consistency
         path: '/',
       });
     }
