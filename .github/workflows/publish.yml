@@ -65,7 +65,8 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           echo "Checking if version $VERSION already exists on npm registry..."
-          if npm view @devlab-io/nest-auth@$VERSION version 2>/dev/null; then
+          # Check if version exists - npm view returns 0 if found, non-zero if not found
+          if npm view @devlab-io/nest-auth@$VERSION version >/dev/null 2>&1; then
             echo "❌ Version $VERSION already exists on npm registry"
             echo "Version $VERSION has already been published. Skipping all steps."
             echo "exists=true" >> $GITHUB_OUTPUT
@@ -138,27 +139,38 @@ jobs:
         if: steps.check_version.outputs.exists != 'true'
         run: |
           mkdir -p release
-          tar -czf release/nest-storage-${{ steps.version.outputs.tag }}.tar.gz dist package.json README.md
-          zip -r release/nest-storage-${{ steps.version.outputs.tag }}.zip dist package.json README.md
+          tar -czf release/nest-auth-${{ steps.version.outputs.tag }}.tar.gz dist package.json README.md
+          zip -r release/nest-auth-${{ steps.version.outputs.tag }}.zip dist package.json README.md
 
       - name: Publish to GitHub Packages
         if: steps.check_version.outputs.exists != 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm publish
+        run: |
+          # Double-check version doesn't exist before publishing (race condition protection)
+          VERSION="${{ steps.version.outputs.version }}"
+          if npm view @devlab-io/nest-auth@$VERSION version >/dev/null 2>&1; then
+            echo "❌ Version $VERSION now exists on npm registry (race condition detected)"
+            echo "Skipping publication to avoid conflict"
+            exit 0
+          fi
+          # Publish without running prepublishOnly (already done in workflow)
+          npm publish --ignore-scripts
 
       - name: Create GitHub Release with archive
         if: steps.check_version.outputs.exists != 'true'
+        continue-on-error: true
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: Release ${{ steps.version.outputs.tag }}
           body: ${{ github.event.inputs.release_description }}
           files: |
-            release/nest-storage-${{ steps.version.outputs.tag }}.tar.gz
-            release/nest-storage-${{ steps.version.outputs.tag }}.zip
+            release/nest-auth-${{ steps.version.outputs.tag }}.tar.gz
+            release/nest-auth-${{ steps.version.outputs.tag }}.zip
           draft: false
           prerelease: false
+          fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

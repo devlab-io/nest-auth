@@ -26,8 +26,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "type-check": "tsc --noEmit",
-    "prepublishOnly": "yarn build && yarn format:check && yarn lint:check && yarn type-check",
-    "publish": "npm publish"
+    "prepublishOnly": "yarn build && yarn format:check && yarn lint:check && yarn type-check"
   },
   "dependencies": {
     "@devlab-io/nest-mailer": "^0.0.1",
