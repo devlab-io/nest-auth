@@ -29,6 +29,7 @@ import {
   SessionController,
   OrganisationController,
   EstablishmentController,
+  RoleController,
 } from './controllers';
 import {
   UserEntity,
@@ -81,6 +82,7 @@ export class AuthModule {
         SessionController,
         OrganisationController,
         EstablishmentController,
+        RoleController,
       ],
       providers: [
         actionConfigProvider,

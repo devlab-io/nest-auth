@@ -58,6 +58,17 @@ export class RoleService {
   }
 
   /**
+   * Get all roles
+   *
+   * @returns All roles
+   */
+  async getAll(): Promise<RoleEntity[]> {
+    return await this.roleRepository.find({
+      order: { name: 'ASC' },
+    });
+  }
+
+  /**
    * Get all roles by their names
    *
    * @param names - The names of the roles

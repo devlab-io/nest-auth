@@ -15,3 +15,6 @@ export * from './establishment.dtos';
 
 // User Account DTOs
 export * from './user-account.dtos';
+
+// Role DTOs
+export * from './role.dtos';

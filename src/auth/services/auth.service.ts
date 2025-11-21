@@ -33,6 +33,7 @@ import { EstablishmentService } from './establishment.service';
 import { ActionTypeUtils } from '../utils';
 import { JwtService } from './jwt.service';
 import { NotificationService } from './notification.service';
+import { UserAccountDto } from '../dtos';
 
 @Injectable()
 export class AuthService {
@@ -50,6 +51,10 @@ export class AuthService {
     @Inject() private readonly notificationService: NotificationService,
     @Inject() private readonly jwtService: JwtService,
   ) {}
+
+  public async getAccount(): Promise<UserAccountDto | null> {
+    return await this.jwtService.getAuthenticatedUserAccount();
+  }
 
   /**
    * Get the maximum expiration time for a set of actions

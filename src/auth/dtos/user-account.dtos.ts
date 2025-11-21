@@ -3,7 +3,7 @@ import { UserAccount } from '../types';
 import { OrganisationDto } from './organisation.dtos';
 import { EstablishmentDto } from './establishment.dtos';
 import { UserDto } from './user.dtos';
-import { RoleDto } from './user.dtos';
+import { RoleDto } from './role.dtos';
 
 export class UserAccountDto implements UserAccount {
   @ApiProperty({

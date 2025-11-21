@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from '../services';
 import {
@@ -12,9 +12,10 @@ import {
   AcceptTermsRequestDto,
   AcceptPrivacyPolicyRequestDto,
   AuthResponseDto,
+  UserAccountDto,
 } from '../dtos';
 import { FrontendUrl } from '../decorators';
-import { FrontendUrlGuard } from '../guards';
+import { FrontendUrlGuard, JwtAuthGuard } from '../guards';
 
 /**
  * Authentication controller
@@ -29,6 +30,18 @@ export class AuthController {
    * @param authService - The auth service
    */
   constructor(private readonly authService: AuthService) {}
+
+  @Get('account')
+  @UseGuards(JwtAuthGuard, FrontendUrlGuard)
+  @ApiOperation({ summary: 'Get the current user account' })
+  @ApiResponse({
+    status: 200,
+    description: 'User account retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getAccount(): Promise<UserAccountDto | null> {
+    return await this.authService.getAccount();
+  }
 
   @Post('invite')
   @UseGuards(FrontendUrlGuard)

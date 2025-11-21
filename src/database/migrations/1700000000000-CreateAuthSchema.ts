@@ -683,9 +683,6 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
     const adminEmail = process.env.ADMIN_EMAIL || 'admin@devlab.io';
     const adminPassword = process.env.ADMIN_PASSWORD || 'ChangeMe1234*';
 
-    // Generate username from email (part before @)
-    const username = adminEmail.split('@')[0];
-
     // Hash the password
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(adminPassword, saltRounds);
@@ -711,53 +708,60 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
 
     if (!existingAdmin) {
       // Create the admin user using TypeORM
-      const adminUser = queryRunner.manager.create(UserEntity, {
-        username,
+      let user: UserEntity = queryRunner.manager.create(UserEntity, {
+        username: 'admin',
         email: adminEmail,
         emailValidated: true,
+        firstName: 'Admin',
+        lastName: 'Devlab',
+        phone: '+689123456789',
         enabled: true,
         acceptedTerms: true,
         acceptedPrivacyPolicy: true,
+        profilePicture: 'https://example.com/profile.jpg',
       });
-
-      const savedAdminUser = await queryRunner.manager.save(adminUser);
+      user = await queryRunner.manager.save(user);
 
       // Create password credential for admin user
-      const adminCredential = queryRunner.manager.create(CredentialEntity, {
-        type: 'password',
-        password: hashedPassword,
-        user: savedAdminUser,
-      });
-      await queryRunner.manager.save(adminCredential);
+      const credential: CredentialEntity = queryRunner.manager.create(
+        CredentialEntity,
+        {
+          type: 'password',
+          password: hashedPassword,
+          user: user,
+        },
+      );
+      await queryRunner.manager.save(credential);
 
       // Create default organisation and establishment
-      const defaultOrganisation = queryRunner.manager.create(
+      let oganisation: OrganisationEntity = queryRunner.manager.create(
         OrganisationEntity,
         {
-          name: 'Default Organisation',
+          name: 'Devlab',
         },
       );
-      const savedOrganisation =
-        await queryRunner.manager.save(defaultOrganisation);
+      oganisation = await queryRunner.manager.save(oganisation);
 
-      const defaultEstablishment = queryRunner.manager.create(
+      let establishment: EstablishmentEntity = queryRunner.manager.create(
         EstablishmentEntity,
         {
-          name: 'Default Establishment',
-          organisation: savedOrganisation,
+          name: 'Devlab',
+          organisation: oganisation,
         },
       );
-      const savedEstablishment =
-        await queryRunner.manager.save(defaultEstablishment);
+      establishment = await queryRunner.manager.save(establishment);
 
       // Create user account with admin role
-      const adminUserAccount = queryRunner.manager.create(UserAccountEntity, {
-        user: savedAdminUser,
-        organisation: savedOrganisation,
-        establishment: savedEstablishment,
-        roles: [adminRole],
-      });
-      await queryRunner.manager.save(adminUserAccount);
+      const account: UserAccountEntity = queryRunner.manager.create(
+        UserAccountEntity,
+        {
+          user: user,
+          organisation: oganisation,
+          establishment: establishment,
+          roles: [adminRole],
+        },
+      );
+      await queryRunner.manager.save(account);
     }
   }
 

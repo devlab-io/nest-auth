@@ -272,7 +272,7 @@ describe('UserService', () => {
 
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
         where: { id: userId },
-        relations: ['credentials', 'actions', 'accounts'],
+        relations: ['credentials', 'actions', 'accounts', 'accounts.roles'],
       });
       expect(result.firstName).toBe('Jane');
       expect(result.lastName).toBe('SMITH');
@@ -443,7 +443,7 @@ describe('UserService', () => {
 
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
         where: { email: 'test@example.com' },
-        relations: ['credentials', 'actions', 'accounts'],
+        relations: ['credentials', 'actions', 'accounts', 'accounts.roles'],
       });
       expect(result).toEqual(user);
     });
@@ -457,7 +457,7 @@ describe('UserService', () => {
 
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
         where: { email: 'test@example.com' },
-        relations: ['credentials', 'actions', 'accounts'],
+        relations: ['credentials', 'actions', 'accounts', 'accounts.roles'],
       });
     });
 
@@ -480,7 +480,7 @@ describe('UserService', () => {
 
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
         where: { id: 'user-id' },
-        relations: ['credentials', 'actions', 'accounts'],
+        relations: ['credentials', 'actions', 'accounts', 'accounts.roles'],
       });
       expect(result).toEqual(user);
     });

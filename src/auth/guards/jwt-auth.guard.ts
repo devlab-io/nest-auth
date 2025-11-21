@@ -5,25 +5,22 @@ import {
   UnauthorizedException,
   Inject,
 } from '@nestjs/common';
-import { JwtConfig, JwtConfigToken } from '../config/jwt.config';
-import { UserService } from '../services/user.service';
-import { SessionService } from '../services/session.service';
-import * as jwt from 'jsonwebtoken';
-import { JwtPayload } from '../types';
-import { UserEntity } from '../entities';
+import { JwtService } from '../services/jwt.service';
 import { extractTokenFromRequest } from '../utils';
 
 /**
  * JWT Authentication Guard
- * Validates JWT tokens and loads the user into the request context
+ * Validates JWT tokens and loads the user account into the request context
+ *
+ * Uses JwtService.loadUserFromToken() which:
+ * - Verifies the token
+ * - Checks the session exists and is active
+ * - Loads the UserAccount (not just User)
+ * - Sets request.userAccount and request.user (for backward compatibility)
  */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  public constructor(
-    @Inject(JwtConfigToken) private readonly jwtConfig: JwtConfig,
-    @Inject() private readonly userService: UserService,
-    @Inject() private readonly sessionService: SessionService,
-  ) {}
+  public constructor(@Inject() private readonly jwtService: JwtService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
@@ -34,35 +31,19 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     try {
-      // Verify and decode the token
-      const payload: JwtPayload = jwt.verify(
-        token,
-        this.jwtConfig.jwt.secret,
-      ) as JwtPayload;
-
-      // Verify session exists in database
-      const session = await this.sessionService.findByToken(token);
-      if (!session) {
-        throw new UnauthorizedException('Session not found');
-      }
-
-      // Check if session is still active
-      if (!this.sessionService.isActive(session)) {
-        throw new UnauthorizedException('Session has expired');
-      }
-
-      // Load the user from the database
-      const user: UserEntity = await this.userService.getById(payload.sub);
-
-      if (!user.enabled) {
-        throw new UnauthorizedException('User account is disabled');
-      }
-
-      // Set the user in the request context
-      request.user = user;
+      // ✅ Use JwtService.loadUserFromToken() which:
+      // - Verifies the token and validates the session
+      // - Loads the UserAccount (payload.sub is userAccount.id)
+      // - Sets request.userAccount and request.user in the context
+      await this.jwtService.loadUserFromToken(token);
 
       return true;
-    } catch {
+    } catch (error) {
+      // If it's already an UnauthorizedException, rethrow it
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      // Otherwise, throw a generic error
       throw new UnauthorizedException('Invalid or expired token');
     }
   }

@@ -306,7 +306,8 @@ export class UserService {
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.credentials', 'credentials')
       .leftJoinAndSelect('user.actions', 'actions')
-      .leftJoinAndSelect('user.accounts', 'accounts');
+      .leftJoinAndSelect('user.accounts', 'accounts')
+      .leftJoinAndSelect('accounts.roles', 'roles');
 
     // Apply basic filters
     if (params.id) {
@@ -397,7 +398,7 @@ export class UserService {
   public async findByEmail(email: string): Promise<UserEntity | null> {
     return await this.userRepository.findOne({
       where: { email: email.toLowerCase() },
-      relations: ['credentials', 'actions', 'accounts'],
+      relations: ['credentials', 'actions', 'accounts', 'accounts.roles'],
     });
   }
 
@@ -410,7 +411,7 @@ export class UserService {
   public async findById(id: string): Promise<UserEntity | null> {
     return await this.userRepository.findOne({
       where: { id },
-      relations: ['credentials', 'actions', 'accounts'],
+      relations: ['credentials', 'actions', 'accounts', 'accounts.roles'],
     });
   }
 
