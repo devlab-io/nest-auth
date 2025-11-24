@@ -35,17 +35,19 @@ export class InviteRequestDto implements InviteRequest {
 
   @ApiProperty({
     example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'ID of the organisation to create user account in',
+    description: 'Name of the organisation to create user account in',
   })
-  @IsString({ message: 'organisationId must be a string' })
-  organisationId: string;
+  @IsString({ message: 'organisation must be a string' })
+  @IsOptional()
+  organisation?: string;
 
   @ApiProperty({
     example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'ID of the establishment to create user account in',
+    description: 'Name of the establishment to create user account in',
   })
-  @IsString({ message: 'establishmentId must be a string' })
-  establishmentId: string;
+  @IsString({ message: 'establishment must be a string' })
+  @IsOptional()
+  establishment?: string;
 
   @ApiPropertyOptional({
     example: 24,

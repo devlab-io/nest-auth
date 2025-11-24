@@ -51,7 +51,12 @@ describe('AuthService', () => {
   };
 
   const mockActionConfig: ActionConfig = {
-    invite: { validity: 24, route: 'auth/accept-invitation' },
+    invite: {
+      validity: 24,
+      route: 'auth/accept-invitation',
+      organisation: undefined,
+      establishment: undefined,
+    },
     validateEmail: { validity: 24, route: 'auth/validate-email' },
     acceptTerms: { validity: 24, route: 'auth/accept-terms' },
     acceptPrivacyPolicy: { validity: 24, route: 'auth/accept-privacy-policy' },
@@ -146,10 +151,12 @@ describe('AuthService', () => {
 
     const mockOrganisationService = {
       getById: jest.fn(),
+      findByName: jest.fn(),
     };
 
     const mockEstablishmentService = {
       getById: jest.fn(),
+      findByNameAndOrganisation: jest.fn(),
     };
 
     const mockNotificationService = {
@@ -320,8 +327,8 @@ describe('AuthService', () => {
       const invite: InviteRequest = {
         email: 'test@example.com',
         roles: ['user'],
-        organisationId: 'org-id',
-        establishmentId: 'est-id',
+        organisation: 'Test Organisation',
+        establishment: 'Test Establishment',
       };
 
       userService.exists.mockResolvedValue(true);
@@ -338,12 +345,9 @@ describe('AuthService', () => {
       } as any;
 
       userService.exists.mockResolvedValue(false);
-      organisationService.getById.mockRejectedValue(
-        new NotFoundException('Organisation not found'),
-      );
 
       await expect(service.sendInvitation(invite, frontendUrl)).rejects.toThrow(
-        NotFoundException,
+        BadRequestException,
       );
     });
 
@@ -351,17 +355,15 @@ describe('AuthService', () => {
       const invite: InviteRequest = {
         email: 'test@example.com',
         roles: ['user'],
-        organisationId: 'org-id',
-        establishmentId: 'est-id',
+        organisation: 'Non-existent Organisation',
+        establishment: 'Test Establishment',
       };
 
       userService.exists.mockResolvedValue(false);
-      organisationService.getById.mockRejectedValue(
-        new NotFoundException('Organisation not found'),
-      );
+      organisationService.findByName = jest.fn().mockResolvedValue(null);
 
       await expect(service.sendInvitation(invite, frontendUrl)).rejects.toThrow(
-        NotFoundException,
+        BadRequestException,
       );
     });
 
@@ -369,47 +371,53 @@ describe('AuthService', () => {
       const invite: InviteRequest = {
         email: 'test@example.com',
         roles: ['user'],
-        organisationId: 'org-id',
-        establishmentId: 'est-id',
+        organisation: 'Test Organisation',
+        establishment: 'Test Establishment',
       };
 
       userService.exists.mockResolvedValue(false);
-      organisationService.getById.mockResolvedValue(mockOrganisation);
-      establishmentService.getById.mockResolvedValue(mockEstablishment);
+      organisationService.findByName = jest
+        .fn()
+        .mockResolvedValue(mockOrganisation);
+      establishmentService.findByNameAndOrganisation = jest
+        .fn()
+        .mockResolvedValue(mockEstablishment);
       actionService.create.mockResolvedValue(mockActionToken);
 
       await service.sendInvitation(invite, frontendUrl);
 
       expect(userService.exists).toHaveBeenCalledWith('test@example.com');
-      expect(organisationService.getById).toHaveBeenCalledWith('org-id');
-      expect(establishmentService.getById).toHaveBeenCalledWith('est-id');
+      expect(organisationService.findByName).toHaveBeenCalledWith(
+        'Test Organisation',
+      );
+      expect(
+        establishmentService.findByNameAndOrganisation,
+      ).toHaveBeenCalledWith('Test Establishment', 'org-id');
       // sendActionToken is called internally, which calls actionService.create
-      // Note: organisationId and establishmentId are passed to sendActionToken but
-      // they are not forwarded to actionService.create in sendActionToken
-      // They are saved separately in ActionService.create from the request object
       expect(actionService.create).toHaveBeenCalled();
       const createCall = (actionService.create as jest.Mock).mock.calls[0][0];
       expect(createCall.email).toBe('test@example.com');
       expect(createCall.type).toBe(ActionType.Invite);
       expect(createCall.roles).toEqual(['user']);
-      // Note: organisationId and establishmentId should be in the createCall but
-      // sendActionToken doesn't pass them through, only the request object passed to
-      // sendInvitation contains them. This is a design issue - the values are passed
-      // in the request but ActionService.create needs them directly.
-      // For now, we just verify that create was called
+      expect(createCall.organisationId).toBe('org-id');
+      expect(createCall.establishmentId).toBe('est-id');
       expect(notificationService.sendActionTokenEmail).toHaveBeenCalled();
     });
 
     it('should use default roles if not provided', async () => {
       const invite: InviteRequest = {
         email: 'test@example.com',
-        organisationId: 'org-id',
-        establishmentId: 'est-id',
+        organisation: 'Test Organisation',
+        establishment: 'Test Establishment',
       };
 
       userService.exists.mockResolvedValue(false);
-      organisationService.getById.mockResolvedValue(mockOrganisation);
-      establishmentService.getById.mockResolvedValue(mockEstablishment);
+      organisationService.findByName = jest
+        .fn()
+        .mockResolvedValue(mockOrganisation);
+      establishmentService.findByNameAndOrganisation = jest
+        .fn()
+        .mockResolvedValue(mockEstablishment);
       actionService.create.mockResolvedValue(mockActionToken);
 
       await service.sendInvitation(invite, frontendUrl);

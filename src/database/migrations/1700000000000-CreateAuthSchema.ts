@@ -15,6 +15,7 @@ import { OrganisationEntity } from '../../auth/entities/organisation.entity';
 import { EstablishmentEntity } from '../../auth/entities/establishment.entity';
 import { CredentialEntity } from '../../auth/entities/credential.entity';
 import { UserAccountEntity } from '../../auth/entities/user-account.entity';
+import { BadRequestException } from '@nestjs/common';
 
 // Load environment variables
 config({ path: resolve(process.cwd(), '.env') });
@@ -687,11 +688,35 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(adminPassword, saltRounds);
 
-    // Create or get the admin role using TypeORM
+    // Create Devlab organisation
+    let devlabOrganisation: OrganisationEntity | null =
+      await queryRunner.manager.findOne(OrganisationEntity, {
+        where: { name: 'Devlab' },
+      });
+    if (!devlabOrganisation) {
+      devlabOrganisation = queryRunner.manager.create(OrganisationEntity, {
+        name: 'Devlab',
+      });
+      devlabOrganisation = await queryRunner.manager.save(devlabOrganisation);
+    }
+
+    // Create Devlab establishment
+    let devlabEstablishment: EstablishmentEntity | null =
+      await queryRunner.manager.findOne(EstablishmentEntity, {
+        where: { name: 'Devlab', organisation: { id: devlabOrganisation.id } },
+      });
+    if (!devlabEstablishment) {
+      devlabEstablishment = queryRunner.manager.create(EstablishmentEntity, {
+        name: 'Devlab',
+        organisation: devlabOrganisation!,
+      });
+      devlabEstablishment = await queryRunner.manager.save(devlabEstablishment);
+    }
+
+    // Create or get the admin role
     let adminRole = await queryRunner.manager.findOne(RoleEntity, {
       where: { name: 'admin' },
     });
-
     if (!adminRole) {
       // Create admin role
       adminRole = queryRunner.manager.create(RoleEntity, {
@@ -701,11 +726,10 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
       adminRole = await queryRunner.manager.save(adminRole);
     }
 
-    // Check if admin user already exists using TypeORM
+    // Check if admin user already exists
     const existingAdmin = await queryRunner.manager.findOne(UserEntity, {
       where: { email: adminEmail },
     });
-
     if (!existingAdmin) {
       // Create the admin user using TypeORM
       let user: UserEntity = queryRunner.manager.create(UserEntity, {
@@ -733,35 +757,87 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
       );
       await queryRunner.manager.save(credential);
 
-      // Create default organisation and establishment
-      let oganisation: OrganisationEntity = queryRunner.manager.create(
-        OrganisationEntity,
-        {
-          name: 'Devlab',
-        },
-      );
-      oganisation = await queryRunner.manager.save(oganisation);
-
-      let establishment: EstablishmentEntity = queryRunner.manager.create(
-        EstablishmentEntity,
-        {
-          name: 'Devlab',
-          organisation: oganisation,
-        },
-      );
-      establishment = await queryRunner.manager.save(establishment);
-
       // Create user account with admin role
       const account: UserAccountEntity = queryRunner.manager.create(
         UserAccountEntity,
         {
           user: user,
-          organisation: oganisation,
-          establishment: establishment,
+          organisation: devlabOrganisation!,
+          establishment: devlabEstablishment!,
           roles: [adminRole],
         },
       );
       await queryRunner.manager.save(account);
+    }
+    // Create organisations and establishments from tenants config
+    await this.createTenantsFromConfig(queryRunner);
+  }
+
+  /**
+   * Creates organisations and establishments from tenants configuration.
+   * Reads AUTH_TENANTS_ORGANISATIONS and AUTH_TENANTS_ESTABLISHMENTS from environment variables.
+   * @param queryRunner - The query runner
+   */
+  private async createTenantsFromConfig(
+    queryRunner: QueryRunner,
+  ): Promise<void> {
+    // Parse organisations from environment variable
+    const organisationsEnv = process.env.AUTH_TENANTS_ORGANISATIONS || '';
+    const organisations: string[] = organisationsEnv
+      .split(',')
+      .map((org) => org.trim())
+      .filter((org) => org.length > 0);
+
+    // Parse establishments from environment variable
+    const establishmentsEnv = process.env.AUTH_TENANTS_ESTABLISHMENTS || '';
+    const establishments: string[] = establishmentsEnv
+      .split(',')
+      .map((est) => est.trim())
+      .filter((est) => est.length > 0);
+
+    // Create organisations
+    const organisationsCache: Map<string, OrganisationEntity> = new Map();
+    for (const organisationName of organisations) {
+      let organisation: OrganisationEntity | null =
+        await queryRunner.manager.findOne(OrganisationEntity, {
+          where: { name: organisationName },
+        });
+
+      if (!organisation) {
+        organisation = queryRunner.manager.create(OrganisationEntity, {
+          name: organisationName,
+        });
+        organisation = await queryRunner.manager.save(organisation);
+      }
+      organisationsCache.set(organisation.name, organisation);
+    }
+
+    // Create establishments and associate them with the first available organisation
+    for (const organisationAndEstablishmentName of establishments) {
+      const [organisationName, establishmentName] =
+        organisationAndEstablishmentName.split(':');
+      const organisation: OrganisationEntity | undefined =
+        organisationsCache.get(organisationName);
+      if (!organisation) {
+        throw new BadRequestException(
+          `Organisation ${organisationName} not found`,
+        );
+      }
+      let establishment: EstablishmentEntity | null =
+        await queryRunner.manager.findOne(EstablishmentEntity, {
+          where: {
+            name: establishmentName,
+            organisation: organisation,
+          },
+        });
+
+      if (!establishment) {
+        establishment = queryRunner.manager.create(EstablishmentEntity, {
+          name: establishmentName,
+          organisation: organisation,
+        });
+        establishment = await queryRunner.manager.save(establishment);
+      }
     }
   }
 

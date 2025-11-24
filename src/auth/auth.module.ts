@@ -41,6 +41,7 @@ import {
   CredentialEntity,
   UserAccountEntity,
 } from './entities';
+import { provideTenantsConfig } from './config/tenants.config';
 
 /**
  * Authentication module
@@ -61,6 +62,7 @@ export class AuthModule {
     const userConfigProvider: Provider = provideUserConfig();
     const googleAuthConfigProvider: Provider = provideGoogleAuthConfig();
     const authConfigProvider: Provider = provideAuthConfig(config);
+    const tenantsConfigProvider: Provider = provideTenantsConfig();
 
     return {
       module: AuthModule,
@@ -91,6 +93,7 @@ export class AuthModule {
         userConfigProvider,
         googleAuthConfigProvider,
         authConfigProvider,
+        tenantsConfigProvider,
         AuthService,
         UserService,
         ActionService,
@@ -112,6 +115,7 @@ export class AuthModule {
         adminConfigProvider,
         userConfigProvider,
         googleAuthConfigProvider,
+        tenantsConfigProvider,
         AuthService,
         UserService,
         ActionService,

@@ -7,8 +7,13 @@ export interface UnitActionConfig {
   route: string; // Frontend route suffix (e.g., 'auth/reset-password')
 }
 
+export interface InviteActionConfig extends UnitActionConfig {
+  organisation?: string;
+  establishment?: string;
+}
+
 export interface ActionConfig {
-  invite: UnitActionConfig;
+  invite: InviteActionConfig;
   validateEmail: UnitActionConfig;
   acceptTerms: UnitActionConfig;
   acceptPrivacyPolicy: UnitActionConfig;
@@ -22,6 +27,8 @@ export const ActionConfigToken: symbol = Symbol('ActionConfig');
 const actionConfigSchema = z.object({
   AUTH_ACTION_INVITE: z.coerce.number().default(24),
   AUTH_ACTION_INVITE_ROUTE: z.string().default('auth/accept-invitation'),
+  AUTH_ACTION_INVITE_ORGANISATION: z.string().optional(),
+  AUTH_ACTION_INVITE_ESTABLISHMENT: z.string().optional(),
   AUTH_ACTION_VALIDATE_EMAIL: z.coerce.number().default(24),
   AUTH_ACTION_VALIDATE_EMAIL_ROUTE: z.string().default('auth/validate-email'),
   AUTH_ACTION_ACCEPT_TERMS: z.coerce.number().default(24),
@@ -44,6 +51,8 @@ function parseActionConfig(env: NodeJS.ProcessEnv): ActionConfig {
     invite: {
       validity: config.AUTH_ACTION_INVITE,
       route: route(config.AUTH_ACTION_INVITE_ROUTE),
+      organisation: config.AUTH_ACTION_INVITE_ORGANISATION,
+      establishment: config.AUTH_ACTION_INVITE_ESTABLISHMENT,
     },
     validateEmail: {
       validity: config.AUTH_ACTION_VALIDATE_EMAIL,

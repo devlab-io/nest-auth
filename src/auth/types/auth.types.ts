@@ -35,8 +35,8 @@ export interface SignUpRequest extends CreateUserRequest {}
 
 export interface InviteRequest {
   email: string;
-  organisationId: string; // Organisation to create user account in
-  establishmentId: string; // Establishment to create user account in
+  organisation?: string; // Organisation to create user account in
+  establishment?: string; // Establishment to create user account in
   expiresIn?: number; // hours
   message?: string;
   roles?: string[];

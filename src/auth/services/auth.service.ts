@@ -22,6 +22,8 @@ import {
   SignUpRequest,
   UpdateUserRequest,
   ValidateEmailRequest,
+  Organisation,
+  Establishment,
 } from '../types';
 import { UserConfig, UserConfigToken } from '../config/user.config';
 import { ActionConfig, ActionConfigToken } from '../config/action.config';
@@ -172,6 +174,8 @@ export class AuthService {
       user: user,
       roles: request.roles,
       expiresIn: expirationTime,
+      organisationId: request.organisationId,
+      establishmentId: request.establishmentId,
     });
 
     // Send the email using NotificationService
@@ -295,19 +299,41 @@ export class AuthService {
       );
     }
 
-    // Verify that the organisation exists
-    await this.organisationService.getById(invite.organisationId);
+    // Check organisation is provided (either in invite or in config)
+    const organisationName =
+      invite.organisation ?? this.actionConfig.invite.organisation;
+    if (!organisationName) {
+      const message: string = 'Organisation was not specified in the invite request nor in the config';
+      this.logger.warn(message);
+      throw new BadRequestException(message);
+    }
+    const organisation: Organisation | null =
+      await this.organisationService.findByName(organisationName);
+    if (!organisation) {
+      throw new BadRequestException(
+        `Organisation ${organisationName} not found`,
+      );
+    }
+
+    // Check establishment is provided (either in invite or in config)
+    const establishmentName =
+      invite.establishment ?? this.actionConfig.invite.establishment;
+    if (!establishmentName) {
+      const message: string = 'Establishment was not specified in the invite request nor in the config';
+      this.logger.warn(message);
+      throw new BadRequestException(message);
+    }
 
     // Verify that the establishment exists
-    const establishment = await this.establishmentService.getById(
-      invite.establishmentId,
-    );
-
-    // Verify that the establishment belongs to the organisation
-    if (establishment.organisation.id !== invite.organisationId) {
-      throw new BadRequestException(
-        `Establishment ${invite.establishmentId} does not belong to organisation ${invite.organisationId}`,
+    const establishment: Establishment | null =
+      await this.establishmentService.findByNameAndOrganisation(
+        establishmentName,
+        organisation.id,
       );
+    if (!establishment) {
+      const message: string = `Establishment ${establishmentName} not found for organisation ${organisation.name}`;
+      this.logger.warn(message);
+      throw new BadRequestException(message);
     }
 
     // Use sendActionToken with organisationId and establishmentId
@@ -317,8 +343,8 @@ export class AuthService {
         type: ActionType.Invite,
         expiresIn: invite.expiresIn,
         roles: invite.roles ?? this.userConfig.user.defaultRoles,
-        organisationId: invite.organisationId,
-        establishmentId: invite.establishmentId,
+        organisationId: organisation.id,
+        establishmentId: establishment.id,
       },
       frontendUrl,
     );
