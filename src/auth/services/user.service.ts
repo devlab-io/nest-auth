@@ -1,4 +1,4 @@
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import {
   Injectable,
   NotFoundException,
@@ -7,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { UserEntity } from '../entities';
+import { UserEntity, UserAccountEntity } from '../entities';
 import {
   UserQueryParams,
   UpdateUserRequest,
@@ -30,14 +30,19 @@ export class UserService {
    * Constructor
    *
    * @param userConfig - The user configuration
+   * @param dataSource - The data source for transactions
    * @param userRepository - The user repository
+   * @param userAccountRepository - The user account repository
    * @param credentialService - The credential service
    * @param actionService - The action service
    */
   public constructor(
     @Inject(UserConfigToken) private readonly userConfig: UserConfig,
+    private readonly dataSource: DataSource,
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
+    @InjectRepository(UserAccountEntity)
+    private readonly userAccountRepository: Repository<UserAccountEntity>,
     @Inject() private readonly credentialService: CredentialService,
     @Inject() private readonly actionService: ActionService,
   ) {}
@@ -473,14 +478,43 @@ export class UserService {
    * @throws NotFoundException if the user is not found
    */
   public async disable(id: string): Promise<UserEntity> {
-    // Get the user with the given ID
-    const user: UserEntity = await this.getById(id);
+    // Use a transaction to ensure all operations are atomic
+    return await this.dataSource.transaction(async (manager) => {
+      // Get the user with the given ID
+      const user: UserEntity | null = await manager.findOne(UserEntity, {
+        where: { id },
+      });
 
-    // Disable the user
-    user.enabled = false;
+      if (!user) {
+        throw new NotFoundException(`User with ID ${id} not found`);
+      }
 
-    // Save the user
-    return await this.userRepository.save(user);
+      // Disable the user
+      user.enabled = false;
+
+      // Save the user
+      const savedUser = await manager.save(UserEntity, user);
+
+      // Disable all associated user accounts
+      const userAccounts = await manager.find(UserAccountEntity, {
+        where: { user: { id } },
+      });
+
+      if (userAccounts.length > 0) {
+        for (const userAccount of userAccounts) {
+          userAccount.enabled = false;
+        }
+        await manager.save(UserAccountEntity, userAccounts);
+
+        // Log
+        this.logger.debug(
+          `Disabled ${userAccounts.length} user account(s) associated with user ${id}`,
+        );
+      }
+
+      // Return the disabled user
+      return savedUser;
+    });
   }
 
   /**

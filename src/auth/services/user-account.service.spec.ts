@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { UserAccountService } from './user-account.service';
 import { UserService } from './user.service';
 import { OrganisationService } from './organisation.service';
@@ -46,6 +47,10 @@ describe('UserAccountService', () => {
     getAllByNames: jest.fn(),
   };
 
+  const mockDataSource = {
+    transaction: jest.fn(),
+  };
+
   const mockUser: UserEntity = {
     id: 'user-id',
     email: 'test@example.com',
@@ -65,6 +70,9 @@ describe('UserAccountService', () => {
     id: 'org-id',
     name: 'Test Organisation',
     establishments: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    enabled: true,
   } as OrganisationEntity;
 
   const mockEstablishment: EstablishmentEntity = {
@@ -72,6 +80,9 @@ describe('UserAccountService', () => {
     name: 'Test Establishment',
     organisation: mockOrganisation,
     accounts: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    enabled: true,
   } as EstablishmentEntity;
 
   const mockRoles: RoleEntity[] = [
@@ -102,6 +113,10 @@ describe('UserAccountService', () => {
         {
           provide: RoleService,
           useValue: mockRoleService,
+        },
+        {
+          provide: DataSource,
+          useValue: mockDataSource,
         },
       ],
     }).compile();
@@ -157,6 +172,9 @@ describe('UserAccountService', () => {
         id: 'other-org-id',
         name: 'Other Organisation',
         establishments: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        enabled: true,
       } as OrganisationEntity;
       const establishmentWithOtherOrg = {
         ...mockEstablishment,
@@ -189,6 +207,9 @@ describe('UserAccountService', () => {
         organisation: mockOrganisation,
         establishment: mockEstablishment,
         roles: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        enabled: true,
       } as UserAccountEntity;
 
       mockUserService.getById.mockResolvedValue(mockUser);
@@ -348,6 +369,9 @@ describe('UserAccountService', () => {
         organisation: mockOrganisation,
         establishment: mockEstablishment,
         roles: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        enabled: true,
       } as UserAccountEntity;
       const updatedRoles = [mockRoles[0]] as RoleEntity[];
       const updatedUserAccount = {
@@ -372,12 +396,18 @@ describe('UserAccountService', () => {
         id: 'new-org-id',
         name: 'New Organisation',
         establishments: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        enabled: true,
       } as OrganisationEntity;
       const newEstablishment = {
         id: 'new-est-id',
         name: 'New Establishment',
         organisation: newOrganisation,
         accounts: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        enabled: true,
       } as EstablishmentEntity;
       const request: UpdateUserAccountRequest = {
         organisationId: 'new-org-id',
@@ -389,6 +419,9 @@ describe('UserAccountService', () => {
         organisation: mockOrganisation,
         establishment: mockEstablishment,
         roles: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        enabled: true,
       } as UserAccountEntity;
 
       mockRepository.findOne.mockResolvedValue(existingUserAccount);

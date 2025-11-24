@@ -26,6 +26,24 @@ export class OrganisationDto implements Organisation {
     type: [EstablishmentDto],
   })
   establishments: EstablishmentDto[];
+
+  @ApiProperty({
+    example: '2024-02-20T10:00:00.000Z',
+    description: 'Date when the organisation was created',
+  })
+  createdAt: Date;
+
+  @ApiProperty({
+    example: '2024-02-20T10:00:00.000Z',
+    description: 'Date when the organisation was last updated',
+  })
+  updatedAt: Date;
+
+  @ApiProperty({
+    example: true,
+    description: 'Indicates if the organisation is enabled',
+  })
+  enabled: boolean;
 }
 
 export class CreateOrganisationRequestDto implements CreateOrganisationRequest {

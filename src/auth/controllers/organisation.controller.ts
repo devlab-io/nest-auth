@@ -195,6 +195,36 @@ export class OrganisationController {
   }
 
   /**
+   * Enable an organisation
+   *
+   * @param id The ID of the organisation
+   * @returns The enabled organisation
+   */
+  @Patch(':id/enable')
+  @ApiOperation({ summary: 'Enable an organisation' })
+  @ApiParam({ name: 'id', type: String, description: 'Organisation ID' })
+  @ApiResponse({ status: 200, type: OrganisationDto })
+  @ApiResponse({ status: 404, description: 'Organisation not found' })
+  async enable(@Param('id') id: string): Promise<OrganisationDto> {
+    return await this.organisationService.enable(id);
+  }
+
+  /**
+   * Disable an organisation
+   *
+   * @param id The ID of the organisation
+   * @returns The disabled organisation
+   */
+  @Patch(':id/disable')
+  @ApiOperation({ summary: 'Disable an organisation' })
+  @ApiParam({ name: 'id', type: String, description: 'Organisation ID' })
+  @ApiResponse({ status: 200, type: OrganisationDto })
+  @ApiResponse({ status: 404, description: 'Organisation not found' })
+  async disable(@Param('id') id: string): Promise<OrganisationDto> {
+    return await this.organisationService.disable(id);
+  }
+
+  /**
    * Delete an organisation
    *
    * @param id The ID of the organisation

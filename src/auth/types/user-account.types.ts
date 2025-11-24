@@ -9,6 +9,9 @@ export interface UserAccount {
   establishment: Establishment;
   user: User;
   roles: Role[];
+  createdAt: Date;
+  updatedAt: Date;
+  enabled: boolean;
 }
 
 export interface CreateUserAccountRequest {

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { OrganisationService } from './organisation.service';
 import { OrganisationEntity } from '../entities';
 import {
@@ -21,6 +22,10 @@ describe('OrganisationService', () => {
     createQueryBuilder: jest.fn(),
   };
 
+  const mockDataSource = {
+    transaction: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -28,6 +33,10 @@ describe('OrganisationService', () => {
         {
           provide: getRepositoryToken(OrganisationEntity),
           useValue: mockRepository,
+        },
+        {
+          provide: DataSource,
+          useValue: mockDataSource,
         },
       ],
     }).compile();
@@ -45,6 +54,9 @@ describe('OrganisationService', () => {
         id: 'org-id',
         name: 'Test Organisation',
         establishments: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        enabled: true,
       } as OrganisationEntity;
 
       mockRepository.findOne.mockResolvedValue(null);
@@ -91,6 +103,9 @@ describe('OrganisationService', () => {
         id,
         name: 'Test Organisation',
         establishments: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        enabled: true,
       } as OrganisationEntity;
 
       mockRepository.findOne.mockResolvedValue(organisation);
@@ -123,6 +138,9 @@ describe('OrganisationService', () => {
         id,
         name: 'Test Organisation',
         establishments: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        enabled: true,
       } as OrganisationEntity;
 
       mockRepository.findOne.mockResolvedValue(organisation);
@@ -154,6 +172,9 @@ describe('OrganisationService', () => {
         id: 'org-id',
         name,
         establishments: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        enabled: true,
       } as OrganisationEntity;
 
       mockRepository.findOne.mockResolvedValue(organisation);
@@ -213,11 +234,17 @@ describe('OrganisationService', () => {
           id: 'org-id-1',
           name: 'Test Organisation 1',
           establishments: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          enabled: true,
         },
         {
           id: 'org-id-2',
           name: 'Test Organisation 2',
           establishments: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          enabled: true,
         },
       ] as OrganisationEntity[];
 
@@ -261,6 +288,9 @@ describe('OrganisationService', () => {
           id: 'org-id',
           name: 'Test Organisation',
           establishments: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          enabled: true,
         },
       ] as OrganisationEntity[];
 
@@ -297,6 +327,9 @@ describe('OrganisationService', () => {
         id,
         name: 'Test Organisation',
         establishments: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        enabled: true,
       } as OrganisationEntity;
       const updatedOrg = {
         ...existingOrg,
@@ -323,11 +356,17 @@ describe('OrganisationService', () => {
         id,
         name: 'Test Organisation',
         establishments: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        enabled: true,
       } as OrganisationEntity;
       const conflictingOrg = {
         id: 'other-id',
         name: 'Existing Organisation',
         establishments: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        enabled: true,
       } as OrganisationEntity;
 
       mockRepository.findOne
@@ -354,6 +393,9 @@ describe('OrganisationService', () => {
         id,
         name: 'Test Organisation',
         establishments: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        enabled: true,
       } as OrganisationEntity;
 
       mockRepository.findOne.mockResolvedValueOnce(existingOrg); // getById
@@ -373,6 +415,9 @@ describe('OrganisationService', () => {
         id,
         name: 'Test Organisation',
         establishments: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        enabled: true,
       } as OrganisationEntity;
 
       // getById calls findById, which calls findOne

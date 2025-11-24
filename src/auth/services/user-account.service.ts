@@ -1,4 +1,4 @@
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import {
   Injectable,
   NotFoundException,
@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { UserAccountEntity } from '../entities';
+import { UserAccountEntity, UserEntity } from '../entities';
 import { UserService } from './user.service';
 import { OrganisationService } from './organisation.service';
 import { EstablishmentService } from './establishment.service';
@@ -25,6 +25,7 @@ export class UserAccountService {
   /**
    * Constructor
    *
+   * @param dataSource - The data source for transactions
    * @param userAccountRepository - The user account repository
    * @param userService - The user service
    * @param organisationService - The organisation service
@@ -32,6 +33,7 @@ export class UserAccountService {
    * @param roleService - The role service
    */
   public constructor(
+    private readonly dataSource: DataSource,
     @InjectRepository(UserAccountEntity)
     private readonly userAccountRepository: Repository<UserAccountEntity>,
     private readonly userService: UserService,
@@ -305,6 +307,95 @@ export class UserAccountService {
 
     // Return the user account
     return userAccount;
+  }
+
+  /**
+   * Enable a user account
+   *
+   * @param id - The ID of the user account
+   * @returns The enabled user account
+   * @throws NotFoundException if the user account is not found
+   */
+  public async enable(id: string): Promise<UserAccountEntity> {
+    // Get the user account with the given ID
+    const userAccount: UserAccountEntity = await this.getById(id);
+
+    // Enable the user account
+    userAccount.enabled = true;
+
+    // Save the user account
+    const saved = await this.userAccountRepository.save(userAccount);
+
+    // Log
+    this.logger.debug(`User account with ID ${id} enabled`);
+
+    // Return the user account
+    return saved;
+  }
+
+  /**
+   * Disable a user account
+   *
+   * @param id - The ID of the user account
+   * @returns The disabled user account
+   * @throws NotFoundException if the user account is not found
+   */
+  public async disable(id: string): Promise<UserAccountEntity> {
+    // Use a transaction to ensure all operations are atomic
+    return await this.dataSource.transaction(async (manager) => {
+      // Get the user account with the given ID
+      const userAccount: UserAccountEntity | null = await manager.findOne(
+        UserAccountEntity,
+        {
+          where: { id },
+          relations: ['user'],
+        },
+      );
+
+      if (!userAccount) {
+        throw new NotFoundException(`User account with ID ${id} not found`);
+      }
+
+      const userId = userAccount.user.id;
+
+      // Disable the user account
+      userAccount.enabled = false;
+
+      // Save the user account
+      const saved = await manager.save(UserAccountEntity, userAccount);
+
+      // Check if the user has any other enabled user accounts
+      const allUserAccounts = await manager.find(UserAccountEntity, {
+        where: { user: { id: userId } },
+      });
+
+      const hasEnabledAccount = allUserAccounts.some(
+        (account) => account.enabled && account.id !== id,
+      );
+
+      // If the user has no enabled accounts, disable the user as well
+      if (!hasEnabledAccount) {
+        const user = await manager.findOne(UserEntity, {
+          where: { id: userId },
+        });
+
+        if (user && user.enabled) {
+          user.enabled = false;
+          await manager.save(UserEntity, user);
+
+          // Log
+          this.logger.debug(
+            `User ${userId} disabled because all user accounts are disabled`,
+          );
+        }
+      }
+
+      // Log
+      this.logger.debug(`User account with ID ${id} disabled`);
+
+      // Return the user account
+      return saved;
+    });
   }
 
   /**

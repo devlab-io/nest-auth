@@ -63,6 +63,9 @@ describe('JwtService', () => {
     id: 'org-id',
     name: 'Test Organisation',
     establishments: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    enabled: true,
   };
 
   const mockEstablishment = {
@@ -70,6 +73,9 @@ describe('JwtService', () => {
     name: 'Test Establishment',
     organisation: mockOrganisation,
     accounts: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    enabled: true,
   };
 
   const mockRoles = [
@@ -83,6 +89,9 @@ describe('JwtService', () => {
     establishment: mockEstablishment,
     user: mockUser,
     roles: mockRoles,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    enabled: true,
   };
 
   const mockUserAccountService = {

@@ -69,6 +69,9 @@ describe('AuthService', () => {
     id: 'org-id',
     name: 'Test Organisation',
     establishments: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    enabled: true,
   } as OrganisationEntity;
 
   const mockEstablishment: EstablishmentEntity = {
@@ -76,6 +79,9 @@ describe('AuthService', () => {
     name: 'Test Establishment',
     organisation: { ...mockOrganisation, id: 'org-id' },
     accounts: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    enabled: true,
   } as EstablishmentEntity;
 
   const mockUser: UserEntity = {
@@ -101,6 +107,9 @@ describe('AuthService', () => {
     establishment: mockEstablishment,
     user: mockUser,
     roles: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    enabled: true,
   } as UserAccountEntity;
 
   const mockRoles: RoleEntity[] = [];

@@ -4,6 +4,9 @@ export interface Organisation {
   id: string;
   name: string;
   establishments: Establishment[];
+  createdAt: Date;
+  updatedAt: Date;
+  enabled: boolean;
 }
 
 export interface CreateOrganisationRequest {

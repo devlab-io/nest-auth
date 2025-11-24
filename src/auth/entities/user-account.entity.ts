@@ -1,10 +1,13 @@
 import {
+  Column,
+  CreateDateColumn,
   Entity,
   JoinColumn,
   JoinTable,
   ManyToMany,
   ManyToOne,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { UserAccount } from '../types';
@@ -72,4 +75,25 @@ export class UserAccountEntity implements UserAccount {
     },
   })
   roles: RoleEntity[];
+
+  @ApiProperty({
+    example: '2024-02-20T10:00:00.000Z',
+    description: 'Date when the user account was created',
+  })
+  @CreateDateColumn({ name: 'createdAt' })
+  createdAt: Date;
+
+  @ApiProperty({
+    example: '2024-02-20T10:00:00.000Z',
+    description: 'Date when the user account was last updated',
+  })
+  @UpdateDateColumn({ name: 'updatedAt' })
+  updatedAt: Date;
+
+  @ApiProperty({
+    example: true,
+    description: 'Indicates if the user account is enabled',
+  })
+  @Column({ name: 'enabled', default: true })
+  enabled: boolean;
 }

@@ -218,6 +218,36 @@ export class EstablishmentController {
   }
 
   /**
+   * Enable an establishment
+   *
+   * @param id The ID of the establishment
+   * @returns The enabled establishment
+   */
+  @Patch(':id/enable')
+  @ApiOperation({ summary: 'Enable an establishment' })
+  @ApiParam({ name: 'id', type: String, description: 'Establishment ID' })
+  @ApiResponse({ status: 200, type: EstablishmentDto })
+  @ApiResponse({ status: 404, description: 'Establishment not found' })
+  async enable(@Param('id') id: string): Promise<EstablishmentDto> {
+    return await this.establishmentService.enable(id);
+  }
+
+  /**
+   * Disable an establishment
+   *
+   * @param id The ID of the establishment
+   * @returns The disabled establishment
+   */
+  @Patch(':id/disable')
+  @ApiOperation({ summary: 'Disable an establishment' })
+  @ApiParam({ name: 'id', type: String, description: 'Establishment ID' })
+  @ApiResponse({ status: 200, type: EstablishmentDto })
+  @ApiResponse({ status: 404, description: 'Establishment not found' })
+  async disable(@Param('id') id: string): Promise<EstablishmentDto> {
+    return await this.establishmentService.disable(id);
+  }
+
+  /**
    * Delete an establishment
    *
    * @param id The ID of the establishment

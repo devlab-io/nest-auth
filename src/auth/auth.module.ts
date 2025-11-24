@@ -29,6 +29,7 @@ import {
   SessionController,
   OrganisationController,
   EstablishmentController,
+  UserAccountController,
   RoleController,
 } from './controllers';
 import {
@@ -84,6 +85,7 @@ export class AuthModule {
         SessionController,
         OrganisationController,
         EstablishmentController,
+        UserAccountController,
         RoleController,
       ],
       providers: [

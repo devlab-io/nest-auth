@@ -1,4 +1,4 @@
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import {
   Injectable,
   NotFoundException,
@@ -6,7 +6,12 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { OrganisationEntity } from '../entities';
+import {
+  OrganisationEntity,
+  EstablishmentEntity,
+  UserAccountEntity,
+  UserEntity,
+} from '../entities';
 import {
   CreateOrganisationRequest,
   UpdateOrganisationRequest,
@@ -21,9 +26,11 @@ export class OrganisationService {
   /**
    * Constructor
    *
+   * @param dataSource - The data source for transactions
    * @param organisationRepository - The organisation repository
    */
   public constructor(
+    private readonly dataSource: DataSource,
     @InjectRepository(OrganisationEntity)
     private readonly organisationRepository: Repository<OrganisationEntity>,
   ) {}
@@ -209,6 +216,136 @@ export class OrganisationService {
 
     // Return the organisation
     return organisation;
+  }
+
+  /**
+   * Enable an organisation
+   *
+   * @param id - The ID of the organisation
+   * @returns The enabled organisation
+   * @throws NotFoundException if the organisation is not found
+   */
+  public async enable(id: string): Promise<OrganisationEntity> {
+    // Get the organisation with the given ID
+    const organisation: OrganisationEntity = await this.getById(id);
+
+    // Enable the organisation
+    organisation.enabled = true;
+
+    // Save the organisation
+    const saved = await this.organisationRepository.save(organisation);
+
+    // Log
+    this.logger.debug(`Organisation with ID ${id} enabled`);
+
+    // Return the organisation
+    return saved;
+  }
+
+  /**
+   * Disable an organisation
+   *
+   * @param id - The ID of the organisation
+   * @returns The disabled organisation
+   * @throws NotFoundException if the organisation is not found
+   */
+  public async disable(id: string): Promise<OrganisationEntity> {
+    // Use a transaction to ensure all operations are atomic
+    return await this.dataSource.transaction(async (manager) => {
+      // Get the organisation with the given ID
+      const organisation: OrganisationEntity | null = await manager.findOne(
+        OrganisationEntity,
+        {
+          where: { id },
+        },
+      );
+
+      if (!organisation) {
+        throw new NotFoundException(`Organisation with ID ${id} not found`);
+      }
+
+      // Disable the organisation
+      organisation.enabled = false;
+
+      // Save the organisation
+      const saved = await manager.save(OrganisationEntity, organisation);
+
+      // Disable all associated establishments
+      const establishments = await manager.find(EstablishmentEntity, {
+        where: { organisation: { id } },
+      });
+
+      const affectedUserIds = new Set<string>();
+
+      if (establishments.length > 0) {
+        for (const establishment of establishments) {
+          establishment.enabled = false;
+        }
+        await manager.save(EstablishmentEntity, establishments);
+
+        // Log
+        this.logger.debug(
+          `Disabled ${establishments.length} establishment(s) associated with organisation ${id}`,
+        );
+
+        // Disable all user accounts associated with these establishments
+        const establishmentIds = establishments.map((est) => est.id);
+        const userAccounts = await manager
+          .createQueryBuilder(UserAccountEntity, 'userAccount')
+          .leftJoinAndSelect('userAccount.user', 'user')
+          .where('userAccount.establishment_id IN (:...establishmentIds)', {
+            establishmentIds,
+          })
+          .getMany();
+
+        if (userAccounts.length > 0) {
+          for (const userAccount of userAccounts) {
+            userAccount.enabled = false;
+            affectedUserIds.add(userAccount.user.id);
+          }
+          await manager.save(UserAccountEntity, userAccounts);
+
+          // Log
+          this.logger.debug(
+            `Disabled ${userAccounts.length} user account(s) associated with organisation ${id}`,
+          );
+        }
+      }
+
+      // For each affected user, check if all their accounts are disabled
+      for (const userId of affectedUserIds) {
+        const allUserAccounts = await manager.find(UserAccountEntity, {
+          where: { user: { id: userId } },
+        });
+
+        const hasEnabledAccount = allUserAccounts.some(
+          (account) => account.enabled,
+        );
+
+        // If the user has no enabled accounts, disable the user as well
+        if (!hasEnabledAccount) {
+          const user = await manager.findOne(UserEntity, {
+            where: { id: userId },
+          });
+
+          if (user && user.enabled) {
+            user.enabled = false;
+            await manager.save(UserEntity, user);
+
+            // Log
+            this.logger.debug(
+              `User ${userId} disabled because all user accounts are disabled`,
+            );
+          }
+        }
+      }
+
+      // Log
+      this.logger.debug(`Organisation with ID ${id} disabled`);
+
+      // Return the organisation
+      return saved;
+    });
   }
 
   /**

@@ -4,7 +4,8 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CredentialService } from './credential.service';
 import { ActionService } from './action.service';
-import { UserEntity } from '../entities';
+import { UserEntity, UserAccountEntity } from '../entities';
+import { DataSource } from 'typeorm';
 import {
   CreateUserRequest,
   PatchUserRequest,
@@ -23,6 +24,15 @@ describe('UserService', () => {
     exists: jest.fn(),
     remove: jest.fn(),
     createQueryBuilder: jest.fn(),
+  };
+
+  const mockUserAccountRepository = {
+    find: jest.fn(),
+    save: jest.fn(),
+  };
+
+  const mockDataSource = {
+    transaction: jest.fn(),
   };
 
   const mockCredentialService = {
@@ -69,6 +79,14 @@ describe('UserService', () => {
         {
           provide: getRepositoryToken(UserEntity),
           useValue: mockUserRepository,
+        },
+        {
+          provide: getRepositoryToken(UserAccountEntity),
+          useValue: mockUserAccountRepository,
+        },
+        {
+          provide: DataSource,
+          useValue: mockDataSource,
         },
         {
           provide: CredentialService,
@@ -574,23 +592,66 @@ describe('UserService', () => {
   });
 
   describe('disable', () => {
-    it('should disable a user', async () => {
+    it('should disable a user and all associated user accounts', async () => {
       const user = createMockUser({ enabled: true });
       const disabledUser = createMockUser({ enabled: false });
+      const userAccounts = [
+        {
+          id: 'account-1',
+          enabled: true,
+          user: { id: 'user-id' },
+        },
+        {
+          id: 'account-2',
+          enabled: true,
+          user: { id: 'user-id' },
+        },
+      ] as UserAccountEntity[];
 
-      mockUserRepository.findOne.mockResolvedValue(user);
-      mockUserRepository.save.mockResolvedValue(disabledUser);
+      const mockManager = {
+        findOne: jest.fn(),
+        find: jest.fn(),
+        save: jest.fn(),
+      };
+
+      mockDataSource.transaction.mockImplementation(async (callback) => {
+        return callback(mockManager);
+      });
+
+      mockManager.findOne.mockResolvedValue(user);
+      mockManager.save
+        .mockResolvedValueOnce(disabledUser)
+        .mockResolvedValueOnce(userAccounts);
+      mockManager.find.mockResolvedValue(userAccounts);
 
       const result = await service.disable('user-id');
 
       expect(result.enabled).toBe(false);
-      expect(mockUserRepository.save).toHaveBeenCalledWith(
+      expect(mockDataSource.transaction).toHaveBeenCalled();
+      expect(mockManager.save).toHaveBeenCalledTimes(2);
+      expect(mockManager.save).toHaveBeenCalledWith(
+        UserEntity,
         expect.objectContaining({ enabled: false }),
+      );
+      expect(mockManager.save).toHaveBeenCalledWith(
+        UserAccountEntity,
+        expect.arrayContaining([
+          expect.objectContaining({ enabled: false }),
+          expect.objectContaining({ enabled: false }),
+        ]),
       );
     });
 
     it('should throw NotFoundException if user not found', async () => {
-      mockUserRepository.findOne.mockResolvedValue(null);
+      const mockManager = {
+        findOne: jest.fn(),
+      };
+
+      mockDataSource.transaction.mockImplementation(async (callback) => {
+        return callback(mockManager);
+      });
+
+      mockManager.findOne.mockResolvedValue(null);
 
       await expect(service.disable('nonexistent-id')).rejects.toThrow(
         NotFoundException,

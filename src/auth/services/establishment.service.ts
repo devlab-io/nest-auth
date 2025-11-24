@@ -1,4 +1,4 @@
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import {
   Injectable,
   NotFoundException,
@@ -6,7 +6,11 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EstablishmentEntity } from '../entities';
+import {
+  EstablishmentEntity,
+  UserAccountEntity,
+  UserEntity,
+} from '../entities';
 import { OrganisationService } from './organisation.service';
 import {
   CreateEstablishmentRequest,
@@ -22,10 +26,12 @@ export class EstablishmentService {
   /**
    * Constructor
    *
+   * @param dataSource - The data source for transactions
    * @param establishmentRepository - The establishment repository
    * @param organisationService - The organisation service
    */
   public constructor(
+    private readonly dataSource: DataSource,
     @InjectRepository(EstablishmentEntity)
     private readonly establishmentRepository: Repository<EstablishmentEntity>,
     private readonly organisationService: OrganisationService,
@@ -248,6 +254,115 @@ export class EstablishmentService {
 
     // Return the establishment
     return establishment;
+  }
+
+  /**
+   * Enable an establishment
+   *
+   * @param id - The ID of the establishment
+   * @returns The enabled establishment
+   * @throws NotFoundException if the establishment is not found
+   */
+  public async enable(id: string): Promise<EstablishmentEntity> {
+    // Get the establishment with the given ID
+    const establishment: EstablishmentEntity = await this.getById(id);
+
+    // Enable the establishment
+    establishment.enabled = true;
+
+    // Save the establishment
+    const saved = await this.establishmentRepository.save(establishment);
+
+    // Log
+    this.logger.debug(`Establishment with ID ${id} enabled`);
+
+    // Return the establishment
+    return saved;
+  }
+
+  /**
+   * Disable an establishment
+   *
+   * @param id - The ID of the establishment
+   * @returns The disabled establishment
+   * @throws NotFoundException if the establishment is not found
+   */
+  public async disable(id: string): Promise<EstablishmentEntity> {
+    // Use a transaction to ensure all operations are atomic
+    return await this.dataSource.transaction(async (manager) => {
+      // Get the establishment with the given ID
+      const establishment: EstablishmentEntity | null = await manager.findOne(
+        EstablishmentEntity,
+        {
+          where: { id },
+        },
+      );
+
+      if (!establishment) {
+        throw new NotFoundException(`Establishment with ID ${id} not found`);
+      }
+
+      // Disable the establishment
+      establishment.enabled = false;
+
+      // Save the establishment
+      const saved = await manager.save(EstablishmentEntity, establishment);
+
+      // Disable all associated user accounts
+      const userAccounts = await manager.find(UserAccountEntity, {
+        where: { establishment: { id } },
+        relations: ['user'],
+      });
+
+      const affectedUserIds = new Set<string>();
+
+      if (userAccounts.length > 0) {
+        for (const userAccount of userAccounts) {
+          userAccount.enabled = false;
+          affectedUserIds.add(userAccount.user.id);
+        }
+        await manager.save(UserAccountEntity, userAccounts);
+
+        // Log
+        this.logger.debug(
+          `Disabled ${userAccounts.length} user account(s) associated with establishment ${id}`,
+        );
+      }
+
+      // For each affected user, check if all their accounts are disabled
+      for (const userId of affectedUserIds) {
+        const allUserAccounts = await manager.find(UserAccountEntity, {
+          where: { user: { id: userId } },
+        });
+
+        const hasEnabledAccount = allUserAccounts.some(
+          (account) => account.enabled,
+        );
+
+        // If the user has no enabled accounts, disable the user as well
+        if (!hasEnabledAccount) {
+          const user = await manager.findOne(UserEntity, {
+            where: { id: userId },
+          });
+
+          if (user && user.enabled) {
+            user.enabled = false;
+            await manager.save(UserEntity, user);
+
+            // Log
+            this.logger.debug(
+              `User ${userId} disabled because all user accounts are disabled`,
+            );
+          }
+        }
+      }
+
+      // Log
+      this.logger.debug(`Establishment with ID ${id} disabled`);
+
+      // Return the establishment
+      return saved;
+    });
   }
 
   /**

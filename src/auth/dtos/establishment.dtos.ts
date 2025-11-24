@@ -32,6 +32,24 @@ export class EstablishmentDto implements Establishment {
     type: [Object],
   })
   accounts: any[];
+
+  @ApiProperty({
+    example: '2024-02-20T10:00:00.000Z',
+    description: 'Date when the establishment was created',
+  })
+  createdAt: Date;
+
+  @ApiProperty({
+    example: '2024-02-20T10:00:00.000Z',
+    description: 'Date when the establishment was last updated',
+  })
+  updatedAt: Date;
+
+  @ApiProperty({
+    example: true,
+    description: 'Indicates if the establishment is enabled',
+  })
+  enabled: boolean;
 }
 
 export class CreateEstablishmentRequestDto
