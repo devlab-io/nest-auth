@@ -303,7 +303,8 @@ export class AuthService {
     const organisationName =
       invite.organisation ?? this.actionConfig.invite.organisation;
     if (!organisationName) {
-      const message: string = 'Organisation was not specified in the invite request nor in the config';
+      const message: string =
+        'Organisation was not specified in the invite request nor in the config';
       this.logger.warn(message);
       throw new BadRequestException(message);
     }
@@ -319,7 +320,8 @@ export class AuthService {
     const establishmentName =
       invite.establishment ?? this.actionConfig.invite.establishment;
     if (!establishmentName) {
-      const message: string = 'Establishment was not specified in the invite request nor in the config';
+      const message: string =
+        'Establishment was not specified in the invite request nor in the config';
       this.logger.warn(message);
       throw new BadRequestException(message);
     }
