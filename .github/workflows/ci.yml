@@ -3,6 +3,7 @@ name: CI/CD
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   CI-CD:
@@ -11,6 +12,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
