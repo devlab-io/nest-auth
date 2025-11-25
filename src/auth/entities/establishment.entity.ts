@@ -26,7 +26,7 @@ export class EstablishmentEntity implements Establishment {
     example: 'Restaurant Downtown',
     description: 'Name of the establishment',
   })
-  @Column()
+  @Column({ name: 'name' })
   name: string;
 
   @ApiProperty({
@@ -61,14 +61,14 @@ export class EstablishmentEntity implements Establishment {
     example: '2024-02-20T10:00:00.000Z',
     description: 'Date when the establishment was created',
   })
-  @CreateDateColumn({ name: 'createdAt' })
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
   @ApiProperty({
     example: '2024-02-20T10:00:00.000Z',
     description: 'Date when the establishment was last updated',
   })
-  @UpdateDateColumn({ name: 'updatedAt' })
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
   @ApiProperty({

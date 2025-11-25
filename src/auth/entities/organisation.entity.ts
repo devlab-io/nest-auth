@@ -23,7 +23,7 @@ export class OrganisationEntity implements Organisation {
     example: 'Restaurant Group Inc.',
     description: 'Name of the organisation',
   })
-  @Column()
+  @Column({ name: 'name' })
   name: string;
 
   @ApiProperty({
@@ -43,14 +43,14 @@ export class OrganisationEntity implements Organisation {
     example: '2024-02-20T10:00:00.000Z',
     description: 'Date when the organisation was created',
   })
-  @CreateDateColumn({ name: 'createdAt' })
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
   @ApiProperty({
     example: '2024-02-20T10:00:00.000Z',
     description: 'Date when the organisation was last updated',
   })
-  @UpdateDateColumn({ name: 'updatedAt' })
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
   @ApiProperty({

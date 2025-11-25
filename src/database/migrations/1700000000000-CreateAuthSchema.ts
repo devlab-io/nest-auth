@@ -129,34 +129,34 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
             comment: 'Indicates if the user account is enabled/active',
           },
           {
-            name: 'profilePicture',
+            name: 'profile_picture',
             type: 'varchar',
             isNullable: true,
             comment: 'URL to the user profile picture',
           },
           {
-            name: 'acceptedTerms',
+            name: 'accepted_terms',
             type: 'boolean',
             default: false,
             isNullable: false,
             comment: 'Indicates if the user accepted the terms of service',
           },
           {
-            name: 'acceptedPrivacyPolicy',
+            name: 'accepted_privacy_policy',
             type: 'boolean',
             default: false,
             isNullable: false,
             comment: 'Indicates if the user accepted the privacy policy',
           },
           {
-            name: 'createdAt',
+            name: 'created_at',
             type: 'timestamp',
             default: 'CURRENT_TIMESTAMP',
             isNullable: false,
             comment: 'Timestamp when the user account was created',
           },
           {
-            name: 'updatedAt',
+            name: 'updated_at',
             type: 'timestamp',
             default: 'CURRENT_TIMESTAMP',
             onUpdate: 'CURRENT_TIMESTAMP',
@@ -210,14 +210,14 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
             comment: 'Name of the organisation',
           },
           {
-            name: 'createdAt',
+            name: 'created_at',
             type: 'timestamp',
             default: 'CURRENT_TIMESTAMP',
             isNullable: false,
             comment: 'Timestamp when the organisation was created',
           },
           {
-            name: 'updatedAt',
+            name: 'updated_at',
             type: 'timestamp',
             default: 'CURRENT_TIMESTAMP',
             onUpdate: 'CURRENT_TIMESTAMP',
@@ -264,14 +264,14 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
             comment: 'Foreign key to organisations.id, cascades on delete',
           },
           {
-            name: 'createdAt',
+            name: 'created_at',
             type: 'timestamp',
             default: 'CURRENT_TIMESTAMP',
             isNullable: false,
             comment: 'Timestamp when the establishment was created',
           },
           {
-            name: 'updatedAt',
+            name: 'updated_at',
             type: 'timestamp',
             default: 'CURRENT_TIMESTAMP',
             onUpdate: 'CURRENT_TIMESTAMP',
@@ -330,7 +330,7 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
             comment: 'Hashed password (bcrypt), only for type=password',
           },
           {
-            name: 'googleId',
+            name: 'google_id',
             type: 'varchar',
             isNullable: true,
             comment: 'Google OAuth ID, only for type=google',
@@ -399,14 +399,14 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
             comment: 'Foreign key to users.id, cascades on delete',
           },
           {
-            name: 'createdAt',
+            name: 'created_at',
             type: 'timestamp',
             default: 'CURRENT_TIMESTAMP',
             isNullable: false,
             comment: 'Timestamp when the user account was created',
           },
           {
-            name: 'updatedAt',
+            name: 'updated_at',
             type: 'timestamp',
             default: 'CURRENT_TIMESTAMP',
             onUpdate: 'CURRENT_TIMESTAMP',
@@ -467,14 +467,14 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
           'Junction table for many-to-many relationship between user accounts and roles',
         columns: [
           {
-            name: 'userAccountId',
+            name: 'user_account_id',
             type: 'uuid',
             isPrimary: true,
             primaryKeyConstraintName: 'PK_user_account_roles_composite',
             comment: 'Foreign key to user_accounts.id, cascades on delete',
           },
           {
-            name: 'roleId',
+            name: 'role_id',
             type: 'integer',
             isPrimary: true,
             comment: 'Foreign key to roles.id, cascades on delete',
@@ -488,8 +488,8 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
     await queryRunner.createForeignKey(
       'user_account_roles',
       new TableForeignKey({
-        name: 'FK_user_account_roles_userAccountId_user_accounts_id',
-        columnNames: ['userAccountId'],
+        name: 'FK_user_account_roles_user_account_id_user_accounts_id',
+        columnNames: ['user_account_id'],
         referencedColumnNames: ['id'],
         referencedTableName: 'user_accounts',
         onDelete: 'CASCADE',
@@ -499,8 +499,8 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
     await queryRunner.createForeignKey(
       'user_account_roles',
       new TableForeignKey({
-        name: 'FK_user_account_roles_roleId_roles_id',
-        columnNames: ['roleId'],
+        name: 'FK_user_account_roles_role_id_roles_id',
+        columnNames: ['role_id'],
         referencedColumnNames: ['id'],
         referencedTableName: 'roles',
         onDelete: 'CASCADE',

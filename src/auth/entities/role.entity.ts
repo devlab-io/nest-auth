@@ -10,14 +10,14 @@ export class RoleEntity implements Role {
   id: number;
 
   @ApiProperty({ example: 'admin', description: 'Name of the role' })
-  @Column({ unique: true })
+  @Column({ name: 'name', unique: true })
   name: string;
 
   @ApiProperty({
     example: "Donne accès à toute l'application",
     description: 'Description du role',
   })
-  @Column({ nullable: true })
+  @Column({ name: 'description', nullable: true })
   description?: string;
 
   @ManyToMany(() => ActionEntity, (token) => token.roles, {

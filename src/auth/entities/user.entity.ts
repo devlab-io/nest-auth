@@ -28,14 +28,14 @@ export class UserEntity implements User {
     example: 'johndoe',
     description: 'Username of the user',
   })
-  @Column()
+  @Column({ name: 'username' })
   username: string;
 
   @ApiProperty({
     example: 'john.doe@example.com',
     description: 'Email address of the user',
   })
-  @Column()
+  @Column({ name: 'email' })
   email: string;
 
   @ApiProperty({
@@ -66,7 +66,7 @@ export class UserEntity implements User {
     description: 'Phone number of the user',
     nullable: true,
   })
-  @Column({ nullable: true })
+  @Column({ name: 'phone', nullable: true })
   phone?: string;
 
   @ApiProperty({
@@ -81,35 +81,35 @@ export class UserEntity implements User {
     description: "URL of the user's profile picture",
     nullable: true,
   })
-  @Column({ nullable: true })
+  @Column({ name: 'profile_picture', nullable: true })
   profilePicture?: string;
 
   @ApiProperty({
     example: true,
     description: 'Indicates if the user accepted the terms of service',
   })
-  @Column({ default: false })
+  @Column({ name: 'accepted_terms', default: false })
   acceptedTerms: boolean;
 
   @ApiProperty({
     example: true,
     description: 'Indicates if the user accepted the privacy policy',
   })
-  @Column({ default: false })
+  @Column({ name: 'accepted_privacy_policy', default: false })
   acceptedPrivacyPolicy: boolean;
 
   @ApiProperty({
     example: '2024-02-20T10:00:00.000Z',
     description: 'Date when the user account was created',
   })
-  @CreateDateColumn({ name: 'createdAt' })
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
   @ApiProperty({
     example: '2024-02-20T10:00:00.000Z',
     description: 'Date when the user account was last updated',
   })
-  @UpdateDateColumn({ name: 'updatedAt' })
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
   @ApiProperty({

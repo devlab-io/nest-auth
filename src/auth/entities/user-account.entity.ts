@@ -66,11 +66,11 @@ export class UserAccountEntity implements UserAccount {
   @JoinTable({
     name: 'user_account_roles',
     joinColumn: {
-      name: 'userAccountId',
+      name: 'user_account_id',
       referencedColumnName: 'id',
     },
     inverseJoinColumn: {
-      name: 'roleId',
+      name: 'role_id',
       referencedColumnName: 'id',
     },
   })
@@ -80,14 +80,14 @@ export class UserAccountEntity implements UserAccount {
     example: '2024-02-20T10:00:00.000Z',
     description: 'Date when the user account was created',
   })
-  @CreateDateColumn({ name: 'createdAt' })
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
   @ApiProperty({
     example: '2024-02-20T10:00:00.000Z',
     description: 'Date when the user account was last updated',
   })
-  @UpdateDateColumn({ name: 'updatedAt' })
+  @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
   @ApiProperty({

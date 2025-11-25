@@ -14,13 +14,13 @@ import { RoleEntity } from './role.entity';
 
 @Entity({ name: 'action_tokens' })
 export class ActionEntity implements Action {
-  @PrimaryColumn({ type: 'text' })
+  @PrimaryColumn({ name: 'token', type: 'text' })
   token: string;
 
-  @Column({ type: 'integer' })
+  @Column({ name: 'type', type: 'integer' })
   type: number; // Bit mask of ActionType values
 
-  @Column({ type: 'text' })
+  @Column({ name: 'email', type: 'text' })
   email: string;
 
   @CreateDateColumn({ name: 'created_at' })

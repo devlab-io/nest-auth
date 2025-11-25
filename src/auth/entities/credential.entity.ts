@@ -23,7 +23,7 @@ export class CredentialEntity implements Credential {
     description: 'Type of credential (password or google)',
     enum: ['password', 'google'],
   })
-  @Column({ type: 'varchar' })
+  @Column({ name: 'type', type: 'varchar' })
   type: 'password' | 'google';
 
   @ApiProperty({
@@ -31,7 +31,7 @@ export class CredentialEntity implements Credential {
     description: 'Hashed password (only for type=password)',
     nullable: true,
   })
-  @Column({ nullable: true })
+  @Column({ name: 'password', nullable: true })
   password?: string;
 
   @ApiProperty({
@@ -39,7 +39,7 @@ export class CredentialEntity implements Credential {
     description: 'Google OAuth ID (only for type=google)',
     nullable: true,
   })
-  @Column({ nullable: true })
+  @Column({ name: 'google_id', nullable: true })
   googleId?: string;
 
   @ApiProperty({

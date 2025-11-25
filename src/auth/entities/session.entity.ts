@@ -16,7 +16,7 @@ export class SessionEntity implements Session {
     example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
     description: 'JWT token string',
   })
-  @PrimaryColumn({ type: 'text' })
+  @PrimaryColumn({ name: 'token', type: 'text' })
   token: string;
 
   @ApiProperty({
