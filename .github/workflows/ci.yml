@@ -36,7 +36,15 @@ jobs:
           # Verify types are built
           echo "Verifying types build..."
           ls -la packages/nest-auth-types/dist/ || (echo "Error: Types directory not found" && exit 1)
-          test -f packages/nest-auth-types/dist/index.d.ts || (echo "Error: index.d.ts not found" && exit 1)
+          # Check if index.d.ts exists (should be in dist/ with rootDir: "./src")
+          if [ -f packages/nest-auth-types/dist/index.d.ts ]; then
+            echo "✓ index.d.ts found in dist/"
+          else
+            echo "Error: index.d.ts not found in dist/"
+            echo "Checking dist structure:"
+            find packages/nest-auth-types/dist -name "*.d.ts" | head -5
+            exit 1
+          fi
           # Re-run yarn install to ensure workspace links are updated after build
           echo "Updating workspace links..."
           yarn install --force
