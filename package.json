@@ -9,7 +9,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "yarn workspaces run build",
+    "build": "yarn build:types && yarn build:client && yarn build:auth",
     "build:types": "yarn workspace @devlab-io/nest-auth-types build",
     "build:auth": "yarn workspace @devlab-io/nest-auth build",
     "build:client": "yarn workspace @devlab-io/nest-auth-client build",
