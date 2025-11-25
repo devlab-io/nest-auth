@@ -2,9 +2,10 @@ name: CI/CD
 
 on:
   push:
+  pull_request:
 
 jobs:
-  ci-cd:
+  CI-CD:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,6 +24,9 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: yarn install --frozen-lockfile
+
+      - name: Build all packages
+        run: yarn build
 
       - name: Check code formatting
         run: yarn format:check

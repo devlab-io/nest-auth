@@ -7,53 +7,9 @@
 ╚═╝  ╚═══╝╚══════╝╚══════╝   ╚═╝      ╚═╝  ╚═╝ ╚═════╝    ╚═╝   ╚═╝  ╚═╝
 ```
 
-# Nest Auth Monorepo
+# @devlab-io/nest-auth
 
-Monorepo contenant les packages NestJS Authentication.
-
-## Structure du monorepo
-
-Ce repository contient trois packages :
-
-### 📦 `@devlab-io/nest-auth-types`
-
-Bibliothèque de typage TypeScript contenant toutes les interfaces et types utilisés par les autres packages.
-
-### 📦 `@devlab-io/nest-auth`
-
-Bibliothèque NestJS principale contenant les modules, services, contrôleurs, entités et migrations pour l'authentification.
-
-### 📦 `@devlab-io/nest-auth-client`
-
-Bibliothèque client Node.js pour consommer les routes de l'API nest-auth. Inclut :
-
-- Services HTTP typés pour toutes les routes
-- Schémas Zod pour la validation des formulaires
-- Gestion automatique des tokens d'authentification
-
-## Installation
-
-### Packages individuels
-
-#### @devlab-io/nest-auth-types
-
-```bash
-yarn add @devlab-io/nest-auth-types
-```
-
-#### @devlab-io/nest-auth
-
-```bash
-yarn add @devlab-io/nest-auth
-```
-
-#### @devlab-io/nest-auth-client
-
-```bash
-yarn add @devlab-io/nest-auth-client
-# Note: axios est requis comme peer dependency
-yarn add axios
-```
+NestJS authentication module
 
 ## Installation
 
@@ -141,8 +97,6 @@ Since this is a private package, you need to configure authentication:
 
 ## Usage
 
-### Utilisation de @devlab-io/nest-auth
-
 Import and configure the module in your `AppModule`:
 
 ```typescript
@@ -193,67 +147,25 @@ TODO;
 TODO;
 ```
 
-### Utilisation de @devlab-io/nest-auth-client
-
-```typescript
-import { AuthClient } from '@devlab-io/nest-auth-client';
-import { signInRequestSchema } from '@devlab-io/nest-auth-client';
-
-// Créer une instance du client
-const authClient = new AuthClient({
-  baseURL: 'https://api.example.com',
-});
-
-// Utiliser les schémas Zod pour valider les données
-const signInData = signInRequestSchema.parse({
-  email: 'user@example.com',
-  password: 'password123',
-});
-
-// Appeler les routes
-const authResponse = await authClient.signIn(signInData);
-// Le token est automatiquement configuré après sign-in
-
-// Utiliser le token pour les requêtes authentifiées
-const account = await authClient.getAccount();
-```
-
 ## Development
 
-### Commandes utiles pour contribuer au développement du monorepo
+### Commandes utiles pour contribuer au devellopement de la lib
 
 ```bash
-# Install dependencies (tous les packages)
+# Install dependencies
 yarn install
 
-# Build tous les packages
-yarn build
-
-# Build un package spécifique
-yarn build:types    # nest-auth-types
-yarn build:auth     # nest-auth
-yarn build:client   # nest-auth-client
+# Build
+yarn run build
 
 # Type check
-yarn type-check
+yarn run type-check
 
 # Format code
-yarn format
+yarn run format
 
 # Lint
-yarn lint
-
-# Nettoyer les dossiers dist
-yarn clean
-```
-
-### Structure des packages
-
-```
-packages/
-├── nest-auth-types/     # Types TypeScript
-├── nest-auth/           # Bibliothèque NestJS principale
-└── nest-auth-client/    # Client HTTP + Schémas Zod
+yarn run lint
 ```
 
 ## Publishing

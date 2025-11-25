@@ -60,19 +60,38 @@ jobs:
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" > ~/.npmrc
           echo "@devlab-io:registry=https://npm.pkg.github.com" >> ~/.npmrc
 
-      - name: Check if version already exists
+      - name: Check if versions already exist
         id: check_version
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          echo "Checking if version $VERSION already exists on npm registry..."
-          # Check if version exists - npm view returns 0 if found, non-zero if not found
+          echo "Checking if version $VERSION already exists on npm registry for all packages..."
+          
+          TYPES_EXISTS=false
+          AUTH_EXISTS=false
+          CLIENT_EXISTS=false
+          
+          if npm view @devlab-io/nest-auth-types@$VERSION version >/dev/null 2>&1; then
+            echo "❌ @devlab-io/nest-auth-types@$VERSION already exists"
+            TYPES_EXISTS=true
+          fi
+          
           if npm view @devlab-io/nest-auth@$VERSION version >/dev/null 2>&1; then
-            echo "❌ Version $VERSION already exists on npm registry"
+            echo "❌ @devlab-io/nest-auth@$VERSION already exists"
+            AUTH_EXISTS=true
+          fi
+          
+          if npm view @devlab-io/nest-auth-client@$VERSION version >/dev/null 2>&1; then
+            echo "❌ @devlab-io/nest-auth-client@$VERSION already exists"
+            CLIENT_EXISTS=true
+          fi
+          
+          if [ "$TYPES_EXISTS" = true ] || [ "$AUTH_EXISTS" = true ] || [ "$CLIENT_EXISTS" = true ]; then
+            echo "❌ One or more versions already exist on npm registry"
             echo "Version $VERSION has already been published. Skipping all steps."
             echo "exists=true" >> $GITHUB_OUTPUT
             exit 0
           else
-            echo "✓ Version $VERSION does not exist, will proceed with publication"
+            echo "✓ Version $VERSION does not exist for any package, will proceed with publication"
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
@@ -117,15 +136,36 @@ jobs:
         if: steps.check_version.outputs.exists != 'true'
         run: yarn test
 
-      - name: Update version in package.json
+      - name: Update version in all package.json files
         if: steps.check_version.outputs.exists != 'true'
         run: |
-          npm version ${{ steps.version.outputs.version }} --no-git-tag-version
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "Updating version to $VERSION in all packages..."
+          
+          # Update root package.json
+          npm version $VERSION --no-git-tag-version
+          
+          # Update nest-auth-types
+          cd packages/nest-auth-types
+          npm version $VERSION --no-git-tag-version
+          cd ../..
+          
+          # Update nest-auth
+          cd packages/nest-auth
+          npm version $VERSION --no-git-tag-version
+          cd ../..
+          
+          # Update nest-auth-client
+          cd packages/nest-auth-client
+          npm version $VERSION --no-git-tag-version
+          cd ../..
+          
+          echo "✓ All package versions updated to $VERSION"
 
       - name: Commit and push version update
         if: steps.check_version.outputs.exists != 'true'
         run: |
-          git add package.json package-lock.json 2>/dev/null || git add package.json
+          git add package.json packages/*/package.json yarn.lock 2>/dev/null || git add package.json packages/*/package.json
           git commit -m "chore: bump version to ${{ steps.version.outputs.version }}" || echo "No changes to commit"
           git push origin main
 
@@ -135,39 +175,91 @@ jobs:
           git tag -a ${{ steps.version.outputs.tag }} -m "${{ github.event.inputs.release_description }}"
           git push origin ${{ steps.version.outputs.tag }}
 
-      - name: Create release archive
+      - name: Create release archives for all packages
         if: steps.check_version.outputs.exists != 'true'
         run: |
           mkdir -p release
-          tar -czf release/nest-auth-${{ steps.version.outputs.tag }}.tar.gz dist package.json README.md
-          zip -r release/nest-auth-${{ steps.version.outputs.tag }}.zip dist package.json README.md
+          VERSION="${{ steps.version.outputs.tag }}"
+          
+          # Archive for nest-auth-types
+          cd packages/nest-auth-types
+          tar -czf ../../release/nest-auth-types-$VERSION.tar.gz dist src package.json tsconfig.json
+          zip -r ../../release/nest-auth-types-$VERSION.zip dist src package.json tsconfig.json
+          cd ../..
+          
+          # Archive for nest-auth
+          cd packages/nest-auth
+          tar -czf ../../release/nest-auth-$VERSION.tar.gz dist src package.json tsconfig.json nest-cli.json README.md LICENSE
+          zip -r ../../release/nest-auth-$VERSION.zip dist src package.json tsconfig.json nest-cli.json README.md LICENSE
+          cd ../..
+          
+          # Archive for nest-auth-client
+          cd packages/nest-auth-client
+          tar -czf ../../release/nest-auth-client-$VERSION.tar.gz dist src package.json tsconfig.json
+          zip -r ../../release/nest-auth-client-$VERSION.zip dist src package.json tsconfig.json
+          cd ../..
+          
+          echo "✓ Created archives for all packages"
+          ls -lh release/
 
-      - name: Publish to GitHub Packages
+      - name: Publish all packages to GitHub Packages
         if: steps.check_version.outputs.exists != 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Double-check version doesn't exist before publishing (race condition protection)
           VERSION="${{ steps.version.outputs.version }}"
-          if npm view @devlab-io/nest-auth@$VERSION version >/dev/null 2>&1; then
-            echo "❌ Version $VERSION now exists on npm registry (race condition detected)"
+          
+          # Double-check versions don't exist before publishing (race condition protection)
+          if npm view @devlab-io/nest-auth-types@$VERSION version >/dev/null 2>&1 || \
+             npm view @devlab-io/nest-auth@$VERSION version >/dev/null 2>&1 || \
+             npm view @devlab-io/nest-auth-client@$VERSION version >/dev/null 2>&1; then
+            echo "❌ One or more versions now exist on npm registry (race condition detected)"
             echo "Skipping publication to avoid conflict"
             exit 0
           fi
-          # Publish without running prepublishOnly (already done in workflow)
+          
+          # Publish nest-auth-types
+          echo "📦 Publishing @devlab-io/nest-auth-types@$VERSION..."
+          cd packages/nest-auth-types
           npm publish --ignore-scripts
+          cd ../..
+          
+          # Publish nest-auth
+          echo "📦 Publishing @devlab-io/nest-auth@$VERSION..."
+          cd packages/nest-auth
+          npm publish --ignore-scripts
+          cd ../..
+          
+          # Publish nest-auth-client
+          echo "📦 Publishing @devlab-io/nest-auth-client@$VERSION..."
+          cd packages/nest-auth-client
+          npm publish --ignore-scripts
+          cd ../..
+          
+          echo "✓ All packages published successfully"
 
-      - name: Create GitHub Release with archive
+      - name: Create GitHub Release with all archives
         if: steps.check_version.outputs.exists != 'true'
         continue-on-error: true
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: Release ${{ steps.version.outputs.tag }}
-          body: ${{ github.event.inputs.release_description }}
+          body: |
+            ${{ github.event.inputs.release_description }}
+            
+            ## Packages Published
+            
+            - **@devlab-io/nest-auth-types@${{ steps.version.outputs.version }}** - TypeScript types library
+            - **@devlab-io/nest-auth@${{ steps.version.outputs.version }}** - NestJS authentication module
+            - **@devlab-io/nest-auth-client@${{ steps.version.outputs.version }}** - HTTP client library with Zod schemas
           files: |
+            release/nest-auth-types-${{ steps.version.outputs.tag }}.tar.gz
+            release/nest-auth-types-${{ steps.version.outputs.tag }}.zip
             release/nest-auth-${{ steps.version.outputs.tag }}.tar.gz
             release/nest-auth-${{ steps.version.outputs.tag }}.zip
+            release/nest-auth-client-${{ steps.version.outputs.tag }}.tar.gz
+            release/nest-auth-client-${{ steps.version.outputs.tag }}.zip
           draft: false
           prerelease: false
           fail_on_unmatched_files: false

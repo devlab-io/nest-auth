@@ -3,9 +3,6 @@
     "module": "commonjs",
     "declaration": true,
     "removeComments": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
     "target": "ES2021",
     "sourceMap": true,
     "outDir": "./dist",
@@ -16,18 +13,12 @@
     "noImplicitAny": true,
     "strictBindCallApply": true,
     "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "lib": ["ES2021", "DOM"],
+    "composite": true
   },
-  "files": [],
-  "references": [
-    {
-      "path": "./packages/nest-auth-types"
-    },
-    {
-      "path": "./packages/nest-auth"
-    },
-    {
-      "path": "./packages/nest-auth-client"
-    }
-  ]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

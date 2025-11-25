@@ -1,0 +1,29 @@
+{
+  "name": "@devlab-io/nest-auth-types",
+  "version": "0.0.4",
+  "description": "TypeScript types for NestJS Authentication Module",
+  "author": "DevLab",
+  "license": "UNLICENSED",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit",
+    "format": "echo 'Formatting handled at root level'",
+    "format:check": "echo 'Format check handled at root level'",
+    "lint": "echo 'Linting handled at root level'",
+    "lint:check": "echo 'Lint check handled at root level'",
+    "test": "echo 'No tests for nest-auth-types'",
+    "clean": "rm -rf dist || true"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  }
+}
