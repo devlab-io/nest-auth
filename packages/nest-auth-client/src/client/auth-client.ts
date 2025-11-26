@@ -8,7 +8,7 @@ import {
   SessionService,
   UserAccountService,
   UserService,
-} from 'src/services';
+} from '../services';
 
 /**
  * Initialize the authentication
