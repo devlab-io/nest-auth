@@ -16,18 +16,16 @@
     "noImplicitAny": true,
     "strictBindCallApply": true,
     "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@/*": ["src/*"]
+    }
   },
-  "files": [],
+  "include": ["src/**/*", "test/**/*"],
+  "exclude": ["node_modules", "dist"],
   "references": [
     {
-      "path": "./packages/nest-auth-types"
-    },
-    {
-      "path": "./packages/nest-auth"
-    },
-    {
-      "path": "./packages/nest-auth-client"
+      "path": "../nest-auth-types"
     }
   ]
 }

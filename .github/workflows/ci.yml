@@ -2,14 +2,18 @@ name: CI/CD
 
 on:
   push:
+  pull_request:
+  workflow_dispatch:
 
 jobs:
-  ci-cd:
+  CI-CD:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -23,6 +27,36 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: yarn install --frozen-lockfile
+
+      - name: Build all packages
+        run: |
+          # Build nest-auth-types first
+          echo "Building nest-auth-types..."
+          yarn workspace @devlab-io/nest-auth-types build
+          # Verify types are built
+          echo "Verifying types build..."
+          ls -la packages/nest-auth-types/dist/ || (echo "Error: Types directory not found" && exit 1)
+          # Check if index.d.ts exists (should be in dist/ with rootDir: "./src")
+          if [ -f packages/nest-auth-types/dist/index.d.ts ]; then
+            echo "✓ index.d.ts found in dist/"
+          else
+            echo "Error: index.d.ts not found in dist/"
+            echo "Checking dist structure:"
+            find packages/nest-auth-types/dist -name "*.d.ts" | head -5
+            exit 1
+          fi
+          # Re-run yarn install to ensure workspace links are updated after build
+          echo "Updating workspace links..."
+          yarn install --force
+          # Verify the package is accessible
+          echo "Verifying package accessibility..."
+          test -f node_modules/@devlab-io/nest-auth-types/dist/index.d.ts || (echo "Error: Package types not accessible in node_modules" && exit 1)
+          # Build nest-auth-client (will use the built types from workspace)
+          echo "Building nest-auth-client..."
+          yarn workspace @devlab-io/nest-auth-client build
+          # Build nest-auth
+          echo "Building nest-auth..."
+          yarn workspace @devlab-io/nest-auth build
 
       - name: Check code formatting
         run: yarn format:check

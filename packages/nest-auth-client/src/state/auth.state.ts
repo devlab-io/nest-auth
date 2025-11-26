@@ -1,0 +1,288 @@
+import { UserAccount } from '@devlab-io/nest-auth-types';
+
+export interface AuthStorage {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+}
+
+export interface AuthStateConfig {
+  baseURL: string;
+  timeout?: number;
+  headers?: Record<string, string>;
+  cookieName?: string;
+  storage?: AuthStorage | null;
+}
+
+/**
+ * Authentication state
+ */
+export class AuthState {
+  private static _baseURL: string | null = null;
+  private static _timeout: number = 30000;
+  private static _headers: Record<string, string> = {};
+  private static _cookieName: string = 'auth-token';
+  private static _storage: AuthStorage | null = null;
+  private static _token: string | null = null;
+  private static _initialized: boolean = false;
+  private static _userAccount: UserAccount | null = null;
+
+  /**
+   * Get the current user account of the logged in user
+   */
+  public static get userAccount(): UserAccount | null {
+    return this._userAccount;
+  }
+
+  /**
+   * Get the base URL
+   */
+  public static get baseURL(): string {
+    if (!this._baseURL) {
+      throw new Error(
+        'AuthState not initialized. Call AuthClient.initialize() first.',
+      );
+    }
+    return this._baseURL;
+  }
+
+  /**
+   * Get the request timeout
+   */
+  public static get timeout(): number {
+    return this._timeout;
+  }
+
+  /**
+   * Get the default request headers
+   */
+  public static get headers(): Record<string, string> {
+    return this._headers;
+  }
+
+  /**
+   * Get the current authentication token
+   */
+  public static get token(): string | null {
+    // If token is already in memory, return it
+    if (this._token) {
+      return this._token;
+    }
+
+    // Try to get token from cookies first (browser environment)
+    let token = this.getTokenFromCookies();
+
+    // If no token from cookies, try storage
+    if (!token && this._storage) {
+      token = this._storage.getItem(this._cookieName);
+    }
+
+    // If token found, synchronize it everywhere
+    if (token) {
+      this.setToken(token);
+    }
+
+    return token;
+  }
+
+  /**
+   * Is the auth state initialized ?
+   */
+  public static get initialized(): boolean {
+    return this._initialized;
+  }
+
+  /**
+   * Initialize the state with configuration and attempt to restore session
+   * @param config - Configuration for the auth state
+   * @returns The user account if a valid session is found, null otherwise
+   */
+  public static async initialize(
+    config: AuthStateConfig,
+  ): Promise<UserAccount | null> {
+    // Set configuration
+    this._baseURL = config.baseURL.replace(/\/$/, ''); // Remove trailing slash
+    this._timeout = config.timeout || 30000;
+    this._headers = {
+      'Content-Type': 'application/json',
+      ...config.headers,
+    };
+    this._cookieName = config.cookieName || 'auth-token';
+
+    // Configure storage
+    this.setStorage(config.storage);
+
+    // Try to get token (from memory, cookies, or storage)
+    // The getter will automatically synchronize it everywhere
+    const token = this.token;
+
+    // If no token found, clear everything and return null
+    if (!token) {
+      this.clear();
+      return null;
+    }
+
+    // Try to fetch the user account to validate the session
+    try {
+      const account = await this.validateSession();
+      if (account) {
+        // Session is valid, cache the account and mark as initialized
+        this._userAccount = account;
+        this._initialized = true;
+        return account;
+      } else {
+        // Account fetch returned null, session is invalid
+        this.clear();
+        return null;
+      }
+    } catch {
+      // Error fetching account, session is invalid
+      this.clear();
+      return null;
+    }
+  }
+
+  /**
+   * Clear all authentication data (token, user account, cache, cookie)
+   */
+  public static clear(): void {
+    // Use setToken to ensure synchronization across all sources
+    this.setToken(null);
+    this._userAccount = null;
+    this._initialized = false;
+    this._baseURL = null;
+  }
+
+  /**
+   * Set the authentication token
+   * Automatically synchronizes the token across memory, storage, and cookies
+   * Used internally and by AuthService after sign-in
+   */
+  public static setToken(value: string | null): void {
+    this._token = value;
+
+    // Synchronize with storage
+    if (this._storage) {
+      if (value) {
+        this._storage.setItem(this._cookieName, value);
+      } else {
+        // If value is null, remove from storage
+        this._storage.removeItem(this._cookieName);
+      }
+    }
+
+    // Synchronize with cookies (browser environment)
+    if (typeof document !== 'undefined') {
+      if (value) {
+        // Set cookie
+        document.cookie = `${this._cookieName}=${encodeURIComponent(value)}; path=/; SameSite=Lax`;
+      } else {
+        // Remove cookie
+        document.cookie = `${this._cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+      }
+    }
+  }
+
+  /**
+   * Set the user account
+   * Used by AuthService to cache the account
+   */
+  public static setUserAccount(value: UserAccount | null): void {
+    this._userAccount = value;
+  }
+
+  /**
+   * Set the initialized state
+   * Used internally and by AuthService after sign-in
+   */
+  public static setInitialized(value: boolean): void {
+    this._initialized = value;
+  }
+
+  /**
+   * Set the storage mechanism
+   * Uses localStorage by default in browser environment, or custom storage if provided
+   */
+  private static setStorage(storage: AuthStorage | null | undefined): void {
+    if (storage !== undefined) {
+      this._storage = storage;
+    } else {
+      // Default to localStorage in browser environment
+      this._storage =
+        typeof window !== 'undefined' && window.localStorage
+          ? {
+              getItem: (key: string) => window.localStorage.getItem(key),
+              setItem: (key: string, value: string) =>
+                window.localStorage.setItem(key, value),
+              removeItem: (key: string) => window.localStorage.removeItem(key),
+            }
+          : null;
+    }
+  }
+
+  /**
+   * Extract token from cookies in document.cookie (browser environment)
+   */
+  private static getTokenFromCookies(): string | null {
+    if (typeof document === 'undefined') {
+      return null; // Not in browser environment
+    }
+
+    const cookies = document.cookie.split(';');
+    for (const cookie of cookies) {
+      const [name, value] = cookie.trim().split('=');
+      if (name === this._cookieName && value) {
+        const decodedValue = decodeURIComponent(value);
+        return decodedValue;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Validate the session by fetching the user account
+   */
+  private static async validateSession(): Promise<UserAccount | null> {
+    const baseURL = this._baseURL!;
+    const timeout = this._timeout;
+    const token = this._token;
+
+    if (!token) {
+      return null;
+    }
+
+    const headers: Record<string, string> = {
+      ...this._headers,
+      Authorization: `Bearer ${token}`,
+    };
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    try {
+      const response = await fetch(`${baseURL}/auth/account`, {
+        method: 'GET',
+        headers,
+        credentials: 'include',
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const account = await response.json();
+        return account as UserAccount;
+      }
+
+      return null;
+    } catch {
+      clearTimeout(timeoutId);
+      return null;
+    }
+  }
+}
