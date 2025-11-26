@@ -1,7 +1,7 @@
 module.exports = {
   parser: '@typescript-eslint/parser',
   parserOptions: {
-    project: './packages/nest-auth/tsconfig.eslint.json',
+    project: './tsconfig.eslint.json',
     tsconfigRootDir: __dirname,
     sourceType: 'module',
   },
@@ -15,13 +15,7 @@ module.exports = {
     node: true,
     jest: true,
   },
-  ignorePatterns: [
-    '.eslintrc.js',
-    'test/**/*',
-    'dist/**/*',
-    'node_modules/**/*',
-    'packages/*/dist/**/*',
-  ],
+  ignorePatterns: ['.eslintrc.js', 'dist/**/*', 'node_modules/**/*'],
   rules: {
     '@typescript-eslint/interface-name-prefix': 'off',
     '@typescript-eslint/explicit-function-return-type': 'off',

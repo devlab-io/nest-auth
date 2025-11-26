@@ -19,8 +19,14 @@
     "noFallthroughCasesInSwitch": true,
     "paths": {
       "@/*": ["src/*"],
-      "@devlab-io/nest-auth-types": ["../nest-auth-types/dist", "../nest-auth-types/src"],
-      "@devlab-io/nest-auth-types/*": ["../nest-auth-types/dist/*", "../nest-auth-types/src/*"]
+      "@devlab-io/nest-auth-types": [
+        "../nest-auth-types/dist",
+        "../nest-auth-types/src"
+      ],
+      "@devlab-io/nest-auth-types/*": [
+        "../nest-auth-types/dist/*",
+        "../nest-auth-types/src/*"
+      ]
     }
   },
   "include": ["src/**/*"],
