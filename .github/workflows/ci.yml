@@ -1,4 +1,4 @@
-name: CI/CD Multipackage
+name: CI/CD
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  CI-CD-Multipackage:
+  CI-CD:
     runs-on: ubuntu-latest
 
     steps:

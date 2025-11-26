@@ -1,4 +1,4 @@
-name: Publish Multipackage to GitHub Packages
+name: Publish
 
 on:
   workflow_dispatch:
@@ -13,7 +13,7 @@ on:
         type: string
 
 jobs:
-  Publish-Multipackage:
+  Publish:
     runs-on: ubuntu-latest
     permissions:
       contents: write

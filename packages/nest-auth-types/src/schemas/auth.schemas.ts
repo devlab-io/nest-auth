@@ -9,7 +9,7 @@ import {
   ResetPasswordRequest,
   AcceptTermsRequest,
   AcceptPrivacyPolicyRequest,
-} from '@devlab-io/nest-auth-types';
+} from '../types';
 
 /**
  * Zod schema for SignInRequest
