@@ -53,7 +53,9 @@ export class AuthState {
       return false;
     }
 
-    return this._userAccount.roles.some((role: Role): boolean => role.name === roleName);
+    return this._userAccount.roles.some(
+      (role: Role): boolean => role.name === roleName,
+    );
   }
 
   /**
