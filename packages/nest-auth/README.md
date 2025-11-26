@@ -9,95 +9,23 @@
 
 # @devlab-io/nest-auth
 
-NestJS authentication module
+Module d'authentification complet pour NestJS avec support multi-comptes, rôles, organisations et établissements.
 
 ## Installation
 
-This package is distributed via GitHub Packages (private npm registry).
-Install it using npm or yarn.
+Ce package est distribué via GitHub Packages (registry npm privé). Consultez le [README principal](../../README.md) pour les instructions d'installation et de configuration.
 
-### Authentication to Github Packages
+```bash
+yarn add @devlab-io/nest-auth
+# ou
+npm install @devlab-io/nest-auth
+```
 
-Since this is a private package, you need to configure authentication:
+## Configuration
 
-1. **Generate a GitHub Personal Access Token**:
-   - Go to https://github.com/settings/tokens
-   - Create a new token with the following permissions:
-     - `read:packages` - to download packages
-     - `repo` - if the repository is private
+### Configuration de base
 
-2. **Configure npm/yarn to use GitHub Packages**:
-
-   Create or edit `.npmrc` file in your project root (or `~/.npmrc` for global configuration):
-
-   ```ini
-   @devlab-io:registry=https://npm.pkg.github.com
-   //npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN
-   ```
-
-   Or configure via command line:
-
-   ```bash
-   # For npm
-   npm config set @devlab-io:registry https://npm.pkg.github.com
-   npm config set //npm.pkg.github.com/:_authToken YOUR_GITHUB_TOKEN
-
-   # For yarn
-   yarn config set @devlab-io:registry https://npm.pkg.github.com
-   yarn config set //npm.pkg.github.com/:_authToken YOUR_GITHUB_TOKEN
-   ```
-
-   Using environment variable (recommended for CI/CD):
-
-   ```bash
-   # Set the token as environment variable
-   export NPM_TOKEN=YOUR_GITHUB_TOKEN
-
-   # Then in .npmrc:
-   @devlab-io:registry=https://npm.pkg.github.com
-   //npm.pkg.github.com/:_authToken=${NPM_TOKEN}
-   ```
-
-### Actual installation
-
-3. **Install the Package**:
-
-   Using npm:
-
-   ```bash
-   npm install @devlab-io/nest-auth
-   ```
-
-   Using yarn:
-
-   ```bash
-   yarn add @devlab-io/nest-auth
-   ```
-
-   Or add directly in `package.json`:
-
-   ```json
-   {
-     "dependencies": {
-       "@devlab-io/nest-auth": "^1.0.0"
-     }
-   }
-   ```
-
-   To see available versions, check the [releases page](https://github.com/devlab-io/nest-auth/releases) or the [GitHub Packages page](https://github.com/orgs/devlab-io/packages/npm/package/nest-auth).
-
-### Github Actions
-
-4. **Autoriser un autre repertoire Gihub à utiliser la bibliothèque**
-
-   Il faut aller dans les [paramètres du package](https://github.com/orgs/devlab-io/packages/npm/nest-auth/settings) et autoriser le repertoire qui utilise la bibliothèque:
-   - Cliquer sur "Add Repository"
-   - Choisir le repository à ajouter
-   - Cliquer sur "Add Repository"
-
-## Usage
-
-Import and configure the module in your `AppModule`:
+Importez et configurez le module dans votre `AppModule` :
 
 ```typescript
 import { Module } from '@nestjs/common';
@@ -107,7 +35,7 @@ import { MailerModule } from '@devlab-io/nest-mailer';
 @Module({
   imports: [
     MailerModule.forRoot({
-      // Your MailerModule configuration
+      // Votre configuration MailerModule
     }),
     AuthModule.forRoot({
       auth: {
@@ -121,47 +49,818 @@ import { MailerModule } from '@devlab-io/nest-mailer';
 export class AppModule {}
 ```
 
-**Note**: `AuthModule` requires `MailerModule` to be imported in your application. Make sure to import and configure `MailerModule` before `AuthModule` in your `AppModule`.
+**Note importante** : `AuthModule` nécessite que `MailerModule` soit importé dans votre application. Assurez-vous d'importer et de configurer `MailerModule` avant `AuthModule` dans votre `AppModule`.
 
-Environment variables:
+### Variables d'environnement
 
-- `ADMIN_EMAIL` - Auth (default: `admin@devlab.io`)
+Le module utilise des variables d'environnement pour la configuration. Toutes les variables sont optionnelles et ont des valeurs par défaut.
 
-## API
+#### Configuration JWT
 
-### Controlers
+```env
+# Secret pour signer les tokens JWT (requis en production)
+AUTH_JWT_SECRET=abcdefghijklmnopqrstuvwxyz0123456789
 
-- /auth/signin
-- /auth/signup
-  ...
-
-### Services
-
-```typescript
-TODO;
+# Durée de validité du token (format: nombre + unité: s, m, h, d)
+# Exemples: 1h, 30m, 7d, 3600s
+AUTH_JWT_EXPIRES_IN=1h
 ```
 
-### Types
+#### Configuration Admin
 
-```typescript
-TODO;
+```env
+# Email de l'administrateur créé lors de la migration
+AUTH_ADMIN_EMAIL=admin@devlab.io
+
+# Mot de passe de l'administrateur créé lors de la migration
+AUTH_ADMIN_PASSWORD=ChangeMe1234*
 ```
 
-## Development
+#### Configuration Utilisateur
 
-### Commandes utiles pour contribuer au devellopement de la lib
+```env
+# Autoriser l'inscription publique (true/false)
+AUTH_USER_CAN_SIGN_UP=true
+
+# Rôles par défaut assignés lors de l'inscription (séparés par des virgules)
+AUTH_USER_DEFAULT_ROLES=user
+```
+
+#### Configuration Google OAuth
+
+```env
+# ID client Google OAuth
+AUTH_GOOGLE_CLIENT_ID=
+
+# Secret client Google OAuth
+AUTH_GOOGLE_CLIENT_SECRET=
+
+# URL de callback Google OAuth
+AUTH_GOOGLE_CALLBACK_URL=
+```
+
+**Note** : Si toutes les variables Google sont renseignées, l'authentification Google sera automatiquement activée.
+
+#### Configuration des Actions (Tokens)
+
+Les routes d'actions définissent les URLs frontend qui seront utilisées dans les emails envoyés aux utilisateurs. Ces routes doivent correspondre à des pages frontend existantes qui acceptent un paramètre de token et appellent les endpoints correspondants du contrôleur `/auth`.
+
+```env
+# Durée de validité des tokens d'invitation (en heures)
+AUTH_ACTION_INVITE=24
+# Route frontend pour accepter une invitation
+AUTH_ACTION_INVITE_ROUTE=auth/accept-invitation
+# Organisation par défaut pour les invitations (optionnel)
+AUTH_ACTION_INVITE_ORGANISATION=
+# Établissement par défaut pour les invitations (optionnel)
+AUTH_ACTION_INVITE_ESTABLISHMENT=
+
+# Validation d'email
+AUTH_ACTION_VALIDATE_EMAIL=24
+AUTH_ACTION_VALIDATE_EMAIL_ROUTE=auth/validate-email
+
+# Acceptation des conditions d'utilisation
+AUTH_ACTION_ACCEPT_TERMS=24
+AUTH_ACTION_ACCEPT_TERMS_ROUTE=auth/accept-terms
+
+# Acceptation de la politique de confidentialité
+AUTH_ACTION_ACCEPT_PRIVACY_POLICY=24
+AUTH_ACTION_ACCEPT_PRIVACY_POLICY_ROUTE=auth/accept-privacy-policy
+
+# Réinitialisation de mot de passe
+AUTH_ACTION_RESET_PASSWORD=24
+AUTH_ACTION_RESET_PASSWORD_ROUTE=auth/reset-password
+
+# Changement de mot de passe
+AUTH_ACTION_CHANGE_PASSWORD=24
+AUTH_ACTION_CHANGE_PASSWORD_ROUTE=auth/change-password
+
+# Changement d'email
+AUTH_ACTION_CHANGE_EMAIL=24
+AUTH_ACTION_CHANGE_EMAIL_ROUTE=auth/change-email
+```
+
+**Important** : Les routes configurées doivent correspondre à des pages frontend existantes. Ces pages doivent :
+
+1. **Accepter les paramètres `token` et `email`** : Les URLs générées dans les emails incluront toujours deux paramètres :
+   - `token` : Le token d'action à utiliser
+   - `email` : L'adresse email de l'utilisateur (utilisé pour la validation)
+   
+   Exemple : `/auth/accept-invitation?token=xxx&email=user@example.com`
+
+2. **Appeler l'endpoint correspondant** : Chaque page doit appeler l'endpoint POST approprié du contrôleur `/auth` avec le token et l'email reçus :
+
+   | Route configurée | Page frontend | Endpoint à appeler |
+   |-----------------|---------------|-------------------|
+   | `auth/accept-invitation` | `/auth/accept-invitation?token=xxx&email=user@example.com` | `POST /auth/accept-invitation` |
+   | `auth/validate-email` | `/auth/validate-email?token=xxx&email=user@example.com` | `POST /auth/accept-email-validation` |
+   | `auth/accept-terms` | `/auth/accept-terms?token=xxx&email=user@example.com` | `POST /auth/accept-terms` |
+   | `auth/accept-privacy-policy` | `/auth/accept-privacy-policy?token=xxx&email=user@example.com` | `POST /auth/accept-privacy-policy` |
+   | `auth/reset-password` | `/auth/reset-password?token=xxx&email=user@example.com` | `POST /auth/accept-reset-password` |
+   | `auth/change-password` | `/auth/change-password?token=xxx&email=user@example.com` | `POST /auth/accept-change-password` |
+   | `auth/change-email` | `/auth/change-email?token=xxx&email=user@example.com` | `POST /auth/accept-change-email` (si implémenté) |
+
+   **Note** : Tous les endpoints d'acceptation d'actions requièrent à la fois le `token` et l'`email` dans le body de la requête pour valider que le token correspond bien à l'email fourni.
+
+**Exemple d'implémentation frontend** (Next.js) :
+
+```typescript
+// app/auth/reset-password/page.tsx
+'use client';
+
+import { useSearchParams } from 'next/navigation';
+import { useState } from 'react';
+
+export default function ResetPasswordPage() {
+  const searchParams = useSearchParams();
+  const token = searchParams.get('token');
+  const email = searchParams.get('email');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!token || !email) {
+      alert('Token ou email manquant');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      alert('Les mots de passe ne correspondent pas');
+      return;
+    }
+
+    try {
+      const response = await fetch('https://api.example.com/auth/accept-reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token,
+          email, // L'email est requis pour valider que le token correspond bien à cet email
+          newPassword: password,
+        }),
+      });
+
+      if (response.ok) {
+        alert('Mot de passe réinitialisé avec succès');
+        // Rediriger vers la page de connexion
+      } else {
+        alert('Erreur lors de la réinitialisation');
+      }
+    } catch (error) {
+      console.error('Erreur:', error);
+      alert('Une erreur est survenue');
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        type="password"
+        placeholder="Nouveau mot de passe"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+      />
+      <input
+        type="password"
+        placeholder="Confirmer le mot de passe"
+        value={confirmPassword}
+        onChange={(e) => setConfirmPassword(e.target.value)}
+        required
+      />
+      <button type="submit">Réinitialiser le mot de passe</button>
+    </form>
+  );
+}
+```
+
+**Note** : Les URLs complètes dans les emails seront construites en combinant l'URL frontend (définie via le guard `FrontendUrlGuard`) avec la route configurée, le token et l'email. Par exemple : `https://frontend.example.com/auth/reset-password?token=abc123...&email=user@example.com`
+
+L'email est toujours inclus dans les paramètres d'URL pour permettre à la page frontend de valider que le token correspond bien à l'email de l'utilisateur avant d'appeler l'API.
+
+#### Configuration des Tenants (Organisations/Établissements)
+
+```env
+# Organisations à créer lors de la migration (séparées par des virgules)
+AUTH_TENANTS_ORGANISATIONS=Organisation1,Organisation2
+
+# Établissements à créer lors de la migration (format: Organisation:Établissement, séparés par des virgules)
+AUTH_TENANTS_ESTABLISHMENTS=Organisation1:Établissement1,Organisation1:Établissement2,Organisation2:Établissement1
+```
+
+## Migrations
+
+Le module fournit une migration TypeORM pour créer toutes les tables nécessaires. Vous devez l'intégrer dans votre configuration TypeORM DataSource.
+
+### Intégration dans DataSource
+
+Créez un fichier `data-source.ts` à la racine de votre projet :
+
+```typescript
+import { DataSource } from 'typeorm';
+import { CreateAuthSchema1700000000000 } from '@devlab-io/nest-auth/database';
+
+export const AppDataSource = new DataSource({
+  type: 'postgres', // ou votre type de base de données
+  host: process.env.DB_HOST,
+  port: parseInt(process.env.DB_PORT || '5432'),
+  username: process.env.DB_USERNAME,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_DATABASE,
+  entities: [
+    // Vos entités
+  ],
+  migrations: [
+    CreateAuthSchema1700000000000,
+    // Vos autres migrations
+  ],
+  synchronize: false, // Toujours false en production
+  logging: process.env.NODE_ENV === 'development',
+});
+```
+
+### Exécution des migrations
 
 ```bash
-# Install dependencies
+# Générer la migration (si vous utilisez TypeORM CLI)
+npm run typeorm migration:generate -- -n CreateAuthSchema
+
+# Exécuter les migrations
+npm run typeorm migration:run
+
+# Revenir en arrière
+npm run typeorm migration:revert
+```
+
+### Ce que crée la migration
+
+La migration `CreateAuthSchema1700000000000` crée :
+
+1. **Table `roles`** : Rôles système (admin, user, etc.)
+2. **Table `users`** : Utilisateurs avec informations personnelles
+3. **Table `organisations`** : Organisations (entreprises)
+4. **Table `establishments`** : Établissements (restaurants, magasins, etc.)
+5. **Table `credentials`** : Identifiants (mot de passe, Google OAuth)
+6. **Table `user_accounts`** : Comptes utilisateur liant users/organisations/établissements
+7. **Table `user_account_roles`** : Table de jonction pour les rôles des comptes
+8. **Table `action_tokens`** : Tokens pour invitations, réinitialisations, etc.
+9. **Table `action_token_roles`** : Table de jonction pour les rôles des tokens
+10. **Table `sessions`** : Sessions JWT actives
+
+La migration crée également :
+- Un utilisateur administrateur par défaut (configurable via `AUTH_ADMIN_EMAIL` et `AUTH_ADMIN_PASSWORD`)
+- L'organisation et l'établissement "Devlab" par défaut
+- Les organisations et établissements configurés via `AUTH_TENANTS_ORGANISATIONS` et `AUTH_TENANTS_ESTABLISHMENTS`
+- Le rôle "admin" par défaut
+
+## Routes API
+
+### Authentification (`/auth`)
+
+#### `GET /auth/account`
+Récupère le compte utilisateur actuellement authentifié.
+
+- **Authentification** : Requise (JWT)
+- **Réponse** : `UserAccountDto` ou `null`
+
+#### `POST /auth/sign-up`
+Inscription d'un nouvel utilisateur.
+
+- **Body** : `SignUpRequestDto`
+  ```typescript
+  {
+    email: string;
+    password: string;
+    username?: string;
+    firstName?: string;
+    lastName?: string;
+  }
+  ```
+- **Réponse** : `void`
+
+#### `POST /auth/sign-in`
+Connexion d'un utilisateur.
+
+- **Body** : `SignInRequestDto`
+  ```typescript
+  {
+    email: string;
+    password: string;
+  }
+  ```
+- **Réponse** : `AuthResponseDto` (contient le token JWT et le compte utilisateur)
+
+#### `POST /auth/sign-out`
+Déconnexion et invalidation de la session actuelle.
+
+- **Authentification** : Requise (JWT)
+- **Réponse** : `void`
+
+#### `POST /auth/invite`
+Envoie une invitation à un utilisateur.
+
+- **Authentification** : Requise (JWT)
+- **Body** : `InviteRequestDto`
+  ```typescript
+  {
+    email: string;
+    organisationId: string;
+    establishmentId: string;
+    roles?: string[];
+  }
+  ```
+- **Réponse** : `void`
+
+#### `POST /auth/accept-invitation`
+Accepte une invitation et crée un compte.
+
+- **Body** : `AcceptInvitationRequestDto`
+  ```typescript
+  {
+    token: string;
+    password: string;
+    username?: string;
+    firstName?: string;
+    lastName?: string;
+  }
+  ```
+- **Réponse** : `AuthResponseDto`
+
+#### `POST /auth/send-email-validation`
+Envoie un token de validation d'email.
+
+- **Authentification** : Requise (JWT)
+- **Query** : `id` (ID de l'utilisateur)
+- **Réponse** : `void`
+
+#### `POST /auth/accept-email-validation`
+Valide un email avec un token.
+
+- **Body** : `ValidateEmailRequestDto`
+  ```typescript
+  {
+    token: string;
+  }
+  ```
+- **Réponse** : `void`
+
+#### `POST /auth/send-change-password`
+Envoie un token pour changer le mot de passe.
+
+- **Authentification** : Requise (JWT)
+- **Query** : `id` (ID de l'utilisateur)
+- **Réponse** : `void`
+
+#### `POST /auth/accept-change-password`
+Change le mot de passe avec un token.
+
+- **Body** : `ChangePasswordRequestDto`
+  ```typescript
+  {
+    token: string;
+    newPassword: string;
+  }
+  ```
+- **Réponse** : `void`
+
+#### `POST /auth/send-reset-password`
+Envoie un token de réinitialisation de mot de passe.
+
+- **Query** : `email` (Email de l'utilisateur)
+- **Réponse** : `void`
+
+#### `POST /auth/accept-reset-password`
+Réinitialise le mot de passe avec un token.
+
+- **Body** : `ResetPasswordRequestDto`
+  ```typescript
+  {
+    token: string;
+    newPassword: string;
+  }
+  ```
+- **Réponse** : `void`
+
+#### `POST /auth/add-accept-terms`
+Génère un token pour accepter les conditions d'utilisation.
+
+- **Query** : `id` (ID de l'utilisateur)
+- **Réponse** : `void`
+
+#### `POST /auth/accept-terms`
+Accepte les conditions d'utilisation avec un token.
+
+- **Body** : `AcceptTermsRequestDto`
+  ```typescript
+  {
+    token: string;
+  }
+  ```
+- **Réponse** : `void`
+
+#### `POST /auth/add-accept-privacy-policy`
+Génère un token pour accepter la politique de confidentialité.
+
+- **Query** : `id` (ID de l'utilisateur)
+- **Réponse** : `void`
+
+#### `POST /auth/accept-privacy-policy`
+Accepte la politique de confidentialité avec un token.
+
+- **Body** : `AcceptPrivacyPolicyRequestDto`
+  ```typescript
+  {
+    token: string;
+  }
+  ```
+- **Réponse** : `void`
+
+### Utilisateurs (`/users`)
+
+#### `POST /users`
+Crée un nouvel utilisateur.
+
+- **Body** : `CreateUserRequestDto`
+- **Réponse** : `UserDto`
+
+#### `GET /users`
+Recherche des utilisateurs avec pagination et filtres.
+
+- **Query** : Paramètres de recherche (`UserQueryParams`) + `page` (défaut: 1) + `limit` (défaut: 10)
+- **Réponse** : `UserPageDto`
+
+#### `GET /users/by-id`
+Trouve un utilisateur par ID.
+
+- **Query** : `id` (ID de l'utilisateur)
+- **Réponse** : `UserDto | null`
+
+#### `GET /users/by-email`
+Trouve un utilisateur par email.
+
+- **Query** : `email` (Email de l'utilisateur)
+- **Réponse** : `UserDto | null`
+
+#### `GET /users/me`
+Récupère le profil de l'utilisateur authentifié.
+
+- **Authentification** : Requise (JWT)
+- **Réponse** : `UserDto`
+
+#### `POST /users/me`
+Met à jour le profil de l'utilisateur authentifié.
+
+- **Authentification** : Requise (JWT)
+- **Body** : `UpdateUserRequestDto`
+- **Réponse** : `UserDto`
+
+#### `DELETE /users/me`
+Supprime le compte de l'utilisateur authentifié.
+
+- **Authentification** : Requise (JWT)
+- **Réponse** : `void`
+
+#### `GET /users/:id`
+Récupère un utilisateur par ID.
+
+- **Param** : `id` (ID de l'utilisateur)
+- **Réponse** : `UserDto`
+
+#### `GET /users/:id/exists`
+Vérifie si un utilisateur existe par ID.
+
+- **Param** : `id` (ID de l'utilisateur)
+- **Réponse** : `boolean`
+
+#### `PATCH /users/:id`
+Met à jour partiellement un utilisateur.
+
+- **Param** : `id` (ID de l'utilisateur)
+- **Body** : `PatchUserRequestDto`
+- **Réponse** : `UserDto`
+
+#### `POST /users/:id`
+Met à jour complètement un utilisateur.
+
+- **Param** : `id` (ID de l'utilisateur)
+- **Body** : `UpdateUserRequestDto`
+- **Réponse** : `UserDto`
+
+#### `PATCH /users/:id/enable`
+Active un compte utilisateur.
+
+- **Param** : `id` (ID de l'utilisateur)
+- **Réponse** : `UserDto`
+
+#### `PATCH /users/:id/disable`
+Désactive un compte utilisateur.
+
+- **Param** : `id` (ID de l'utilisateur)
+- **Réponse** : `UserDto`
+
+#### `DELETE /users/:id`
+Supprime un utilisateur.
+
+- **Param** : `id` (ID de l'utilisateur)
+- **Réponse** : `void`
+
+#### `GET /users/:id/sessions`
+Récupère toutes les sessions d'un utilisateur.
+
+- **Param** : `id` (ID de l'utilisateur)
+- **Réponse** : `SessionDto[]`
+
+#### `GET /users/:id/sessions/active`
+Récupère toutes les sessions actives d'un utilisateur.
+
+- **Param** : `id` (ID de l'utilisateur)
+- **Réponse** : `SessionDto[]`
+
+#### `DELETE /users/:id/sessions`
+Supprime toutes les sessions d'un utilisateur.
+
+- **Param** : `id` (ID de l'utilisateur)
+- **Réponse** : `DeleteSessionsResponseDto` (contient le nombre de sessions supprimées)
+
+### Comptes Utilisateur (`/user-accounts`)
+
+#### `POST /user-accounts`
+Crée un nouveau compte utilisateur.
+
+- **Body** : `CreateUserAccountRequestDto`
+  ```typescript
+  {
+    userId: string;
+    organisationId: string;
+    establishmentId: string;
+    roles?: string[];
+  }
+  ```
+- **Réponse** : `UserAccountDto`
+
+#### `GET /user-accounts`
+Recherche des comptes utilisateur avec pagination et filtres.
+
+- **Query** : Paramètres de recherche (`UserAccountQueryParams`) + `page` (défaut: 1) + `limit` (défaut: 10)
+- **Réponse** : `UserAccountPageDto`
+
+#### `GET /user-accounts/by-id`
+Trouve un compte utilisateur par ID.
+
+- **Query** : `id` (ID du compte)
+- **Réponse** : `UserAccountDto | null`
+
+#### `GET /user-accounts/:id`
+Récupère un compte utilisateur par ID.
+
+- **Param** : `id` (ID du compte)
+- **Réponse** : `UserAccountDto`
+
+#### `GET /user-accounts/:id/exists`
+Vérifie si un compte utilisateur existe par ID.
+
+- **Param** : `id` (ID du compte)
+- **Réponse** : `boolean`
+
+#### `POST /user-accounts/:id`
+Met à jour complètement un compte utilisateur.
+
+- **Param** : `id` (ID du compte)
+- **Body** : `UpdateUserAccountRequestDto`
+- **Réponse** : `UserAccountDto`
+
+#### `PATCH /user-accounts/:id`
+Met à jour partiellement un compte utilisateur.
+
+- **Param** : `id` (ID du compte)
+- **Body** : `UpdateUserAccountRequestDto`
+- **Réponse** : `UserAccountDto`
+
+#### `PATCH /user-accounts/:id/enable`
+Active un compte utilisateur.
+
+- **Param** : `id` (ID du compte)
+- **Réponse** : `UserAccountDto`
+
+#### `PATCH /user-accounts/:id/disable`
+Désactive un compte utilisateur.
+
+- **Param** : `id` (ID du compte)
+- **Réponse** : `UserAccountDto`
+
+#### `DELETE /user-accounts/:id`
+Supprime un compte utilisateur.
+
+- **Param** : `id` (ID du compte)
+- **Réponse** : `void`
+
+### Organisations (`/organisations`)
+
+#### `POST /organisations`
+Crée une nouvelle organisation.
+
+- **Body** : `CreateOrganisationRequestDto`
+  ```typescript
+  {
+    name: string;
+  }
+  ```
+- **Réponse** : `OrganisationDto`
+
+#### `GET /organisations`
+Recherche des organisations avec pagination et filtres.
+
+- **Query** : Paramètres de recherche (`OrganisationQueryParams`) + `page` (défaut: 1) + `limit` (défaut: 10)
+- **Réponse** : `OrganisationPageDto`
+
+#### `GET /organisations/by-id`
+Trouve une organisation par ID.
+
+- **Query** : `id` (ID de l'organisation)
+- **Réponse** : `OrganisationDto | null`
+
+#### `GET /organisations/by-name`
+Trouve une organisation par nom.
+
+- **Query** : `name` (Nom de l'organisation)
+- **Réponse** : `OrganisationDto | null`
+
+#### `GET /organisations/:id`
+Récupère une organisation par ID.
+
+- **Param** : `id` (ID de l'organisation)
+- **Réponse** : `OrganisationDto`
+
+#### `GET /organisations/:id/exists`
+Vérifie si une organisation existe par ID.
+
+- **Param** : `id` (ID de l'organisation)
+- **Réponse** : `boolean`
+
+#### `POST /organisations/:id`
+Met à jour complètement une organisation.
+
+- **Param** : `id` (ID de l'organisation)
+- **Body** : `UpdateOrganisationRequestDto`
+- **Réponse** : `OrganisationDto`
+
+#### `PATCH /organisations/:id`
+Met à jour partiellement une organisation.
+
+- **Param** : `id` (ID de l'organisation)
+- **Body** : `UpdateOrganisationRequestDto`
+- **Réponse** : `OrganisationDto`
+
+#### `PATCH /organisations/:id/enable`
+Active une organisation.
+
+- **Param** : `id` (ID de l'organisation)
+- **Réponse** : `OrganisationDto`
+
+#### `PATCH /organisations/:id/disable`
+Désactive une organisation.
+
+- **Param** : `id` (ID de l'organisation)
+- **Réponse** : `OrganisationDto`
+
+#### `DELETE /organisations/:id`
+Supprime une organisation.
+
+- **Param** : `id` (ID de l'organisation)
+- **Réponse** : `void`
+
+### Établissements (`/establishments`)
+
+#### `POST /establishments`
+Crée un nouvel établissement.
+
+- **Body** : `CreateEstablishmentRequestDto`
+  ```typescript
+  {
+    name: string;
+    organisationId: string;
+  }
+  ```
+- **Réponse** : `EstablishmentDto`
+
+#### `GET /establishments`
+Recherche des établissements avec pagination et filtres.
+
+- **Query** : Paramètres de recherche (`EstablishmentQueryParams`) + `page` (défaut: 1) + `limit` (défaut: 10)
+- **Réponse** : `EstablishmentPageDto`
+
+#### `GET /establishments/by-id`
+Trouve un établissement par ID.
+
+- **Query** : `id` (ID de l'établissement)
+- **Réponse** : `EstablishmentDto | null`
+
+#### `GET /establishments/by-name`
+Trouve un établissement par nom et organisation.
+
+- **Query** : `name` (Nom de l'établissement) + `organisationId` (ID de l'organisation)
+- **Réponse** : `EstablishmentDto | null`
+
+#### `GET /establishments/:id`
+Récupère un établissement par ID.
+
+- **Param** : `id` (ID de l'établissement)
+- **Réponse** : `EstablishmentDto`
+
+#### `GET /establishments/:id/exists`
+Vérifie si un établissement existe par ID.
+
+- **Param** : `id` (ID de l'établissement)
+- **Réponse** : `boolean`
+
+#### `POST /establishments/:id`
+Met à jour complètement un établissement.
+
+- **Param** : `id` (ID de l'établissement)
+- **Body** : `UpdateEstablishmentRequestDto`
+- **Réponse** : `EstablishmentDto`
+
+#### `PATCH /establishments/:id`
+Met à jour partiellement un établissement.
+
+- **Param** : `id` (ID de l'établissement)
+- **Body** : `UpdateEstablishmentRequestDto`
+- **Réponse** : `EstablishmentDto`
+
+#### `PATCH /establishments/:id/enable`
+Active un établissement.
+
+- **Param** : `id` (ID de l'établissement)
+- **Réponse** : `EstablishmentDto`
+
+#### `PATCH /establishments/:id/disable`
+Désactive un établissement.
+
+- **Param** : `id` (ID de l'établissement)
+- **Réponse** : `EstablishmentDto`
+
+#### `DELETE /establishments/:id`
+Supprime un établissement.
+
+- **Param** : `id` (ID de l'établissement)
+- **Réponse** : `void`
+
+### Rôles (`/roles`)
+
+#### `GET /roles`
+Récupère tous les rôles disponibles.
+
+- **Réponse** : `RoleDto[]`
+
+### Sessions (`/sessions`)
+
+#### `GET /sessions`
+Recherche des sessions avec filtres.
+
+- **Query** : `SessionQueryParams` (userId, loginDate, expirationDate, active)
+- **Réponse** : `SessionDto[]`
+
+#### `GET /sessions/active`
+Récupère toutes les sessions actives (non expirées).
+
+- **Réponse** : `SessionDto[]`
+
+#### `GET /sessions/:token`
+Récupère une session par token.
+
+- **Param** : `token` (Token JWT)
+- **Réponse** : `SessionDto`
+
+#### `DELETE /sessions/:token`
+Supprime une session par token.
+
+- **Param** : `token` (Token JWT)
+- **Réponse** : `void`
+
+#### `DELETE /sessions/expired`
+Supprime toutes les sessions expirées.
+
+- **Réponse** : `DeleteSessionsResponseDto` (contient le nombre de sessions supprimées)
+
+## Développement
+
+### Commandes utiles pour contribuer au développement de la lib
+
+```bash
+# Installer les dépendances
 yarn install
 
 # Build
 yarn run build
 
-# Type check
+# Vérification des types
 yarn run type-check
 
-# Format code
+# Formatage du code
 yarn run format
 
 # Lint
@@ -170,52 +869,7 @@ yarn run lint
 
 ## Publishing
 
-Le projet utilise un workflow Git Flow automatisé via GitHub Actions pour publier la bibliothèque.
-
-### Publier une nouvelle version
-
-1. **Via GitHub Actions** :
-   - Allez dans l'onglet "Actions" de votre repository GitHub
-   - Sélectionnez le workflow "Publish to GitHub Packages"
-   - Cliquez sur "Run workflow"
-   - Sélectionnez la branche `develop` (requis)
-   - Entrez les informations suivantes :
-     - **Version tag** : La version à publier (ex: `v1.0.1` ou `1.0.1`)
-     - **Release description** : Description de la release (sera utilisée pour le tag et la release GitHub)
-   - Cliquez sur "Run workflow"
-
-2. **Le workflow va automatiquement** :
-   - ✅ Checkout et pull de `develop`
-   - ✅ Merge de `develop` dans `main`
-   - ✅ Checkout et pull de `main`
-   - ✅ Installation des dépendances
-   - ✅ Build du package
-   - ✅ Vérification du formatage (Prettier)
-   - ✅ Vérification du linting (ESLint)
-   - ✅ Vérification des types TypeScript
-   - ✅ Exécution des tests
-   - ✅ Mise à jour de la version dans `package.json`
-   - ✅ Commit et push de la mise à jour de version sur `main`
-   - ✅ Création et push du tag git
-   - ✅ Création des archives (`.tar.gz` et `.zip`)
-   - ✅ Publication sur GitHub Packages
-   - ✅ Création de la release GitHub avec les archives
-   - ✅ Merge de `main` dans `develop`
-   - ✅ Push de `develop`
-
-**Important** :
-
-- Le workflow ne peut être déclenché que depuis la branche `develop`
-- La branche `main` ne peut être modifiée que par ce workflow
-- Si un des checks (format, lint, type-check, tests) échoue, la publication est annulée
-- Les archives sont automatiquement attachées à la release GitHub
-
-### Vérifier la publication
-
-Après la publication, vous pouvez vérifier :
-
-- Le package sur [GitHub Packages](https://github.com/orgs/devlab-io/packages/npm/package/nest-auth)
-- La release sur [GitHub Releases](https://github.com/devlab-io/nest-auth/releases)
+Le projet utilise un workflow Git Flow automatisé via GitHub Actions pour publier la bibliothèque. Consultez le [README principal](../../README.md) pour plus de détails sur le processus de publication.
 
 ## License
 

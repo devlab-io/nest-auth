@@ -11,219 +11,128 @@
 
 Monorepo contenant les packages NestJS Authentication.
 
+## Introduction
+
+Ce monorepo fournit une solution complète d'authentification pour les applications NestJS. Il est composé de trois packages complémentaires qui travaillent ensemble pour offrir une authentification robuste, sécurisée et facile à intégrer.
+
+### Fonctionnalités principales
+
+- 🔐 **Authentification complète** : Inscription, connexion, déconnexion, réinitialisation de mot de passe
+- 👥 **Gestion multi-comptes** : Support des utilisateurs avec plusieurs comptes dans différentes organisations/établissements
+- 🔑 **Gestion des rôles** : Système de rôles et permissions intégré
+- 📧 **Validation par email** : Envoi et validation d'emails avec tokens sécurisés
+- 🎫 **Tokens JWT** : Authentification basée sur JWT avec gestion automatique des tokens
+- 📦 **Client TypeScript** : Client HTTP typé pour applications frontend (Next.js, React, etc.)
+- 🛡️ **Sécurité** : Protection CSRF, validation des données, gestion sécurisée des tokens
+
 ## Structure du monorepo
 
 Ce repository contient trois packages :
 
 ### 📦 `@devlab-io/nest-auth-types`
 
-Bibliothèque de typage TypeScript contenant toutes les interfaces et types utilisés par les autres packages.
+Bibliothèque de typage TypeScript contenant toutes les interfaces et types utilisés par les autres packages. Ce package est une dépendance commune qui garantit la cohérence des types entre le backend et le frontend.
+
+**📖 Documentation** : Voir le [README du package](./packages/nest-auth-types/README.md)
 
 ### 📦 `@devlab-io/nest-auth`
 
-Bibliothèque NestJS principale contenant les modules, services, contrôleurs, entités et migrations pour l'authentification.
+Bibliothèque NestJS principale contenant les modules, services, contrôleurs, entités et migrations pour l'authentification. C'est le cœur du système d'authentification qui doit être intégré dans votre application NestJS backend.
+
+**📖 Documentation** : Voir le [README du package](./packages/nest-auth/README.md)
 
 ### 📦 `@devlab-io/nest-auth-client`
 
-Bibliothèque client Node.js pour consommer les routes de l'API nest-auth. Inclut :
+Bibliothèque client pour applications frontend (Next.js, React, etc.) permettant de consommer les routes de l'API nest-auth. Inclut :
 
 - Services HTTP typés pour toutes les routes
-- Schémas Zod pour la validation des formulaires
-- Gestion automatique des tokens d'authentification
+- Gestion automatique des tokens d'authentification (cookies, localStorage)
+- État d'authentification réactif avec callbacks
+- Support des comptes multiples
+
+**📖 Documentation** : Voir le [README du package](./packages/nest-auth-client/README.md)
 
 ## Installation
 
-### Packages individuels
+### Configuration GitHub Packages
 
-#### @devlab-io/nest-auth-types
+Ces packages sont distribués via GitHub Packages (registry npm privé). Vous devez configurer l'authentification avant de pouvoir les installer.
 
-```bash
-yarn add @devlab-io/nest-auth-types
-```
+1. **Générer un GitHub Personal Access Token** :
+   - Allez sur https://github.com/settings/tokens
+   - Créez un nouveau token avec les permissions suivantes :
+     - `read:packages` - pour télécharger les packages
+     - `repo` - si le repository est privé
 
-#### @devlab-io/nest-auth
+2. **Configurer npm/yarn pour utiliser GitHub Packages** :
 
-```bash
-yarn add @devlab-io/nest-auth
-```
-
-#### @devlab-io/nest-auth-client
-
-```bash
-yarn add @devlab-io/nest-auth-client
-# Note: axios est requis comme peer dependency
-yarn add axios
-```
-
-## Installation
-
-This package is distributed via GitHub Packages (private npm registry).
-Install it using npm or yarn.
-
-### Authentication to Github Packages
-
-Since this is a private package, you need to configure authentication:
-
-1. **Generate a GitHub Personal Access Token**:
-   - Go to https://github.com/settings/tokens
-   - Create a new token with the following permissions:
-     - `read:packages` - to download packages
-     - `repo` - if the repository is private
-
-2. **Configure npm/yarn to use GitHub Packages**:
-
-   Create or edit `.npmrc` file in your project root (or `~/.npmrc` for global configuration):
+   Créez ou modifiez le fichier `.npmrc` à la racine de votre projet (ou `~/.npmrc` pour une configuration globale) :
 
    ```ini
    @devlab-io:registry=https://npm.pkg.github.com
    //npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN
    ```
 
-   Or configure via command line:
+   Ou configurez via la ligne de commande :
 
    ```bash
-   # For npm
+   # Pour npm
    npm config set @devlab-io:registry https://npm.pkg.github.com
    npm config set //npm.pkg.github.com/:_authToken YOUR_GITHUB_TOKEN
 
-   # For yarn
+   # Pour yarn
    yarn config set @devlab-io:registry https://npm.pkg.github.com
    yarn config set //npm.pkg.github.com/:_authToken YOUR_GITHUB_TOKEN
    ```
 
-   Using environment variable (recommended for CI/CD):
+   Utilisation d'une variable d'environnement (recommandé pour CI/CD) :
 
    ```bash
-   # Set the token as environment variable
+   # Définir le token comme variable d'environnement
    export NPM_TOKEN=YOUR_GITHUB_TOKEN
 
-   # Then in .npmrc:
+   # Puis dans .npmrc :
    @devlab-io:registry=https://npm.pkg.github.com
    //npm.pkg.github.com/:_authToken=${NPM_TOKEN}
    ```
 
-### Actual installation
+3. **Autoriser un autre repository GitHub à utiliser la bibliothèque**
 
-3. **Install the Package**:
+   Allez dans les [paramètres du package](https://github.com/orgs/devlab-io/packages/npm/nest-auth/settings) et autorisez le repository qui utilise la bibliothèque :
+   - Cliquez sur "Add Repository"
+   - Choisissez le repository à ajouter
+   - Cliquez sur "Add Repository"
 
-   Using npm:
+### Installation des packages
 
-   ```bash
-   npm install @devlab-io/nest-auth
-   ```
+Une fois l'authentification configurée, vous pouvez installer les packages :
 
-   Using yarn:
+```bash
+# Installer tous les packages
+yarn add @devlab-io/nest-auth-types @devlab-io/nest-auth @devlab-io/nest-auth-client
 
-   ```bash
-   yarn add @devlab-io/nest-auth
-   ```
-
-   Or add directly in `package.json`:
-
-   ```json
-   {
-     "dependencies": {
-       "@devlab-io/nest-auth": "^1.0.0"
-     }
-   }
-   ```
-
-   To see available versions, check the [releases page](https://github.com/devlab-io/nest-auth/releases) or the [GitHub Packages page](https://github.com/orgs/devlab-io/packages/npm/package/nest-auth).
-
-### Github Actions
-
-4. **Autoriser un autre repertoire Gihub à utiliser la bibliothèque**
-
-   Il faut aller dans les [paramètres du package](https://github.com/orgs/devlab-io/packages/npm/nest-auth/settings) et autoriser le repertoire qui utilise la bibliothèque:
-   - Cliquer sur "Add Repository"
-   - Choisir le repository à ajouter
-   - Cliquer sur "Add Repository"
-
-## Usage
-
-### Utilisation de @devlab-io/nest-auth
-
-Import and configure the module in your `AppModule`:
-
-```typescript
-import { Module } from '@nestjs/common';
-import { AuthModule } from '@devlab-io/nest-auth';
-import { MailerModule } from '@devlab-io/nest-mailer';
-
-@Module({
-  imports: [
-    MailerModule.forRoot({
-      // Your MailerModule configuration
-    }),
-    AuthModule.forRoot({
-      auth: {
-        admin: {
-          email: 'administrator@devlab.io',
-        },
-      },
-    }),
-  ],
-})
-export class AppModule {}
+# Ou individuellement
+yarn add @devlab-io/nest-auth-types
+yarn add @devlab-io/nest-auth
+yarn add @devlab-io/nest-auth-client
 ```
 
-**Note**: `AuthModule` requires `MailerModule` to be imported in your application. Make sure to import and configure `MailerModule` before `AuthModule` in your `AppModule`.
+Pour voir les versions disponibles, consultez la [page des releases](https://github.com/devlab-io/nest-auth/releases) ou la [page GitHub Packages](https://github.com/orgs/devlab-io/packages/npm/package/nest-auth).
 
-Environment variables:
+## Utilisation
 
-- `ADMIN_EMAIL` - Auth (default: `admin@devlab.io`)
+Pour apprendre à utiliser chaque package, consultez la documentation détaillée :
 
-## API
+- **[@devlab-io/nest-auth-types](./packages/nest-auth-types/README.md)** - Types et interfaces TypeScript
+- **[@devlab-io/nest-auth](./packages/nest-auth/README.md)** - Module NestJS backend
+- **[@devlab-io/nest-auth-client](./packages/nest-auth-client/README.md)** - Client frontend
 
-### Controlers
-
-- /auth/signin
-- /auth/signup
-  ...
-
-### Services
-
-```typescript
-TODO;
-```
-
-### Types
-
-```typescript
-TODO;
-```
-
-### Utilisation de @devlab-io/nest-auth-client
-
-```typescript
-import { AuthClient } from '@devlab-io/nest-auth-client';
-import { signInRequestSchema } from '@devlab-io/nest-auth-client';
-
-// Créer une instance du client
-const authClient = new AuthClient({
-  baseURL: 'https://api.example.com',
-});
-
-// Utiliser les schémas Zod pour valider les données
-const signInData = signInRequestSchema.parse({
-  email: 'user@example.com',
-  password: 'password123',
-});
-
-// Appeler les routes
-const authResponse = await authClient.signIn(signInData);
-// Le token est automatiquement configuré après sign-in
-
-// Utiliser le token pour les requêtes authentifiées
-const account = await authClient.getAccount();
-```
-
-## Development
+## Développement
 
 ### Commandes utiles pour contribuer au développement du monorepo
 
 ```bash
-# Install dependencies (tous les packages)
+# Installer les dépendances (tous les packages)
 yarn install
 
 # Build tous les packages
@@ -234,10 +143,10 @@ yarn build:types    # nest-auth-types
 yarn build:auth     # nest-auth
 yarn build:client   # nest-auth-client
 
-# Type check
+# Vérification des types
 yarn type-check
 
-# Format code
+# Formatage du code
 yarn format
 
 # Lint
@@ -253,7 +162,7 @@ yarn clean
 packages/
 ├── nest-auth-types/     # Types TypeScript
 ├── nest-auth/           # Bibliothèque NestJS principale
-└── nest-auth-client/    # Client HTTP + Schémas Zod
+└── nest-auth-client/    # Client HTTP + Gestion d'état
 ```
 
 ## Publishing
