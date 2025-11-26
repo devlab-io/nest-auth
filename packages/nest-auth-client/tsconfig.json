@@ -19,7 +19,6 @@
     "resolveJsonModule": true,
     "lib": ["ES2021", "DOM"],
     "composite": true,
-    "skipLibCheck": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"],

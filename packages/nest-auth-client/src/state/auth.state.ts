@@ -1,4 +1,4 @@
-import { UserAccount } from '@devlab-io/nest-auth-types';
+import { Role, UserAccount } from '@devlab-io/nest-auth-types';
 
 export interface AuthStorage {
   getItem(key: string): string | null;
@@ -15,6 +15,13 @@ export interface AuthStateConfig {
 }
 
 /**
+ * Callback function called when the user account changes
+ */
+export type UserAccountChangeCallback = (
+  userAccount: UserAccount | null,
+) => void;
+
+/**
  * Authentication state
  */
 export class AuthState {
@@ -26,12 +33,27 @@ export class AuthState {
   private static _token: string | null = null;
   private static _initialized: boolean = false;
   private static _userAccount: UserAccount | null = null;
+  private static _userAccountCallbacks: Set<UserAccountChangeCallback> =
+    new Set();
 
   /**
    * Get the current user account of the logged in user
    */
   public static get userAccount(): UserAccount | null {
     return this._userAccount;
+  }
+
+  /**
+   * Check if the current user account has a specific role
+   * @param roleName - The name of the role to check
+   * @returns true if the user account has the role, false otherwise
+   */
+  public static hasRole(roleName: string): boolean {
+    if (!this._userAccount || !this._userAccount.roles) {
+      return false;
+    }
+
+    return this._userAccount.roles.some((role: Role): boolean => role.name === roleName);
   }
 
   /**
@@ -127,7 +149,8 @@ export class AuthState {
       const account = await this.validateSession();
       if (account) {
         // Session is valid, cache the account and mark as initialized
-        this._userAccount = account;
+        // setUserAccount will notify callbacks
+        this.setUserAccount(account);
         this._initialized = true;
         return account;
       } else {
@@ -148,7 +171,8 @@ export class AuthState {
   public static clear(): void {
     // Use setToken to ensure synchronization across all sources
     this.setToken(null);
-    this._userAccount = null;
+    // setUserAccount will notify callbacks
+    this.setUserAccount(null);
     this._initialized = false;
     this._baseURL = null;
   }
@@ -186,9 +210,55 @@ export class AuthState {
   /**
    * Set the user account
    * Used by AuthService to cache the account
+   * Notifies all registered callbacks when the account changes
    */
   public static setUserAccount(value: UserAccount | null): void {
+    // Only notify if the value actually changed
+    const hasChanged =
+      this._userAccount !== value &&
+      (this._userAccount === null ||
+        value === null ||
+        this._userAccount.id !== value.id);
+
     this._userAccount = value;
+
+    // Notify all callbacks if the value changed
+    if (hasChanged) {
+      this._userAccountCallbacks.forEach((callback) => {
+        try {
+          callback(value);
+        } catch (error) {
+          // Log error but don't break the chain
+          console.error('Error in userAccount change callback:', error);
+        }
+      });
+    }
+  }
+
+  /**
+   * Subscribe to user account changes
+   * @param callback - Function to call when the user account changes
+   * @returns A function to unsubscribe from changes
+   */
+  public static onUserAccountChange(
+    callback: UserAccountChangeCallback,
+  ): () => void {
+    this._userAccountCallbacks.add(callback);
+
+    // Return unsubscribe function
+    return () => {
+      this._userAccountCallbacks.delete(callback);
+    };
+  }
+
+  /**
+   * Unsubscribe from user account changes
+   * @param callback - The callback function to remove
+   */
+  public static offUserAccountChange(
+    callback: UserAccountChangeCallback,
+  ): void {
+    this._userAccountCallbacks.delete(callback);
   }
 
   /**
