@@ -106,6 +106,7 @@ export default function Page() {
 ## Paramètres d'URL
 
 Toutes les pages d'actions reçoivent deux paramètres d'URL :
+
 - `token` : Le token d'action à utiliser
 - `email` : L'adresse email de l'utilisateur (pour validation)
 
@@ -130,4 +131,3 @@ NEXT_PUBLIC_API_URL=https://api.example.com
 4. **Redirections** : Après succès, les pages redirigent généralement vers le dashboard ou la page de connexion.
 
 5. **Styles** : Les exemples utilisent des classes CSS génériques. Vous devrez ajouter vos propres styles.
-

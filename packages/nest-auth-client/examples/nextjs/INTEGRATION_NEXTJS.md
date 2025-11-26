@@ -3,6 +3,7 @@
 ## Vue d'ensemble
 
 Ce guide explique comment intégrer `@devlab-io/nest-auth-client` dans un projet Next.js pour :
+
 - Initialiser le client une seule fois au démarrage
 - Utiliser l'état d'authentification dans toute l'application
 - Afficher le profil utilisateur dans la navigation
@@ -40,7 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const initializeAuth = async () => {
       try {
         setIsLoading(true);
-        
+
         // Initialiser le client avec la configuration
         const account = await AuthClient.initialize({
           baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001',
@@ -201,7 +202,7 @@ export function Navigation() {
     <nav className="navbar">
       <div className="navbar-content">
         <Link href="/">Mon App</Link>
-        
+
         {userAccount ? (
           <div className="navbar-profile" ref={menuRef}>
             <button
@@ -601,7 +602,7 @@ export default function ProfilePage() {
   return (
     <div className="profile-page">
       <h1>Mon profil</h1>
-      
+
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label>Email</label>
@@ -686,19 +687,23 @@ export default function ProfilePage() {
 ## Points importants
 
 ### Initialisation unique
+
 - Le `AuthClient.initialize()` est appelé une seule fois dans le `useEffect` du `AuthProvider`
 - L'initialisation vérifie automatiquement s'il existe un token valide et restaure la session
 
 ### Synchronisation de l'état
+
 - `AuthState.onUserAccountChange()` permet de réagir aux changements d'authentification
 - Les changements sont automatiquement propagés à tous les composants via React Context
 
 ### Gestion des comptes multiples
+
 - Un `User` peut avoir plusieurs `UserAccount` (dans différentes organisations/établissements)
 - Le menu affiche le compte actuel et les autres comptes disponibles
 - Note: Le changement de compte actif nécessitera probablement une API dédiée
 
 ### Stockage du token
+
 - Le token est stocké dans les cookies ET localStorage par défaut
 - `AuthState.setToken()` synchronise automatiquement les deux sources
 
@@ -716,4 +721,3 @@ NEXT_PUBLIC_API_URL=http://localhost:3000
 2. Ajouter la gestion des rôles et permissions
 3. Implémenter la protection des routes avec des guards
 4. Ajouter la gestion des erreurs et des états de chargement
-

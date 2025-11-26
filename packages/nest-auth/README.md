@@ -145,20 +145,20 @@ AUTH_ACTION_CHANGE_EMAIL_ROUTE=auth/change-email
 1. **Accepter les paramètres `token` et `email`** : Les URLs générées dans les emails incluront toujours deux paramètres :
    - `token` : Le token d'action à utiliser
    - `email` : L'adresse email de l'utilisateur (utilisé pour la validation)
-   
+
    Exemple : `/auth/accept-invitation?token=xxx&email=user@example.com`
 
 2. **Appeler l'endpoint correspondant** : Chaque page doit appeler l'endpoint POST approprié du contrôleur `/auth` avec le token et l'email reçus :
 
-   | Route configurée | Page frontend | Endpoint à appeler |
-   |-----------------|---------------|-------------------|
-   | `auth/accept-invitation` | `/auth/accept-invitation?token=xxx&email=user@example.com` | `POST /auth/accept-invitation` |
-   | `auth/validate-email` | `/auth/validate-email?token=xxx&email=user@example.com` | `POST /auth/accept-email-validation` |
-   | `auth/accept-terms` | `/auth/accept-terms?token=xxx&email=user@example.com` | `POST /auth/accept-terms` |
-   | `auth/accept-privacy-policy` | `/auth/accept-privacy-policy?token=xxx&email=user@example.com` | `POST /auth/accept-privacy-policy` |
-   | `auth/reset-password` | `/auth/reset-password?token=xxx&email=user@example.com` | `POST /auth/accept-reset-password` |
-   | `auth/change-password` | `/auth/change-password?token=xxx&email=user@example.com` | `POST /auth/accept-change-password` |
-   | `auth/change-email` | `/auth/change-email?token=xxx&email=user@example.com` | `POST /auth/accept-change-email` (si implémenté) |
+   | Route configurée             | Page frontend                                                  | Endpoint à appeler                               |
+   | ---------------------------- | -------------------------------------------------------------- | ------------------------------------------------ |
+   | `auth/accept-invitation`     | `/auth/accept-invitation?token=xxx&email=user@example.com`     | `POST /auth/accept-invitation`                   |
+   | `auth/validate-email`        | `/auth/validate-email?token=xxx&email=user@example.com`        | `POST /auth/accept-email-validation`             |
+   | `auth/accept-terms`          | `/auth/accept-terms?token=xxx&email=user@example.com`          | `POST /auth/accept-terms`                        |
+   | `auth/accept-privacy-policy` | `/auth/accept-privacy-policy?token=xxx&email=user@example.com` | `POST /auth/accept-privacy-policy`               |
+   | `auth/reset-password`        | `/auth/reset-password?token=xxx&email=user@example.com`        | `POST /auth/accept-reset-password`               |
+   | `auth/change-password`       | `/auth/change-password?token=xxx&email=user@example.com`       | `POST /auth/accept-change-password`              |
+   | `auth/change-email`          | `/auth/change-email?token=xxx&email=user@example.com`          | `POST /auth/accept-change-email` (si implémenté) |
 
    **Note** : Tous les endpoints d'acceptation d'actions requièrent à la fois le `token` et l'`email` dans le body de la requête pour valider que le token correspond bien à l'email fourni.
 
@@ -180,7 +180,7 @@ export default function ResetPasswordPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!token || !email) {
       alert('Token ou email manquant');
       return;
@@ -312,6 +312,7 @@ La migration `CreateAuthSchema1700000000000` crée :
 10. **Table `sessions`** : Sessions JWT actives
 
 La migration crée également :
+
 - Un utilisateur administrateur par défaut (configurable via `AUTH_ADMIN_EMAIL` et `AUTH_ADMIN_PASSWORD`)
 - L'organisation et l'établissement "Devlab" par défaut
 - Les organisations et établissements configurés via `AUTH_TENANTS_ORGANISATIONS` et `AUTH_TENANTS_ESTABLISHMENTS`
@@ -322,12 +323,14 @@ La migration crée également :
 ### Authentification (`/auth`)
 
 #### `GET /auth/account`
+
 Récupère le compte utilisateur actuellement authentifié.
 
 - **Authentification** : Requise (JWT)
 - **Réponse** : `UserAccountDto` ou `null`
 
 #### `POST /auth/sign-up`
+
 Inscription d'un nouvel utilisateur.
 
 - **Body** : `SignUpRequestDto`
@@ -343,6 +346,7 @@ Inscription d'un nouvel utilisateur.
 - **Réponse** : `void`
 
 #### `POST /auth/sign-in`
+
 Connexion d'un utilisateur.
 
 - **Body** : `SignInRequestDto`
@@ -355,12 +359,14 @@ Connexion d'un utilisateur.
 - **Réponse** : `AuthResponseDto` (contient le token JWT et le compte utilisateur)
 
 #### `POST /auth/sign-out`
+
 Déconnexion et invalidation de la session actuelle.
 
 - **Authentification** : Requise (JWT)
 - **Réponse** : `void`
 
 #### `POST /auth/invite`
+
 Envoie une invitation à un utilisateur.
 
 - **Authentification** : Requise (JWT)
@@ -376,6 +382,7 @@ Envoie une invitation à un utilisateur.
 - **Réponse** : `void`
 
 #### `POST /auth/accept-invitation`
+
 Accepte une invitation et crée un compte.
 
 - **Body** : `AcceptInvitationRequestDto`
@@ -391,6 +398,7 @@ Accepte une invitation et crée un compte.
 - **Réponse** : `AuthResponseDto`
 
 #### `POST /auth/send-email-validation`
+
 Envoie un token de validation d'email.
 
 - **Authentification** : Requise (JWT)
@@ -398,6 +406,7 @@ Envoie un token de validation d'email.
 - **Réponse** : `void`
 
 #### `POST /auth/accept-email-validation`
+
 Valide un email avec un token.
 
 - **Body** : `ValidateEmailRequestDto`
@@ -409,6 +418,7 @@ Valide un email avec un token.
 - **Réponse** : `void`
 
 #### `POST /auth/send-change-password`
+
 Envoie un token pour changer le mot de passe.
 
 - **Authentification** : Requise (JWT)
@@ -416,6 +426,7 @@ Envoie un token pour changer le mot de passe.
 - **Réponse** : `void`
 
 #### `POST /auth/accept-change-password`
+
 Change le mot de passe avec un token.
 
 - **Body** : `ChangePasswordRequestDto`
@@ -428,12 +439,14 @@ Change le mot de passe avec un token.
 - **Réponse** : `void`
 
 #### `POST /auth/send-reset-password`
+
 Envoie un token de réinitialisation de mot de passe.
 
 - **Query** : `email` (Email de l'utilisateur)
 - **Réponse** : `void`
 
 #### `POST /auth/accept-reset-password`
+
 Réinitialise le mot de passe avec un token.
 
 - **Body** : `ResetPasswordRequestDto`
@@ -446,12 +459,14 @@ Réinitialise le mot de passe avec un token.
 - **Réponse** : `void`
 
 #### `POST /auth/add-accept-terms`
+
 Génère un token pour accepter les conditions d'utilisation.
 
 - **Query** : `id` (ID de l'utilisateur)
 - **Réponse** : `void`
 
 #### `POST /auth/accept-terms`
+
 Accepte les conditions d'utilisation avec un token.
 
 - **Body** : `AcceptTermsRequestDto`
@@ -463,12 +478,14 @@ Accepte les conditions d'utilisation avec un token.
 - **Réponse** : `void`
 
 #### `POST /auth/add-accept-privacy-policy`
+
 Génère un token pour accepter la politique de confidentialité.
 
 - **Query** : `id` (ID de l'utilisateur)
 - **Réponse** : `void`
 
 #### `POST /auth/accept-privacy-policy`
+
 Accepte la politique de confidentialité avec un token.
 
 - **Body** : `AcceptPrivacyPolicyRequestDto`
@@ -482,36 +499,42 @@ Accepte la politique de confidentialité avec un token.
 ### Utilisateurs (`/users`)
 
 #### `POST /users`
+
 Crée un nouvel utilisateur.
 
 - **Body** : `CreateUserRequestDto`
 - **Réponse** : `UserDto`
 
 #### `GET /users`
+
 Recherche des utilisateurs avec pagination et filtres.
 
 - **Query** : Paramètres de recherche (`UserQueryParams`) + `page` (défaut: 1) + `limit` (défaut: 10)
 - **Réponse** : `UserPageDto`
 
 #### `GET /users/by-id`
+
 Trouve un utilisateur par ID.
 
 - **Query** : `id` (ID de l'utilisateur)
 - **Réponse** : `UserDto | null`
 
 #### `GET /users/by-email`
+
 Trouve un utilisateur par email.
 
 - **Query** : `email` (Email de l'utilisateur)
 - **Réponse** : `UserDto | null`
 
 #### `GET /users/me`
+
 Récupère le profil de l'utilisateur authentifié.
 
 - **Authentification** : Requise (JWT)
 - **Réponse** : `UserDto`
 
 #### `POST /users/me`
+
 Met à jour le profil de l'utilisateur authentifié.
 
 - **Authentification** : Requise (JWT)
@@ -519,24 +542,28 @@ Met à jour le profil de l'utilisateur authentifié.
 - **Réponse** : `UserDto`
 
 #### `DELETE /users/me`
+
 Supprime le compte de l'utilisateur authentifié.
 
 - **Authentification** : Requise (JWT)
 - **Réponse** : `void`
 
 #### `GET /users/:id`
+
 Récupère un utilisateur par ID.
 
 - **Param** : `id` (ID de l'utilisateur)
 - **Réponse** : `UserDto`
 
 #### `GET /users/:id/exists`
+
 Vérifie si un utilisateur existe par ID.
 
 - **Param** : `id` (ID de l'utilisateur)
 - **Réponse** : `boolean`
 
 #### `PATCH /users/:id`
+
 Met à jour partiellement un utilisateur.
 
 - **Param** : `id` (ID de l'utilisateur)
@@ -544,6 +571,7 @@ Met à jour partiellement un utilisateur.
 - **Réponse** : `UserDto`
 
 #### `POST /users/:id`
+
 Met à jour complètement un utilisateur.
 
 - **Param** : `id` (ID de l'utilisateur)
@@ -551,36 +579,42 @@ Met à jour complètement un utilisateur.
 - **Réponse** : `UserDto`
 
 #### `PATCH /users/:id/enable`
+
 Active un compte utilisateur.
 
 - **Param** : `id` (ID de l'utilisateur)
 - **Réponse** : `UserDto`
 
 #### `PATCH /users/:id/disable`
+
 Désactive un compte utilisateur.
 
 - **Param** : `id` (ID de l'utilisateur)
 - **Réponse** : `UserDto`
 
 #### `DELETE /users/:id`
+
 Supprime un utilisateur.
 
 - **Param** : `id` (ID de l'utilisateur)
 - **Réponse** : `void`
 
 #### `GET /users/:id/sessions`
+
 Récupère toutes les sessions d'un utilisateur.
 
 - **Param** : `id` (ID de l'utilisateur)
 - **Réponse** : `SessionDto[]`
 
 #### `GET /users/:id/sessions/active`
+
 Récupère toutes les sessions actives d'un utilisateur.
 
 - **Param** : `id` (ID de l'utilisateur)
 - **Réponse** : `SessionDto[]`
 
 #### `DELETE /users/:id/sessions`
+
 Supprime toutes les sessions d'un utilisateur.
 
 - **Param** : `id` (ID de l'utilisateur)
@@ -589,6 +623,7 @@ Supprime toutes les sessions d'un utilisateur.
 ### Comptes Utilisateur (`/user-accounts`)
 
 #### `POST /user-accounts`
+
 Crée un nouveau compte utilisateur.
 
 - **Body** : `CreateUserAccountRequestDto`
@@ -603,30 +638,35 @@ Crée un nouveau compte utilisateur.
 - **Réponse** : `UserAccountDto`
 
 #### `GET /user-accounts`
+
 Recherche des comptes utilisateur avec pagination et filtres.
 
 - **Query** : Paramètres de recherche (`UserAccountQueryParams`) + `page` (défaut: 1) + `limit` (défaut: 10)
 - **Réponse** : `UserAccountPageDto`
 
 #### `GET /user-accounts/by-id`
+
 Trouve un compte utilisateur par ID.
 
 - **Query** : `id` (ID du compte)
 - **Réponse** : `UserAccountDto | null`
 
 #### `GET /user-accounts/:id`
+
 Récupère un compte utilisateur par ID.
 
 - **Param** : `id` (ID du compte)
 - **Réponse** : `UserAccountDto`
 
 #### `GET /user-accounts/:id/exists`
+
 Vérifie si un compte utilisateur existe par ID.
 
 - **Param** : `id` (ID du compte)
 - **Réponse** : `boolean`
 
 #### `POST /user-accounts/:id`
+
 Met à jour complètement un compte utilisateur.
 
 - **Param** : `id` (ID du compte)
@@ -634,6 +674,7 @@ Met à jour complètement un compte utilisateur.
 - **Réponse** : `UserAccountDto`
 
 #### `PATCH /user-accounts/:id`
+
 Met à jour partiellement un compte utilisateur.
 
 - **Param** : `id` (ID du compte)
@@ -641,18 +682,21 @@ Met à jour partiellement un compte utilisateur.
 - **Réponse** : `UserAccountDto`
 
 #### `PATCH /user-accounts/:id/enable`
+
 Active un compte utilisateur.
 
 - **Param** : `id` (ID du compte)
 - **Réponse** : `UserAccountDto`
 
 #### `PATCH /user-accounts/:id/disable`
+
 Désactive un compte utilisateur.
 
 - **Param** : `id` (ID du compte)
 - **Réponse** : `UserAccountDto`
 
 #### `DELETE /user-accounts/:id`
+
 Supprime un compte utilisateur.
 
 - **Param** : `id` (ID du compte)
@@ -661,6 +705,7 @@ Supprime un compte utilisateur.
 ### Organisations (`/organisations`)
 
 #### `POST /organisations`
+
 Crée une nouvelle organisation.
 
 - **Body** : `CreateOrganisationRequestDto`
@@ -672,36 +717,42 @@ Crée une nouvelle organisation.
 - **Réponse** : `OrganisationDto`
 
 #### `GET /organisations`
+
 Recherche des organisations avec pagination et filtres.
 
 - **Query** : Paramètres de recherche (`OrganisationQueryParams`) + `page` (défaut: 1) + `limit` (défaut: 10)
 - **Réponse** : `OrganisationPageDto`
 
 #### `GET /organisations/by-id`
+
 Trouve une organisation par ID.
 
 - **Query** : `id` (ID de l'organisation)
 - **Réponse** : `OrganisationDto | null`
 
 #### `GET /organisations/by-name`
+
 Trouve une organisation par nom.
 
 - **Query** : `name` (Nom de l'organisation)
 - **Réponse** : `OrganisationDto | null`
 
 #### `GET /organisations/:id`
+
 Récupère une organisation par ID.
 
 - **Param** : `id` (ID de l'organisation)
 - **Réponse** : `OrganisationDto`
 
 #### `GET /organisations/:id/exists`
+
 Vérifie si une organisation existe par ID.
 
 - **Param** : `id` (ID de l'organisation)
 - **Réponse** : `boolean`
 
 #### `POST /organisations/:id`
+
 Met à jour complètement une organisation.
 
 - **Param** : `id` (ID de l'organisation)
@@ -709,6 +760,7 @@ Met à jour complètement une organisation.
 - **Réponse** : `OrganisationDto`
 
 #### `PATCH /organisations/:id`
+
 Met à jour partiellement une organisation.
 
 - **Param** : `id` (ID de l'organisation)
@@ -716,18 +768,21 @@ Met à jour partiellement une organisation.
 - **Réponse** : `OrganisationDto`
 
 #### `PATCH /organisations/:id/enable`
+
 Active une organisation.
 
 - **Param** : `id` (ID de l'organisation)
 - **Réponse** : `OrganisationDto`
 
 #### `PATCH /organisations/:id/disable`
+
 Désactive une organisation.
 
 - **Param** : `id` (ID de l'organisation)
 - **Réponse** : `OrganisationDto`
 
 #### `DELETE /organisations/:id`
+
 Supprime une organisation.
 
 - **Param** : `id` (ID de l'organisation)
@@ -736,6 +791,7 @@ Supprime une organisation.
 ### Établissements (`/establishments`)
 
 #### `POST /establishments`
+
 Crée un nouvel établissement.
 
 - **Body** : `CreateEstablishmentRequestDto`
@@ -748,36 +804,42 @@ Crée un nouvel établissement.
 - **Réponse** : `EstablishmentDto`
 
 #### `GET /establishments`
+
 Recherche des établissements avec pagination et filtres.
 
 - **Query** : Paramètres de recherche (`EstablishmentQueryParams`) + `page` (défaut: 1) + `limit` (défaut: 10)
 - **Réponse** : `EstablishmentPageDto`
 
 #### `GET /establishments/by-id`
+
 Trouve un établissement par ID.
 
 - **Query** : `id` (ID de l'établissement)
 - **Réponse** : `EstablishmentDto | null`
 
 #### `GET /establishments/by-name`
+
 Trouve un établissement par nom et organisation.
 
 - **Query** : `name` (Nom de l'établissement) + `organisationId` (ID de l'organisation)
 - **Réponse** : `EstablishmentDto | null`
 
 #### `GET /establishments/:id`
+
 Récupère un établissement par ID.
 
 - **Param** : `id` (ID de l'établissement)
 - **Réponse** : `EstablishmentDto`
 
 #### `GET /establishments/:id/exists`
+
 Vérifie si un établissement existe par ID.
 
 - **Param** : `id` (ID de l'établissement)
 - **Réponse** : `boolean`
 
 #### `POST /establishments/:id`
+
 Met à jour complètement un établissement.
 
 - **Param** : `id` (ID de l'établissement)
@@ -785,6 +847,7 @@ Met à jour complètement un établissement.
 - **Réponse** : `EstablishmentDto`
 
 #### `PATCH /establishments/:id`
+
 Met à jour partiellement un établissement.
 
 - **Param** : `id` (ID de l'établissement)
@@ -792,18 +855,21 @@ Met à jour partiellement un établissement.
 - **Réponse** : `EstablishmentDto`
 
 #### `PATCH /establishments/:id/enable`
+
 Active un établissement.
 
 - **Param** : `id` (ID de l'établissement)
 - **Réponse** : `EstablishmentDto`
 
 #### `PATCH /establishments/:id/disable`
+
 Désactive un établissement.
 
 - **Param** : `id` (ID de l'établissement)
 - **Réponse** : `EstablishmentDto`
 
 #### `DELETE /establishments/:id`
+
 Supprime un établissement.
 
 - **Param** : `id` (ID de l'établissement)
@@ -812,6 +878,7 @@ Supprime un établissement.
 ### Rôles (`/roles`)
 
 #### `GET /roles`
+
 Récupère tous les rôles disponibles.
 
 - **Réponse** : `RoleDto[]`
@@ -819,29 +886,34 @@ Récupère tous les rôles disponibles.
 ### Sessions (`/sessions`)
 
 #### `GET /sessions`
+
 Recherche des sessions avec filtres.
 
 - **Query** : `SessionQueryParams` (userId, loginDate, expirationDate, active)
 - **Réponse** : `SessionDto[]`
 
 #### `GET /sessions/active`
+
 Récupère toutes les sessions actives (non expirées).
 
 - **Réponse** : `SessionDto[]`
 
 #### `GET /sessions/:token`
+
 Récupère une session par token.
 
 - **Param** : `token` (Token JWT)
 - **Réponse** : `SessionDto`
 
 #### `DELETE /sessions/:token`
+
 Supprime une session par token.
 
 - **Param** : `token` (Token JWT)
 - **Réponse** : `void`
 
 #### `DELETE /sessions/expired`
+
 Supprime toutes les sessions expirées.
 
 - **Réponse** : `DeleteSessionsResponseDto` (contient le nombre de sessions supprimées)

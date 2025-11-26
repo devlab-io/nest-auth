@@ -173,4 +173,3 @@ import { User, UserAccount, AuthResponse } from '@devlab-io/nest-auth-types';
 ## Documentation complète
 
 Pour une liste complète de tous les types disponibles, consultez le code source dans le dossier `src/types/`.
-
