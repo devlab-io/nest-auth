@@ -1,6 +1,6 @@
 {
   "name": "nest-auth-monorepo",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "private": true,
   "description": "NestJS Authentication Module - Monorepo",
   "author": "DevLab",
