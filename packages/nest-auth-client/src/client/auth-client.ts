@@ -9,6 +9,7 @@ import {
   UserAccountService,
   UserService,
 } from 'src/services';
+
 /**
  * Initialize the authentication
  */

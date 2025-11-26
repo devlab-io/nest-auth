@@ -10,7 +10,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --build",
     "type-check": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
@@ -19,7 +19,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "clean": "rimraf dist || true"
+    "clean": "rm -rf dist tsconfig.tsbuildinfo || true"
   },
   "dependencies": {
     "@devlab-io/nest-auth-types": "*",

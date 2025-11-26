@@ -9,7 +9,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "yarn build:types && yarn build:client && yarn build:auth",
+    "build": "yarn build:types && yarn build:auth && yarn build:client",
     "build:types": "yarn workspace @devlab-io/nest-auth-types build",
     "build:auth": "yarn workspace @devlab-io/nest-auth build",
     "build:client": "yarn workspace @devlab-io/nest-auth-client build",
@@ -19,7 +19,7 @@
     "lint:check": "yarn workspaces run lint:check",
     "test": "yarn workspaces run test",
     "type-check": "yarn workspaces run type-check",
-    "clean": "yarn workspaces run clean && rm -rf dist node_modules || true"
+    "clean": "yarn workspaces run clean && rm -rf dist || true"
   },
   "devDependencies": {
     "prettier": "^3.4.2",

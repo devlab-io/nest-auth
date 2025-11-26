@@ -12,7 +12,9 @@
   "types": "dist/index.d.ts",
   "files": [
     "dist",
-    "src"
+    "src",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "nest build",
@@ -27,7 +29,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "type-check": "tsc --noEmit",
     "prepublishOnly": "yarn build && yarn format:check && yarn lint:check && yarn type-check",
-    "clean": "rm -rf dist || true"
+    "clean": "rm -rf dist *.tsbuildinfo || true"
   },
   "dependencies": {
     "@devlab-io/nest-auth-types": "*",
