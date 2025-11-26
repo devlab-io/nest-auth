@@ -70,15 +70,14 @@ describe('AuthService', () => {
   beforeEach(async () => {
     // Clear AuthState before each test
     AuthState.clear();
-    // Initialize AuthState for tests that require it
-    // We'll manually set the configuration since initialize() validates the session
-    // and we don't want that in tests
-    (AuthState as any)._baseURL = 'https://api.example.com';
-    (AuthState as any)._timeout = 30000;
-    (AuthState as any)._headers = { 'Content-Type': 'application/json' };
-    // Set a mock token
+    // Initialize AuthState for tests
+    // No token is set, so initialization will return null but state will be initialized
+    await AuthState.initialize({
+      baseURL: 'https://api.example.com',
+      timeout: 30000,
+    });
+    // Set a mock token after initialization
     AuthState.setToken('test-token');
-    AuthState.setInitialized(true);
 
     service = new AuthService();
     jest.clearAllMocks();
@@ -213,9 +212,9 @@ describe('AuthService', () => {
           method: 'POST',
         }),
       );
-      // After signOut, state should be cleared
+      // After signOut, token should be cleared but state remains initialized
       expect(AuthState.token).toBeNull();
-      expect(AuthState.initialized).toBe(false);
+      expect(AuthState.initialized).toBe(true);
     });
   });
 

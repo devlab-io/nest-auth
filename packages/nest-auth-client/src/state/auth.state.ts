@@ -28,7 +28,7 @@ export class AuthState {
   private static _baseURL: string | null = null;
   private static _timeout: number = 30000;
   private static _headers: Record<string, string> = {};
-  private static _cookieName: string = 'auth-token';
+  private static _cookieName: string = 'access_token';
   private static _storage: AuthStorage | null = null;
   private static _token: string | null = null;
   private static _initialized: boolean = false;
@@ -124,23 +124,31 @@ export class AuthState {
   public static async initialize(
     config: AuthStateConfig,
   ): Promise<UserAccount | null> {
-    // Set configuration
-    this._baseURL = config.baseURL.replace(/\/$/, ''); // Remove trailing slash
-    this._timeout = config.timeout || 30000;
-    this._headers = {
-      'Content-Type': 'application/json',
-      ...config.headers,
-    };
-    this._cookieName = config.cookieName || 'auth-token';
+    try {
+      // Validate configuration
+      if (!config || !config.baseURL) {
+        throw new Error('AuthStateConfig.baseURL is required');
+      }
 
-    // Configure storage
-    this.setStorage(config.storage);
+      // Set configuration
+      this._baseURL = config.baseURL.replace(/\/$/, ''); // Remove trailing slash
+      this._timeout = config.timeout || 30000;
+      this._headers = {
+        'Content-Type': 'application/json',
+        ...config.headers,
+      };
+      this._cookieName = config.cookieName || 'access_token';
+      this.setStorage(config.storage);
+      this._initialized = true;
+    } catch (error) {
+      // If configuration fails, reset everything
+      this._initialized = false;
+      this._baseURL = null;
+      throw error;
+    }
 
-    // Try to get token (from memory, cookies, or storage)
-    // The getter will automatically synchronize it everywhere
+    // Look for an existing token
     const token = this.token;
-
-    // If no token found, clear everything and return null
     if (!token) {
       this.clear();
       return null;
@@ -150,18 +158,13 @@ export class AuthState {
     try {
       const account = await this.validateSession();
       if (account) {
-        // Session is valid, cache the account and mark as initialized
-        // setUserAccount will notify callbacks
         this.setUserAccount(account);
-        this._initialized = true;
         return account;
       } else {
-        // Account fetch returned null, session is invalid
         this.clear();
         return null;
       }
     } catch {
-      // Error fetching account, session is invalid
       this.clear();
       return null;
     }
@@ -175,8 +178,6 @@ export class AuthState {
     this.setToken(null);
     // setUserAccount will notify callbacks
     this.setUserAccount(null);
-    this._initialized = false;
-    this._baseURL = null;
   }
 
   /**
@@ -261,14 +262,6 @@ export class AuthState {
     callback: UserAccountChangeCallback,
   ): void {
     this._userAccountCallbacks.delete(callback);
-  }
-
-  /**
-   * Set the initialized state
-   * Used internally and by AuthService after sign-in
-   */
-  public static setInitialized(value: boolean): void {
-    this._initialized = value;
   }
 
   /**

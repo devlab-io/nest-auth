@@ -125,8 +125,10 @@ describe('AuthState', () => {
       const result = await AuthState.initialize(baseConfig);
 
       expect(result).toBeNull();
-      expect(AuthState.initialized).toBe(false);
+      // State is still initialized even without token
+      expect(AuthState.initialized).toBe(true);
       expect(AuthState.token).toBeNull();
+      expect(AuthState.baseURL).toBe('https://api.example.com');
     });
 
     it('should return null if token is invalid', async () => {
@@ -140,17 +142,20 @@ describe('AuthState', () => {
       const result = await AuthState.initialize(baseConfig);
 
       expect(result).toBeNull();
-      expect(AuthState.initialized).toBe(false);
-      // After clear(), token should be null (setToken(null) was called)
-      // But we need to clear localStorage mock too
+      // State is still initialized even with invalid token
+      expect(AuthState.initialized).toBe(true);
+      expect(AuthState.baseURL).toBe('https://api.example.com');
+      // After clear(), token should be removed from storage
+      // Update mock to reflect that localStorage was cleared
       mockLocalStorage.getItem.mockReturnValue(null);
+      mockDocument.cookie = '';
       expect(AuthState.token).toBeNull();
     });
 
     it('should read token from cookies first', async () => {
       const account = createTestUserAccount();
 
-      mockDocument.cookie = 'auth-token=cookie-token-value';
+      mockDocument.cookie = 'access_token=cookie-token-value';
 
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
@@ -165,7 +170,7 @@ describe('AuthState', () => {
       expect(result).toEqual(account);
       expect(AuthState.token).toBe('cookie-token-value');
       // Should not have called localStorage.getItem for token
-      expect(mockLocalStorage.getItem).not.toHaveBeenCalledWith('auth-token');
+      expect(mockLocalStorage.getItem).not.toHaveBeenCalledWith('access_token');
     });
 
     it('should fallback to localStorage if no cookie', async () => {
@@ -186,7 +191,7 @@ describe('AuthState', () => {
 
       expect(result).toEqual(account);
       expect(AuthState.token).toBe('storage-token');
-      expect(mockLocalStorage.getItem).toHaveBeenCalledWith('auth-token');
+      expect(mockLocalStorage.getItem).toHaveBeenCalledWith('access_token');
     });
   });
 
@@ -199,12 +204,12 @@ describe('AuthState', () => {
     it('should read from localStorage if not in memory', () => {
       mockLocalStorage.getItem.mockReturnValue('storage-token');
       expect(AuthState.token).toBe('storage-token');
-      expect(mockLocalStorage.getItem).toHaveBeenCalledWith('auth-token');
+      expect(mockLocalStorage.getItem).toHaveBeenCalledWith('access_token');
     });
 
     it('should read from cookies if not in memory or storage', () => {
       mockLocalStorage.getItem.mockReturnValue(null);
-      mockDocument.cookie = 'auth-token=cookie-token';
+      mockDocument.cookie = 'access_token=cookie-token';
       expect(AuthState.token).toBe('cookie-token');
     });
 
@@ -220,27 +225,27 @@ describe('AuthState', () => {
       AuthState.setToken('new-token');
       expect(AuthState.token).toBe('new-token');
       expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
-        'auth-token',
+        'access_token',
         'new-token',
       );
     });
 
     it('should set cookie in browser environment', () => {
       AuthState.setToken('new-token');
-      expect(mockDocument.cookie).toContain('auth-token=new-token');
+      expect(mockDocument.cookie).toContain('access_token=new-token');
     });
 
     it('should remove token from storage when set to null', () => {
       AuthState.setToken('token');
       AuthState.setToken(null);
-      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('auth-token');
+      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('access_token');
       expect(AuthState.token).toBeNull();
     });
 
     it('should remove cookie when set to null', () => {
       AuthState.setToken('token');
       AuthState.setToken(null);
-      expect(mockDocument.cookie).toContain('auth-token=; expires=');
+      expect(mockDocument.cookie).toContain('access_token=; expires=');
     });
   });
 
@@ -248,20 +253,22 @@ describe('AuthState', () => {
     it('should clear all state', () => {
       AuthState.setToken('token');
       AuthState.setUserAccount(createTestUserAccount());
-      AuthState.setInitialized(true);
 
       AuthState.clear();
 
       expect(AuthState.token).toBeNull();
       expect(AuthState.userAccount).toBeNull();
-      expect(AuthState.initialized).toBe(false);
-      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('auth-token');
+      expect(AuthState.initialized).toBe(true);
+      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('access_token');
     });
   });
 
   describe('getters', () => {
     it('should throw error if baseURL accessed before initialization', () => {
-      AuthState.clear();
+      // Reset the state to uninitialized
+      (AuthState as any)._baseURL = null;
+      (AuthState as any)._initialized = false;
+
       expect(() => AuthState.baseURL).toThrow(
         'AuthState not initialized. Call AuthClient.initialize() first.',
       );

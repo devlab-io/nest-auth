@@ -86,9 +86,12 @@ export class AuthService extends BaseService {
       method: 'POST',
       body: data,
     });
-    // Automatically set the auth token if sign-in is successful
+    // Automatically set the auth token and user account if sign-in is successful
     if (response?.jwt?.accessToken) {
       AuthState.setToken(response.jwt.accessToken);
+      AuthState.setUserAccount(response?.userAccount);
+    } else {
+      AuthState.clear();
     }
     return response;
   }

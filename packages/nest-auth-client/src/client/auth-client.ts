@@ -23,7 +23,7 @@ export class AuthClient {
   public static async initialize(
     config: AuthStateConfig,
   ): Promise<UserAccount | null> {
-    return AuthState.initialize(config);
+    return await AuthState.initialize(config);
   }
 
   /**
