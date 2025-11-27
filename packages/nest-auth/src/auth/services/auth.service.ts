@@ -5,7 +5,6 @@ import {
   Logger,
 } from '@nestjs/common';
 import { ActionEntity, UserEntity } from '../entities';
-import { UserService } from './user.service';
 import {
   AcceptInvitationRequest,
   AcceptPrivacyPolicyRequest,
@@ -29,13 +28,19 @@ import { UserConfig, UserConfigToken } from '../config/user.config';
 import { ActionConfig, ActionConfigToken } from '../config/action.config';
 import { ActionService } from './action.service';
 import { UserAccountService } from './user-account.service';
-import { CredentialService } from './credential.service';
-import { OrganisationService } from './organisation.service';
-import { EstablishmentService } from './establishment.service';
 import { ActionTypeUtils } from '../utils';
 import { JwtService } from './jwt.service';
 import { NotificationService } from './notification.service';
 import { UserAccountDto } from '../dtos';
+import { UserService, UserServiceToken } from './user.service';
+import {
+  OrganisationService,
+  OrganisationServiceToken,
+} from './organisation.service';
+import {
+  EstablishmentService,
+  EstablishmentServiceToken,
+} from './establishment.service';
 
 @Injectable()
 export class AuthService {
@@ -45,11 +50,12 @@ export class AuthService {
     @Inject(UserConfigToken) private readonly userConfig: UserConfig,
     @Inject(ActionConfigToken) private readonly actionConfig: ActionConfig,
     @Inject() private readonly actionService: ActionService,
-    @Inject() private readonly userService: UserService,
+    @Inject(UserServiceToken) private readonly userService: UserService,
     @Inject() private readonly userAccountService: UserAccountService,
-    @Inject() private readonly credentialService: CredentialService,
-    @Inject() private readonly organisationService: OrganisationService,
-    @Inject() private readonly establishmentService: EstablishmentService,
+    @Inject(OrganisationServiceToken)
+    private readonly organisationService: OrganisationService,
+    @Inject(EstablishmentServiceToken)
+    private readonly establishmentService: EstablishmentService,
     @Inject() private readonly notificationService: NotificationService,
     @Inject() private readonly jwtService: JwtService,
   ) {}

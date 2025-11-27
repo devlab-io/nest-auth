@@ -11,7 +11,7 @@ import {
   UserAccountEntity,
   UserEntity,
 } from '../entities';
-import { OrganisationService } from './organisation.service';
+import { DefaultOrganisationService } from './organisation.service';
 import {
   CreateEstablishmentRequest,
   UpdateEstablishmentRequest,
@@ -19,9 +19,61 @@ import {
   EstablishmentPage,
 } from '@devlab-io/nest-auth-types';
 
+/**
+ * Symbol used to inject the EstablishmentService.
+ */
+export const EstablishmentServiceToken: symbol = Symbol('EstablishmentService');
+
+/**
+ * Interface for establishment services.
+ */
+export interface EstablishmentService {
+  create(request: CreateEstablishmentRequest): Promise<EstablishmentEntity>;
+  getById(id: string): Promise<EstablishmentEntity>;
+  findById(id: string): Promise<EstablishmentEntity | null>;
+  findByNameAndOrganisation(
+    name: string,
+    organisationId: string,
+  ): Promise<EstablishmentEntity | null>;
+  exists(id: string): Promise<boolean>;
+  search(
+    params: EstablishmentQueryParams,
+    page?: number,
+    limit?: number,
+  ): Promise<EstablishmentPage>;
+  update(
+    id: string,
+    request: UpdateEstablishmentRequest,
+  ): Promise<EstablishmentEntity>;
+  enable(id: string): Promise<EstablishmentEntity>;
+  disable(id: string): Promise<EstablishmentEntity>;
+  delete(id: string): Promise<void>;
+}
+
+/**
+ * Base EstablishmentService implementation.
+ *
+ * This service can be extended by users to add custom logic for establishment management.
+ * Extended services should inherit from this class and can override methods
+ * to add custom behavior while preserving the base authentication functionality.
+ *
+ * @example
+ * ```typescript
+ * @Injectable()
+ * export class ExtendedEstablishmentService extends EstablishmentService {
+ *   async create(request: CreateEstablishmentRequest): Promise<ExtendedEstablishmentEntity> {
+ *     const establishment = await super.create(request);
+ *     // Add custom logic here
+ *     return establishment;
+ *   }
+ * }
+ * ```
+ */
 @Injectable()
-export class EstablishmentService {
-  private readonly logger: Logger = new Logger(EstablishmentService.name);
+export class DefaultEstablishmentService implements EstablishmentService {
+  private readonly logger: Logger = new Logger(
+    DefaultEstablishmentService.name,
+  );
 
   /**
    * Constructor
@@ -34,7 +86,7 @@ export class EstablishmentService {
     private readonly dataSource: DataSource,
     @InjectRepository(EstablishmentEntity)
     private readonly establishmentRepository: Repository<EstablishmentEntity>,
-    private readonly organisationService: OrganisationService,
+    private readonly organisationService: DefaultOrganisationService,
   ) {}
 
   /**

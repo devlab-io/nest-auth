@@ -5,6 +5,17 @@ import { GoogleAuthConfig, GoogleAuthConfigToken } from './google-auth.config';
 import { UserConfig, UserConfigToken } from './user.config';
 import { ActionConfig, ActionConfigToken } from './action.config';
 import { TenantsConfig, TenantsConfigToken } from './tenants.config';
+import { ExtentedConfig } from './extended.config';
+import {
+  EstablishmentEntity,
+  OrganisationEntity,
+  UserEntity,
+} from '../entities';
+import {
+  DefaultEstablishmentService,
+  DefaultOrganisationService,
+  DefaultUserService,
+} from '../services';
 
 export interface AuthConfig {
   auth: JwtConfig &
@@ -12,7 +23,8 @@ export interface AuthConfig {
     UserConfig &
     GoogleAuthConfig &
     ActionConfig &
-    TenantsConfig;
+    TenantsConfig &
+    ExtentedConfig;
 }
 
 export const AuthConfigToken: symbol = Symbol('AuthConfig');
@@ -44,6 +56,18 @@ export function provideAuthConfig(config?: AuthConfig): Provider {
           ...googleAuthConfig,
           ...actionConfig,
           ...tenantsConfig,
+          entities: {
+            // by default entities are not extented
+            UserEntity: UserEntity,
+            OrganisationEntity: OrganisationEntity,
+            EstablishmentEntity: EstablishmentEntity,
+          },
+          services: {
+            // by default services are not extented
+            UserService: DefaultUserService,
+            OrganisationService: DefaultOrganisationService,
+            EstablishmentService: DefaultEstablishmentService,
+          },
         },
         ...config,
       };

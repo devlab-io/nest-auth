@@ -4,12 +4,19 @@ import {
   NotFoundException,
   BadRequestException,
   Logger,
+  Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserAccountEntity, UserEntity } from '../entities';
-import { UserService } from './user.service';
-import { OrganisationService } from './organisation.service';
-import { EstablishmentService } from './establishment.service';
+import { UserService, UserServiceToken } from './user.service';
+import {
+  OrganisationService,
+  OrganisationServiceToken,
+} from './organisation.service';
+import {
+  EstablishmentService,
+  EstablishmentServiceToken,
+} from './establishment.service';
 import { RoleService } from './role.service';
 import {
   CreateUserAccountRequest,
@@ -36,8 +43,11 @@ export class UserAccountService {
     private readonly dataSource: DataSource,
     @InjectRepository(UserAccountEntity)
     private readonly userAccountRepository: Repository<UserAccountEntity>,
+    @Inject(UserServiceToken)
     private readonly userService: UserService,
+    @Inject(OrganisationServiceToken)
     private readonly organisationService: OrganisationService,
+    @Inject(EstablishmentServiceToken)
     private readonly establishmentService: EstablishmentService,
     private readonly roleService: RoleService,
   ) {}

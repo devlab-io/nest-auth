@@ -16,10 +16,13 @@ import {
   JwtService,
   RoleService,
   SessionService,
-  UserService,
+  DefaultUserService,
+  UserServiceToken,
   NotificationService,
-  OrganisationService,
-  EstablishmentService,
+  DefaultOrganisationService,
+  OrganisationServiceToken,
+  DefaultEstablishmentService,
+  EstablishmentServiceToken,
   UserAccountService,
   CredentialService,
 } from './services';
@@ -65,16 +68,51 @@ export class AuthModule {
     const authConfigProvider: Provider = provideAuthConfig(config);
     const tenantsConfigProvider: Provider = provideTenantsConfig();
 
+    // Create providers for services with tokens
+    const extendedUserServiceProvider: Provider = {
+      provide: UserServiceToken,
+      useClass: config?.auth.services.UserService || DefaultUserService,
+    };
+
+    const extendedOrganisationServiceProvider: Provider = {
+      provide: OrganisationServiceToken,
+      useClass:
+        config?.auth.services.OrganisationService || DefaultOrganisationService,
+    };
+
+    const extendedEstablishmentServiceProvider: Provider = {
+      provide: EstablishmentServiceToken,
+      useClass:
+        config?.auth.services.EstablishmentService ||
+        DefaultEstablishmentService,
+    };
+
+    // Also provide the concrete classes for backward compatibility
+    const defaultUserServiceProvider: Provider = {
+      provide: UserServiceToken,
+      useClass: DefaultUserService,
+    };
+
+    const defaultOrganisationServiceProvider: Provider = {
+      provide: OrganisationServiceToken,
+      useClass: DefaultOrganisationService,
+    };
+
+    const defaultEstablishmentServiceProvider: Provider = {
+      provide: EstablishmentServiceToken,
+      useClass: DefaultEstablishmentService,
+    };
+
     return {
       module: AuthModule,
       imports: [
         TypeOrmModule.forFeature([
-          UserEntity,
+          config?.auth.entities.UserEntity || UserEntity,
+          config?.auth.entities.OrganisationEntity || OrganisationEntity,
+          config?.auth.entities.EstablishmentEntity || EstablishmentEntity,
           RoleEntity,
           ActionEntity,
           SessionEntity,
-          OrganisationEntity,
-          EstablishmentEntity,
           CredentialEntity,
           UserAccountEntity,
         ]),
@@ -97,14 +135,17 @@ export class AuthModule {
         authConfigProvider,
         tenantsConfigProvider,
         AuthService,
-        UserService,
+        extendedUserServiceProvider,
+        defaultUserServiceProvider,
+        extendedOrganisationServiceProvider,
+        defaultOrganisationServiceProvider,
+        extendedEstablishmentServiceProvider,
+        defaultEstablishmentServiceProvider,
         ActionService,
         RoleService,
         JwtService,
         SessionService,
         NotificationService,
-        OrganisationService,
-        EstablishmentService,
         UserAccountService,
         CredentialService,
         JwtAuthGuard,
@@ -119,14 +160,17 @@ export class AuthModule {
         googleAuthConfigProvider,
         tenantsConfigProvider,
         AuthService,
-        UserService,
+        extendedUserServiceProvider,
+        defaultUserServiceProvider,
+        extendedOrganisationServiceProvider,
+        defaultOrganisationServiceProvider,
+        extendedEstablishmentServiceProvider,
+        defaultEstablishmentServiceProvider,
         ActionService,
         RoleService,
         JwtService,
         SessionService,
         NotificationService,
-        OrganisationService,
-        EstablishmentService,
         UserAccountService,
         CredentialService,
         JwtAuthGuard,

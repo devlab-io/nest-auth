@@ -17,3 +17,4 @@ export {
   ActionConfigToken,
   provideActionConfig,
 } from './action.config';
+export { ExtentedConfig } from './extended.config';
