@@ -1,6 +1,6 @@
 {
   "name": "@devlab-io/nest-auth-client",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "description": "Client library for NestJS Authentication Module",
   "author": "DevLab",
   "license": "UNLICENSED",
