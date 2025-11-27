@@ -291,7 +291,10 @@ import { ActionService } from '@devlab-io/nest-auth';
 import { SmsService } from './sms.service';
 
 @Injectable()
-export class ExtendedUserService extends DefaultUserService implements UserService {
+export class ExtendedUserService
+  extends DefaultUserService
+  implements UserService
+{
   constructor(
     @Inject(UserConfigToken) userConfig: UserConfig,
     dataSource: DataSource,
@@ -301,17 +304,23 @@ export class ExtendedUserService extends DefaultUserService implements UserServi
     actionService: ActionService,
     private readonly smsService: SmsService, // Dépendance personnalisée
   ) {
-    super(userConfig, dataSource, userRepository, credentialService, actionService);
+    super(
+      userConfig,
+      dataSource,
+      userRepository,
+      credentialService,
+      actionService,
+    );
   }
 
   async create(request: CreateUserRequest): Promise<ExtendedUserEntity> {
     const user = await super.create(request);
-    
+
     // Logique personnalisée
     if (user.phoneNumber) {
       await this.smsService.sendWelcomeSms(user.phoneNumber);
     }
-    
+
     return user;
   }
 }
