@@ -3,9 +3,9 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { UserAccountService } from './user-account.service';
-import { UserService } from './user.service';
-import { OrganisationService } from './organisation.service';
-import { EstablishmentService } from './establishment.service';
+import { UserServiceToken } from './user.service';
+import { OrganisationServiceToken } from './organisation.service';
+import { EstablishmentServiceToken } from './establishment.service';
 import { RoleService } from './role.service';
 import {
   UserAccountEntity,
@@ -99,15 +99,15 @@ describe('UserAccountService', () => {
           useValue: mockRepository,
         },
         {
-          provide: UserService,
+          provide: UserServiceToken,
           useValue: mockUserService,
         },
         {
-          provide: OrganisationService,
+          provide: OrganisationServiceToken,
           useValue: mockOrganisationService,
         },
         {
-          provide: EstablishmentService,
+          provide: EstablishmentServiceToken,
           useValue: mockEstablishmentService,
         },
         {

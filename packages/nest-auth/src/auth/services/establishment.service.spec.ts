@@ -2,8 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { EstablishmentService } from './establishment.service';
-import { OrganisationService } from './organisation.service';
+import { DefaultEstablishmentService } from './establishment.service';
+import { DefaultOrganisationService } from './organisation.service';
 import { EstablishmentEntity, OrganisationEntity } from '../entities';
 import {
   CreateEstablishmentRequest,
@@ -12,7 +12,7 @@ import {
 } from '@devlab-io/nest-auth-types';
 
 describe('EstablishmentService', () => {
-  let service: EstablishmentService;
+  let service: DefaultEstablishmentService;
 
   const mockRepository = {
     create: jest.fn(),
@@ -43,13 +43,13 @@ describe('EstablishmentService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        EstablishmentService,
+        DefaultEstablishmentService,
         {
           provide: getRepositoryToken(EstablishmentEntity),
           useValue: mockRepository,
         },
         {
-          provide: OrganisationService,
+          provide: DefaultOrganisationService,
           useValue: mockOrganisationService,
         },
         {
@@ -59,7 +59,9 @@ describe('EstablishmentService', () => {
       ],
     }).compile();
 
-    service = module.get<EstablishmentService>(EstablishmentService);
+    service = module.get<DefaultEstablishmentService>(
+      DefaultEstablishmentService,
+    );
     jest.clearAllMocks();
   });
 

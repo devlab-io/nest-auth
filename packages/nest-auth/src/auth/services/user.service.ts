@@ -102,9 +102,7 @@ export class DefaultUserService implements UserService {
     private readonly dataSource: DataSource,
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
-    @InjectRepository(UserAccountEntity)
-    @Inject()
-    private readonly credentialService: CredentialService,
+    @Inject() private readonly credentialService: CredentialService,
     @Inject() private readonly actionService: ActionService,
   ) {}
 

@@ -148,11 +148,6 @@ describe('BaseService', () => {
       );
     });
 
-    it.skip('should handle timeout', async () => {
-      // Skip this test as it's difficult to test with fake timers and fetch
-      // The timeout functionality is tested implicitly through integration tests
-    });
-
     it('should handle empty response', async () => {
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
