@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Inject,
   Param,
   Patch,
   Post,
@@ -15,7 +16,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { OrganisationService } from '../services';
+import { OrganisationService, OrganisationServiceToken } from '../services';
 import { OrganisationQueryParams } from '@devlab-io/nest-auth-types';
 import {
   CreateOrganisationRequestDto,
@@ -36,7 +37,10 @@ export class OrganisationController {
    *
    * @param organisationService - The organisation service
    */
-  constructor(private readonly organisationService: OrganisationService) {}
+  constructor(
+    @Inject(OrganisationServiceToken)
+    private readonly organisationService: OrganisationService,
+  ) {}
 
   /**
    * Create a new organisation

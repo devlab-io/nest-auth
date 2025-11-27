@@ -5,17 +5,7 @@ import { GoogleAuthConfig, GoogleAuthConfigToken } from './google-auth.config';
 import { UserConfig, UserConfigToken } from './user.config';
 import { ActionConfig, ActionConfigToken } from './action.config';
 import { TenantsConfig, TenantsConfigToken } from './tenants.config';
-import { ExtentedConfig } from './extended.config';
-import {
-  EstablishmentEntity,
-  OrganisationEntity,
-  UserEntity,
-} from '../entities';
-import {
-  DefaultEstablishmentService,
-  DefaultOrganisationService,
-  DefaultUserService,
-} from '../services';
+import { ExtentedConfig, ExtendedConfigToken } from './extended.config';
 
 export interface AuthConfig {
   auth: JwtConfig &
@@ -29,7 +19,7 @@ export interface AuthConfig {
 
 export const AuthConfigToken: symbol = Symbol('AuthConfig');
 
-export function provideAuthConfig(config?: AuthConfig): Provider {
+export function provideAuthConfig(): Provider {
   return {
     provide: AuthConfigToken,
     inject: [
@@ -39,6 +29,7 @@ export function provideAuthConfig(config?: AuthConfig): Provider {
       GoogleAuthConfigToken,
       ActionConfigToken,
       TenantsConfigToken,
+      ExtendedConfigToken,
     ],
     useFactory: (
       jwtConfig: JwtConfig,
@@ -47,6 +38,7 @@ export function provideAuthConfig(config?: AuthConfig): Provider {
       googleAuthConfig: GoogleAuthConfig,
       actionConfig: ActionConfig,
       tenantsConfig: TenantsConfig,
+      extendedConfig: ExtentedConfig,
     ): AuthConfig => {
       return {
         auth: {
@@ -56,20 +48,8 @@ export function provideAuthConfig(config?: AuthConfig): Provider {
           ...googleAuthConfig,
           ...actionConfig,
           ...tenantsConfig,
-          entities: {
-            // by default entities are not extented
-            UserEntity: UserEntity,
-            OrganisationEntity: OrganisationEntity,
-            EstablishmentEntity: EstablishmentEntity,
-          },
-          services: {
-            // by default services are not extented
-            UserService: DefaultUserService,
-            OrganisationService: DefaultOrganisationService,
-            EstablishmentService: DefaultEstablishmentService,
-          },
+          ...extendedConfig,
         },
-        ...config,
       };
     },
   };

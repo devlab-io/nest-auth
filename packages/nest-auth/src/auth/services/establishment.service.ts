@@ -4,6 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
   Logger,
+  Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -11,7 +12,10 @@ import {
   UserAccountEntity,
   UserEntity,
 } from '../entities';
-import { DefaultOrganisationService } from './organisation.service';
+import {
+  OrganisationService,
+  OrganisationServiceToken,
+} from './organisation.service';
 import {
   CreateEstablishmentRequest,
   UpdateEstablishmentRequest,
@@ -86,7 +90,8 @@ export class DefaultEstablishmentService implements EstablishmentService {
     private readonly dataSource: DataSource,
     @InjectRepository(EstablishmentEntity)
     private readonly establishmentRepository: Repository<EstablishmentEntity>,
-    private readonly organisationService: DefaultOrganisationService,
+    @Inject(OrganisationServiceToken)
+    private readonly organisationService: OrganisationService,
   ) {}
 
   /**

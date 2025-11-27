@@ -2,6 +2,7 @@ import { config } from 'dotenv';
 import { resolve } from 'path';
 import { z } from 'zod';
 import { Provider } from '@nestjs/common';
+import { DeepPartial } from 'typeorm';
 
 // Load environment variables
 config({ path: resolve(process.cwd(), '.env') });
@@ -30,11 +31,20 @@ function parseAdminConfig(env: NodeJS.ProcessEnv): AdminConfig {
   };
 }
 
-export function provideAdminConfig(): Provider {
+export function provideAdminConfig(
+  config?: DeepPartial<{ admin: AdminConfig['admin'] }>,
+): Provider {
   return {
     provide: AdminConfigToken,
     useFactory: (): AdminConfig => {
-      return parseAdminConfig(process.env);
+      // Priority: config passed > environment variable > default zod
+      const envConfig = parseAdminConfig(process.env);
+      return {
+        admin: {
+          email: config?.admin?.email ?? envConfig.admin.email,
+          password: config?.admin?.password ?? envConfig.admin.password,
+        },
+      };
     },
   };
 }

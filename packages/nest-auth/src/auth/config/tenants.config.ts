@@ -2,6 +2,7 @@ import { config } from 'dotenv';
 import { resolve } from 'path';
 import { z } from 'zod';
 import { Provider } from '@nestjs/common';
+import { DeepPartial } from 'typeorm';
 
 // Load environment variables
 config({ path: resolve(process.cwd(), '.env') });
@@ -58,11 +59,22 @@ function parseTenantsConfig(env: NodeJS.ProcessEnv): TenantsConfig {
   };
 }
 
-export function provideTenantsConfig(): Provider {
+export function provideTenantsConfig(
+  config?: DeepPartial<{ tenants: TenantsConfig['tenants'] }>,
+): Provider {
   return {
     provide: TenantsConfigToken,
     useFactory: (): TenantsConfig => {
-      return parseTenantsConfig(process.env);
+      // Priority: config passed > environment variable > default zod
+      const envConfig = parseTenantsConfig(process.env);
+      return {
+        tenants: {
+          organisations:
+            config?.tenants?.organisations ?? envConfig.tenants.organisations,
+          establishments:
+            config?.tenants?.establishments ?? envConfig.tenants.establishments,
+        },
+      };
     },
   };
 }

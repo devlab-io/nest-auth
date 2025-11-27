@@ -1,5 +1,6 @@
 import { Provider } from '@nestjs/common';
 import { z } from 'zod';
+import { DeepPartial } from 'typeorm';
 
 export interface UserConfig {
   user: {
@@ -39,11 +40,21 @@ function parseUserConfig(env: NodeJS.ProcessEnv): UserConfig {
   };
 }
 
-export function provideUserConfig(): Provider {
+export function provideUserConfig(
+  config?: DeepPartial<{ user: UserConfig['user'] }>,
+): Provider {
   return {
     provide: UserConfigToken,
     useFactory: (): UserConfig => {
-      return parseUserConfig(process.env);
+      // Priority: config passed > environment variable > default zod
+      const envConfig = parseUserConfig(process.env);
+      return {
+        user: {
+          canSignUp: config?.user?.canSignUp ?? envConfig.user.canSignUp,
+          defaultRoles:
+            config?.user?.defaultRoles ?? envConfig.user.defaultRoles,
+        },
+      };
     },
   };
 }

@@ -3,7 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { DefaultEstablishmentService } from './establishment.service';
-import { DefaultOrganisationService } from './organisation.service';
+import { OrganisationServiceToken } from './organisation.service';
 import { EstablishmentEntity, OrganisationEntity } from '../entities';
 import {
   CreateEstablishmentRequest,
@@ -49,7 +49,7 @@ describe('EstablishmentService', () => {
           useValue: mockRepository,
         },
         {
-          provide: DefaultOrganisationService,
+          provide: OrganisationServiceToken,
           useValue: mockOrganisationService,
         },
         {
