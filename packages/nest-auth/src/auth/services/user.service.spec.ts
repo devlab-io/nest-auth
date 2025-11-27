@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { UserService } from './user.service';
+import { DefaultUserService } from './user.service';
 import { CredentialService } from './credential.service';
 import { ActionService } from './action.service';
 import { UserEntity, UserAccountEntity } from '../entities';
@@ -15,7 +15,7 @@ import {
 import { UserConfig, UserConfigToken } from '../config/user.config';
 
 describe('UserService', () => {
-  let service: UserService;
+  let service: DefaultUserService;
 
   const mockUserRepository = {
     create: jest.fn(),
@@ -35,10 +35,10 @@ describe('UserService', () => {
     transaction: jest.fn(),
   };
 
-  const mockCredentialService = {
-    createPasswordCredential: jest.fn(),
-    createGoogleCredential: jest.fn(),
-    setPasswordCredential: jest.fn(),
+  let mockCredentialService: {
+    createPasswordCredential: jest.Mock;
+    createGoogleCredential: jest.Mock;
+    setPasswordCredential: jest.Mock;
   };
 
   const mockActionService = {
@@ -73,9 +73,15 @@ describe('UserService', () => {
   };
 
   beforeEach(async () => {
+    mockCredentialService = {
+      createPasswordCredential: jest.fn().mockResolvedValue(undefined),
+      createGoogleCredential: jest.fn().mockResolvedValue(undefined),
+      setPasswordCredential: jest.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        UserService,
+        DefaultUserService,
         {
           provide: getRepositoryToken(UserEntity),
           useValue: mockUserRepository,
@@ -103,9 +109,7 @@ describe('UserService', () => {
       ],
     }).compile();
 
-    service = module.get<UserService>(UserService);
-
-    jest.clearAllMocks();
+    service = module.get<DefaultUserService>(DefaultUserService);
   });
 
   describe('create', () => {

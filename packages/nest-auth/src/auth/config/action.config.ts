@@ -1,5 +1,6 @@
 import { Provider } from '@nestjs/common';
 import { z } from 'zod';
+import { DeepPartial } from 'typeorm';
 import { route } from '../utils';
 
 export interface UnitActionConfig {
@@ -81,11 +82,59 @@ function parseActionConfig(env: NodeJS.ProcessEnv): ActionConfig {
   };
 }
 
-export function provideActionConfig(): Provider {
+export function provideActionConfig(
+  config?: DeepPartial<{ invite: ActionConfig['invite'] } & ActionConfig>,
+): Provider {
   return {
     provide: ActionConfigToken,
     useFactory: (): ActionConfig => {
-      return parseActionConfig(process.env);
+      // Priority: config passed > environment variable > default zod
+      const envConfig = parseActionConfig(process.env);
+      return {
+        invite: {
+          validity: config?.invite?.validity ?? envConfig.invite.validity,
+          route: config?.invite?.route ?? envConfig.invite.route,
+          organisation:
+            config?.invite?.organisation ?? envConfig.invite.organisation,
+          establishment:
+            config?.invite?.establishment ?? envConfig.invite.establishment,
+        },
+        validateEmail: {
+          validity:
+            config?.validateEmail?.validity ?? envConfig.validateEmail.validity,
+          route: config?.validateEmail?.route ?? envConfig.validateEmail.route,
+        },
+        acceptTerms: {
+          validity:
+            config?.acceptTerms?.validity ?? envConfig.acceptTerms.validity,
+          route: config?.acceptTerms?.route ?? envConfig.acceptTerms.route,
+        },
+        acceptPrivacyPolicy: {
+          validity:
+            config?.acceptPrivacyPolicy?.validity ??
+            envConfig.acceptPrivacyPolicy.validity,
+          route:
+            config?.acceptPrivacyPolicy?.route ??
+            envConfig.acceptPrivacyPolicy.route,
+        },
+        resetPassword: {
+          validity:
+            config?.resetPassword?.validity ?? envConfig.resetPassword.validity,
+          route: config?.resetPassword?.route ?? envConfig.resetPassword.route,
+        },
+        changePassword: {
+          validity:
+            config?.changePassword?.validity ??
+            envConfig.changePassword.validity,
+          route:
+            config?.changePassword?.route ?? envConfig.changePassword.route,
+        },
+        changeEmail: {
+          validity:
+            config?.changeEmail?.validity ?? envConfig.changeEmail.validity,
+          route: config?.changeEmail?.route ?? envConfig.changeEmail.route,
+        },
+      };
     },
   };
 }

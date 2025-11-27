@@ -19,9 +19,56 @@ import {
   OrganisationPage,
 } from '@devlab-io/nest-auth-types';
 
+/**
+ * Symbol used to inject the OrganisationService.
+ */
+export const OrganisationServiceToken: symbol = Symbol('OrganisationService');
+
+/**
+ * Interface for organisation services.
+ */
+export interface OrganisationService {
+  create(request: CreateOrganisationRequest): Promise<OrganisationEntity>;
+  getById(id: string): Promise<OrganisationEntity>;
+  findById(id: string): Promise<OrganisationEntity | null>;
+  findByName(name: string): Promise<OrganisationEntity | null>;
+  exists(id: string): Promise<boolean>;
+  search(
+    params: OrganisationQueryParams,
+    page?: number,
+    limit?: number,
+  ): Promise<OrganisationPage>;
+  update(
+    id: string,
+    request: UpdateOrganisationRequest,
+  ): Promise<OrganisationEntity>;
+  enable(id: string): Promise<OrganisationEntity>;
+  disable(id: string): Promise<OrganisationEntity>;
+  delete(id: string): Promise<void>;
+}
+
+/**
+ * Default OrganisationService implementation.
+ *
+ * This service can be extended by users to add custom logic for organisation management.
+ * Extended services should inherit from this class and can override methods
+ * to add custom behavior while preserving the base authentication functionality.
+ *
+ * @example
+ * ```typescript
+ * @Injectable()
+ * export class ExtendedOrganisationService extends OrganisationService {
+ *   async create(request: CreateOrganisationRequest): Promise<ExtendedOrganisationEntity> {
+ *     const organisation = await super.create(request);
+ *     // Add custom logic here
+ *     return organisation;
+ *   }
+ * }
+ * ```
+ */
 @Injectable()
-export class OrganisationService {
-  private readonly logger: Logger = new Logger(OrganisationService.name);
+export class DefaultOrganisationService implements OrganisationService {
+  private readonly logger: Logger = new Logger(DefaultOrganisationService.name);
 
   /**
    * Constructor

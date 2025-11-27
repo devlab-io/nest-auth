@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Inject,
   Param,
   Patch,
   Post,
@@ -15,7 +16,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { UserService, SessionService } from '../services';
+import { UserService, SessionService, UserServiceToken } from '../services';
 import { UserQueryParams } from '@devlab-io/nest-auth-types';
 import {
   CreateUserRequestDto,
@@ -44,6 +45,7 @@ export class UserController {
    * @param sessionService - The session service
    */
   constructor(
+    @Inject(UserServiceToken)
     private readonly userService: UserService,
     private readonly sessionService: SessionService,
   ) {}

@@ -1,13 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { UserService } from './user.service';
+import { UserServiceToken, UserService } from './user.service';
 import { ActionService } from './action.service';
 import { JwtService } from './jwt.service';
 import { UserAccountService } from './user-account.service';
 import { CredentialService } from './credential.service';
-import { OrganisationService } from './organisation.service';
-import { EstablishmentService } from './establishment.service';
+import {
+  OrganisationServiceToken,
+  OrganisationService,
+} from './organisation.service';
+import {
+  EstablishmentServiceToken,
+  EstablishmentService,
+} from './establishment.service';
 import { NotificationService } from './notification.service';
 import { UserConfig, UserConfigToken } from '../config/user.config';
 import { ActionConfig, ActionConfigToken } from '../config/action.config';
@@ -181,7 +187,7 @@ describe('AuthService', () => {
       providers: [
         AuthService,
         {
-          provide: UserService,
+          provide: UserServiceToken,
           useValue: mockUserService,
         },
         {
@@ -201,11 +207,11 @@ describe('AuthService', () => {
           useValue: mockCredentialService,
         },
         {
-          provide: OrganisationService,
+          provide: OrganisationServiceToken,
           useValue: mockOrganisationService,
         },
         {
-          provide: EstablishmentService,
+          provide: EstablishmentServiceToken,
           useValue: mockEstablishmentService,
         },
         {
@@ -224,12 +230,12 @@ describe('AuthService', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-    userService = module.get(UserService);
+    userService = module.get(UserServiceToken);
     actionService = module.get(ActionService);
     jwtService = module.get(JwtService);
     userAccountService = module.get(UserAccountService);
-    organisationService = module.get(OrganisationService);
-    establishmentService = module.get(EstablishmentService);
+    organisationService = module.get(OrganisationServiceToken);
+    establishmentService = module.get(EstablishmentServiceToken);
     notificationService = module.get(NotificationService);
 
     jest.clearAllMocks();

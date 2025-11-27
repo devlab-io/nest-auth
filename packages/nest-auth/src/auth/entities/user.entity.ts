@@ -13,7 +13,36 @@ import { ActionEntity } from './action-token.entity';
 import { CredentialEntity } from './credential.entity';
 import { UserAccountEntity } from './user-account.entity';
 
-@Entity('users')
+/**
+ * Name of the user table.
+ */
+export const USERS = 'users';
+
+/**
+ * Base UserEntity implementation.
+ *
+ * This entity can be extended by users to add custom fields and relations.
+ * Extended entities must use the same table name ('users') and should
+ * inherit from this class.
+ *
+ * @example
+ * ```typescript
+ * @Entity('users')
+ * export class ExtendedUserEntity extends UserEntity {
+ *   @Column({ name: 'custom_field' })
+ *   customField: string;
+ *
+ *   @OneToMany(() => CustomEntity, (custom) => custom.user)
+ *   customRelations: CustomEntity[];
+ * }
+ * ```
+ *
+ * Note: When extending this entity, ensure that:
+ * - The table name remains 'users'
+ * - All base fields and relations are preserved
+ * - Custom migrations are created to add new columns/relations
+ */
+@Entity({ name: USERS })
 @Unique('unique_email', ['email'])
 @Unique('unique_username', ['username'])
 export class UserEntity implements User {

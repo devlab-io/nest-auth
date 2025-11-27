@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { OrganisationService } from './organisation.service';
+import { DefaultOrganisationService } from './organisation.service';
 import { OrganisationEntity } from '../entities';
 import {
   CreateOrganisationRequest,
@@ -11,7 +11,7 @@ import {
 } from '@devlab-io/nest-auth-types';
 
 describe('OrganisationService', () => {
-  let service: OrganisationService;
+  let service: DefaultOrganisationService;
 
   const mockRepository = {
     create: jest.fn(),
@@ -29,7 +29,7 @@ describe('OrganisationService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        OrganisationService,
+        DefaultOrganisationService,
         {
           provide: getRepositoryToken(OrganisationEntity),
           useValue: mockRepository,
@@ -41,7 +41,9 @@ describe('OrganisationService', () => {
       ],
     }).compile();
 
-    service = module.get<OrganisationService>(OrganisationService);
+    service = module.get<DefaultOrganisationService>(
+      DefaultOrganisationService,
+    );
     jest.clearAllMocks();
   });
 

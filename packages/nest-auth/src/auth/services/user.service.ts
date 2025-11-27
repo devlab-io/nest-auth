@@ -22,9 +22,71 @@ import { UserConfig, UserConfigToken } from '../config/user.config';
 import { capitalize, normalize } from '../utils';
 import { ActionType, CreateActionRequest } from '@devlab-io/nest-auth-types';
 
+/**
+ * Symbol used to inject the UserService.
+ */
+export const UserServiceToken: symbol = Symbol('UserService');
+
+/**
+ * Interface for extended UserService implementations.
+ *
+ * Extended services should extend the base UserService class
+ * and can override methods to add custom logic while preserving
+ * the base authentication behavior.
+ */
+export interface UserService {
+  create(request: CreateUserRequest): Promise<UserEntity>;
+  patch(id: string, request: PatchUserRequest): Promise<UserEntity>;
+  update(id: string, request: UpdateUserRequest): Promise<UserEntity>;
+  search(
+    params: UserQueryParams,
+    page?: number,
+    limit?: number,
+  ): Promise<UserPage>;
+  findByEmail(email: string): Promise<UserEntity | null>;
+  findById(id: string): Promise<UserEntity | null>;
+  getById(id: string): Promise<UserEntity>;
+  exists(email: string): Promise<boolean>;
+  enable(id: string): Promise<UserEntity>;
+  disable(id: string): Promise<UserEntity>;
+  delete(id: string): Promise<void>;
+  addPasswordCredential(userId: string, password: string): Promise<void>;
+  addGoogleCredential(userId: string, googleId: string): Promise<void>;
+  removePasswordCredential(userId: string): Promise<void>;
+  removeGoogleCredential(userId: string): Promise<void>;
+  removeCredential(userId: string, credentialId: string): Promise<void>;
+  addAction(
+    userId: string,
+    actionType: ActionType | number,
+    expiresIn?: number,
+    roles?: string[],
+  ): Promise<string>;
+  removeAction(userId: string, token: string): Promise<void>;
+  removeAllActions(userId: string): Promise<void>;
+}
+
+/**
+ * Base UserService implementation.
+ *
+ * This service can be extended by users to add custom logic for user management.
+ * Extended services should inherit from this class and can override methods
+ * to add custom behavior while preserving the base authentication functionality.
+ *
+ * @example
+ * ```typescript
+ * @Injectable()
+ * export class ExtendedUserService extends UserService {
+ *   async create(request: CreateUserRequest): Promise<ExtendedUserEntity> {
+ *     const user = await super.create(request);
+ *     // Add custom logic here
+ *     return user;
+ *   }
+ * }
+ * ```
+ */
 @Injectable()
-export class UserService {
-  private readonly logger: Logger = new Logger(UserService.name);
+export class DefaultUserService implements UserService {
+  private readonly logger: Logger = new Logger(DefaultUserService.name);
 
   /**
    * Constructor
@@ -32,7 +94,6 @@ export class UserService {
    * @param userConfig - The user configuration
    * @param dataSource - The data source for transactions
    * @param userRepository - The user repository
-   * @param userAccountRepository - The user account repository
    * @param credentialService - The credential service
    * @param actionService - The action service
    */
@@ -41,8 +102,6 @@ export class UserService {
     private readonly dataSource: DataSource,
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
-    @InjectRepository(UserAccountEntity)
-    private readonly userAccountRepository: Repository<UserAccountEntity>,
     @Inject() private readonly credentialService: CredentialService,
     @Inject() private readonly actionService: ActionService,
   ) {}

@@ -1,9 +1,21 @@
 export { ActionService } from './action.service';
-export { OrganisationService } from './organisation.service';
-export { EstablishmentService } from './establishment.service';
+export {
+  DefaultOrganisationService,
+  OrganisationService,
+  OrganisationServiceToken,
+} from './organisation.service';
+export {
+  DefaultEstablishmentService,
+  EstablishmentService,
+  EstablishmentServiceToken,
+} from './establishment.service';
 export { UserAccountService } from './user-account.service';
 export { CredentialService } from './credential.service';
-export { UserService } from './user.service';
+export {
+  DefaultUserService,
+  UserService,
+  UserServiceToken,
+} from './user.service';
 export { RoleService } from './role.service';
 export { JwtService } from './jwt.service';
 export { SessionService } from './session.service';

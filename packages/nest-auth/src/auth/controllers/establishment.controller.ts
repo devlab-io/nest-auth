@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Inject,
   Param,
   Patch,
   Post,
@@ -15,7 +16,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { EstablishmentService } from '../services';
+import { EstablishmentService, EstablishmentServiceToken } from '../services';
 import { EstablishmentQueryParams } from '@devlab-io/nest-auth-types';
 import {
   CreateEstablishmentRequestDto,
@@ -36,7 +37,10 @@ export class EstablishmentController {
    *
    * @param establishmentService - The establishment service
    */
-  constructor(private readonly establishmentService: EstablishmentService) {}
+  constructor(
+    @Inject(EstablishmentServiceToken)
+    private readonly establishmentService: EstablishmentService,
+  ) {}
 
   /**
    * Create a new establishment

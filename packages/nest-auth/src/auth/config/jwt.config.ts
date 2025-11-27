@@ -2,6 +2,7 @@ import { config } from 'dotenv';
 import { resolve } from 'path';
 import { z } from 'zod';
 import { Provider } from '@nestjs/common';
+import { DeepPartial } from 'typeorm';
 import { parseExpiresIn } from '../utils';
 
 // Load environment variables
@@ -35,11 +36,20 @@ function parseJwtConfig(env: NodeJS.ProcessEnv): JwtConfig {
   };
 }
 
-export function provideJwtConfig(): Provider {
+export function provideJwtConfig(
+  config?: DeepPartial<{ jwt: JwtConfig['jwt'] }>,
+): Provider {
   return {
     provide: JwtConfigToken,
     useFactory: (): JwtConfig => {
-      return parseJwtConfig(process.env);
+      // Priority: config passed > environment variable > default zod
+      const envConfig = parseJwtConfig(process.env);
+      return {
+        jwt: {
+          secret: config?.jwt?.secret ?? envConfig.jwt.secret,
+          expiresIn: config?.jwt?.expiresIn ?? envConfig.jwt.expiresIn,
+        },
+      };
     },
   };
 }

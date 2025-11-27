@@ -2,6 +2,7 @@ import { config } from 'dotenv';
 import { resolve } from 'path';
 import { z } from 'zod';
 import { Provider } from '@nestjs/common';
+import { DeepPartial } from 'typeorm';
 
 // Load environment variables
 config({ path: resolve(process.cwd(), '.env') });
@@ -40,11 +41,29 @@ function parseGoogleAuthConfig(env: NodeJS.ProcessEnv): GoogleAuthConfig {
   };
 }
 
-export function provideGoogleAuthConfig(): Provider {
+export function provideGoogleAuthConfig(
+  config?: DeepPartial<{ google: GoogleAuthConfig['google'] }>,
+): Provider {
   return {
     provide: GoogleAuthConfigToken,
     useFactory: (): GoogleAuthConfig => {
-      return parseGoogleAuthConfig(process.env);
+      // Priority: config passed > environment variable > default zod
+      const envConfig = parseGoogleAuthConfig(process.env);
+      const clientId = config?.google?.clientId ?? envConfig.google.clientId;
+      const clientSecret =
+        config?.google?.clientSecret ?? envConfig.google.clientSecret;
+      const callbackUrl =
+        config?.google?.callbackUrl ?? envConfig.google.callbackUrl;
+      const enabled: boolean = !!clientId && !!clientSecret && !!callbackUrl;
+
+      return {
+        google: {
+          enabled,
+          clientId,
+          clientSecret,
+          callbackUrl,
+        },
+      };
     },
   };
 }
