@@ -1,13 +1,5 @@
 import { Type, Provider } from '@nestjs/common';
 import {
-  EstablishmentService,
-  OrganisationService,
-  UserService,
-  DefaultUserService,
-  DefaultOrganisationService,
-  DefaultEstablishmentService,
-} from '../services';
-import {
   EstablishmentEntity,
   OrganisationEntity,
   UserEntity,
@@ -15,7 +7,7 @@ import {
 import { DeepPartial } from 'typeorm';
 
 /**
- * Configuration for extended services and entities
+ * Configuration for extended entities
  */
 export interface ExtentedConfig {
   /**
@@ -37,32 +29,6 @@ export interface ExtentedConfig {
      */
     EstablishmentEntity: Type<EstablishmentEntity>;
   };
-
-  /**
-   * Extended servicies
-   */
-  services: {
-    /**
-     * Extended UserService class.
-     * Must extend the base UserService and implement IUserService.
-     * If not provided, the base UserService is used.
-     */
-    UserService: Type<UserService>;
-
-    /**
-     * Extended OrganisationService class.
-     * Must extend the base OrganisationService and implement IOrganisationService.
-     * If not provided, the base OrganisationService is used.
-     */
-    OrganisationService: Type<OrganisationService>;
-
-    /**
-     * Extended EstablishmentService class.
-     * Must extend the base EstablishmentService and implement IEstablishmentService.
-     * If not provided, the base EstablishmentService is used.
-     */
-    EstablishmentService: Type<EstablishmentService>;
-  };
 }
 
 /**
@@ -83,7 +49,6 @@ export function provideExtendedConfig(
     provide: ExtendedConfigToken,
     useFactory: (): ExtentedConfig => {
       const configEntities = config?.entities;
-      const configServices = config?.services;
 
       const result: ExtentedConfig = {
         entities: {
@@ -96,18 +61,6 @@ export function provideExtendedConfig(
           EstablishmentEntity:
             (configEntities?.EstablishmentEntity as typeof EstablishmentEntity) ||
             EstablishmentEntity,
-        },
-        services: {
-          // by default services are not extended
-          UserService:
-            (configServices?.UserService as typeof DefaultUserService) ||
-            DefaultUserService,
-          OrganisationService:
-            (configServices?.OrganisationService as typeof DefaultOrganisationService) ||
-            DefaultOrganisationService,
-          EstablishmentService:
-            (configServices?.EstablishmentService as typeof DefaultEstablishmentService) ||
-            DefaultEstablishmentService,
         },
       };
       return result;

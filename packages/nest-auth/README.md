@@ -275,19 +275,49 @@ export class ExtendedUserEntity extends UserEntity {
 }
 ```
 
-#### Extension des Services
-
-Vous pouvez étendre les services pour ajouter des fonctionnalités personnalisées ou injecter des dépendances supplémentaires :
+Configurez votre entité étendue dans `AuthModule` :
 
 ```typescript
-import { Injectable } from '@nestjs/common';
-import { DefaultUserService, UserService } from '@devlab-io/nest-auth';
-import { UserConfig, UserConfigToken } from '@devlab-io/nest-auth';
-import { DataSource, Repository } from 'typeorm';
+import { Module } from '@nestjs/common';
+import { AuthModule } from '@devlab-io/nest-auth';
+import { ExtendedUserEntity } from './entities/extended-user.entity';
+
+@Module({
+  imports: [
+    AuthModule.forRoot({
+      auth: {
+        entities: {
+          UserEntity: ExtendedUserEntity,
+        },
+      },
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+#### Extension des Services
+
+Le module utilise un **pattern "Override"** pour l'extension des services. Les services par défaut sont fournis via des tokens d'injection, et vous pouvez les remplacer en fournissant votre propre implémentation avec le même token.
+
+##### Exemple 1 : Extension de UserService avec dépendance custom
+
+**1. Créez votre service étendu :**
+
+```typescript
+// services/extended-user.service.ts
+import { Injectable, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ExtendedUserEntity } from './extended-user.entity';
-import { CredentialService } from '@devlab-io/nest-auth';
-import { ActionService } from '@devlab-io/nest-auth';
+import { DataSource, Repository } from 'typeorm';
+import { 
+  DefaultUserService, 
+  UserService, 
+  UserConfigToken,
+  UserConfig,
+  CredentialService,
+  ActionService,
+} from '@devlab-io/nest-auth';
+import { ExtendedUserEntity } from '../entities/extended-user.entity';
 import { SmsService } from './sms.service';
 
 @Injectable()
@@ -302,7 +332,8 @@ export class ExtendedUserService
     userRepository: Repository<ExtendedUserEntity>,
     credentialService: CredentialService,
     actionService: ActionService,
-    private readonly smsService: SmsService, // Dépendance personnalisée
+    // ✨ Ajoutez vos dépendances custom
+    private readonly smsService: SmsService,
   ) {
     super(
       userConfig,
@@ -316,26 +347,52 @@ export class ExtendedUserService
   async create(request: CreateUserRequest): Promise<ExtendedUserEntity> {
     const user = await super.create(request);
 
-    // Logique personnalisée
+    // ✨ Logique personnalisée
     if (user.phoneNumber) {
       await this.smsService.sendWelcomeSms(user.phoneNumber);
     }
 
     return user;
   }
+
+  // Ajoutez vos méthodes personnalisées
+  async findByPhoneNumber(phoneNumber: string): Promise<ExtendedUserEntity | null> {
+    return this.userRepository.findOne({ where: { phoneNumber } });
+  }
 }
 ```
 
-#### Configuration dans le Module
-
-Pour utiliser vos entités et services étendus, passez-les dans la configuration du module :
+**2. Créez un module pour vos services custom :**
 
 ```typescript
+// custom-auth.module.ts
 import { Module } from '@nestjs/common';
-import { AuthModule } from '@devlab-io/nest-auth';
-import { ExtendedUserEntity } from './entities/extended-user.entity';
 import { ExtendedUserService } from './services/extended-user.service';
 import { SmsService } from './services/sms.service';
+import { UserServiceToken } from '@devlab-io/nest-auth';
+
+@Module({
+  providers: [
+    SmsService,
+    ExtendedUserService,
+    // 🔑 Override via token
+    {
+      provide: UserServiceToken,
+      useExisting: ExtendedUserService,
+    },
+  ],
+  exports: [ExtendedUserService],
+})
+export class CustomAuthModule {}
+```
+
+**3. Importez dans votre AppModule :**
+
+```typescript
+// app.module.ts
+import { Module } from '@nestjs/common';
+import { AuthModule } from '@devlab-io/nest-auth';
+import { CustomAuthModule } from './custom-auth.module';
 
 @Module({
   imports: [
@@ -344,31 +401,150 @@ import { SmsService } from './services/sms.service';
         entities: {
           UserEntity: ExtendedUserEntity,
         },
-        services: {
-          UserService: ExtendedUserService,
-        },
       },
     }),
-  ],
-  providers: [
-    SmsService, // Important : enregistrez vos services personnalisés comme providers
-    ExtendedUserService, // Optionnel mais recommandé pour le singleton
+    CustomAuthModule, // Importe après AuthModule
   ],
 })
 export class AppModule {}
 ```
 
+##### Exemple 2 : Extension de EstablishmentService (pour multi-tenant)
+
+```typescript
+// services/client.service.ts
+import { Injectable, Inject } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import {
+  DefaultEstablishmentService,
+  EstablishmentService,
+  UserServiceToken,
+  OrganisationServiceToken,
+  UserService,
+  OrganisationService,
+} from '@devlab-io/nest-auth';
+import { ClientEntity } from '../entities/client.entity';
+import { BillingService } from './billing.service';
+
+@Injectable()
+export class ClientService
+  extends DefaultEstablishmentService
+  implements EstablishmentService
+{
+  constructor(
+    @InjectRepository(ClientEntity)
+    establishmentRepository: Repository<ClientEntity>,
+    @InjectRepository(UserEntity)
+    userRepository: Repository<UserEntity>,
+    @Inject(UserServiceToken)
+    userService: UserService,
+    @Inject(OrganisationServiceToken)
+    organisationService: OrganisationService,
+    // ✨ Service custom pour la facturation
+    private readonly billingService: BillingService,
+  ) {
+    super(
+      establishmentRepository,
+      userRepository,
+      userService,
+      organisationService,
+    );
+  }
+
+  async create(request: CreateEstablishmentRequest): Promise<ClientEntity> {
+    const client = await super.create(request);
+
+    // ✨ Créer un compte de facturation automatiquement
+    await this.billingService.createAccount(client.id);
+
+    return client;
+  }
+
+  async suspendForNonPayment(id: string): Promise<void> {
+    const client = await this.findById(id);
+    if (client) {
+      client.isEnabled = false;
+      await this.establishmentRepository.save(client);
+      // Logique métier supplémentaire
+    }
+  }
+}
+```
+
+Configuration du module :
+
+```typescript
+// client.module.ts
+import { Module } from '@nestjs/common';
+import { ClientService } from './services/client.service';
+import { BillingService } from './services/billing.service';
+import { EstablishmentServiceToken } from '@devlab-io/nest-auth';
+
+@Module({
+  providers: [
+    BillingService,
+    ClientService,
+    {
+      provide: EstablishmentServiceToken,
+      useExisting: ClientService,
+    },
+  ],
+  exports: [ClientService],
+})
+export class ClientModule {}
+```
+
+```typescript
+// app.module.ts
+import { Module } from '@nestjs/common';
+import { AuthModule } from '@devlab-io/nest-auth';
+import { ClientModule } from './client/client.module';
+
+@Module({
+  imports: [
+    AuthModule.forRoot({
+      auth: {
+        entities: {
+          EstablishmentEntity: ClientEntity,
+        },
+      },
+    }),
+    ClientModule,
+  ],
+})
+export class AppModule {}
+```
+
+#### Tokens disponibles pour l'override
+
+Le module expose les tokens suivants pour l'override des services :
+
+```typescript
+import { 
+  UserServiceToken,
+  OrganisationServiceToken,
+  EstablishmentServiceToken,
+} from '@devlab-io/nest-auth';
+```
+
 #### Points Importants
 
-1. **Enregistrement des Services Personnalisés** : Les services personnalisés que vous injectez dans vos services étendus (comme `SmsService` dans l'exemple) doivent être enregistrés comme providers dans votre module. Sinon, NestJS ne pourra pas les injecter.
+1. **Pattern Override** : Utilisez les tokens d'injection (`UserServiceToken`, `OrganisationServiceToken`, `EstablishmentServiceToken`) pour remplacer les services par défaut.
 
-2. **Héritage des Services** : Vos services étendus doivent hériter de `DefaultUserService`, `DefaultOrganisationService` ou `DefaultEstablishmentService` et implémenter l'interface correspondante (`UserService`, `OrganisationService`, `EstablishmentService`).
+2. **useExisting vs useClass** :
+   - `useExisting` : Réutilise l'instance du service créée par NestJS (recommandé)
+   - `useClass` : Crée une nouvelle instance spécifique pour le token
 
-3. **Repositories** : Si vous étendez une entité, assurez-vous d'utiliser le bon type de repository dans votre service étendu (par exemple, `Repository<ExtendedUserEntity>` au lieu de `Repository<UserEntity>`).
+3. **Ordre d'import** : Importez `AuthModule` **avant** vos modules custom pour que l'override fonctionne correctement.
 
-4. **Injection de Dépendances** : NestJS injectera automatiquement toutes les dépendances disponibles dans le conteneur DI, y compris vos services personnalisés, tant qu'ils sont enregistrés comme providers.
+4. **Héritage des Services** : Vos services étendus doivent hériter de `DefaultUserService`, `DefaultOrganisationService` ou `DefaultEstablishmentService` et implémenter l'interface correspondante.
 
-5. **Services par Défaut** : Si vous ne spécifiez pas d'entités ou de services étendus, le module utilisera les entités et services par défaut.
+5. **Repositories** : Si vous étendez une entité, utilisez le bon type de repository dans votre service étendu (par exemple, `Repository<ExtendedUserEntity>` au lieu de `Repository<UserEntity>`).
+
+6. **Dépendances Custom** : Toutes les dépendances custom doivent être enregistrées comme providers dans votre module. NestJS les injectera automatiquement.
+
+7. **Services par Défaut** : Si vous n'overridez pas un service, le module utilisera l'implémentation par défaut.
 
 ## Migrations
 

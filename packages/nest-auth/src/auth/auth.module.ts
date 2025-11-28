@@ -1,6 +1,5 @@
 import { DynamicModule, Global, Module, Provider } from '@nestjs/common';
-import { ModuleRef } from '@nestjs/core';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { getRepositoryToken, TypeOrmModule } from '@nestjs/typeorm';
 import {
   provideAuthConfig,
   provideJwtConfig,
@@ -10,8 +9,8 @@ import {
   provideActionConfig,
   provideExtendedConfig,
   AuthConfig,
-  ExtendedConfigToken,
-  ExtentedConfig,
+  UserConfigToken,
+  UserConfig,
 } from './config';
 import { JwtAuthGuard, FrontendUrlGuard } from './guards';
 import {
@@ -20,11 +19,14 @@ import {
   JwtService,
   RoleService,
   SessionService,
+  DefaultUserService,
   UserService,
   UserServiceToken,
   NotificationService,
+  DefaultOrganisationService,
   OrganisationService,
   OrganisationServiceToken,
+  DefaultEstablishmentService,
   EstablishmentService,
   EstablishmentServiceToken,
   UserAccountService,
@@ -50,7 +52,7 @@ import {
   UserAccountEntity,
 } from './entities';
 import { provideTenantsConfig } from './config/tenants.config';
-import { DeepPartial } from 'typeorm';
+import { DataSource, DeepPartial, Repository } from 'typeorm';
 
 /**
  * Authentication module
@@ -90,41 +92,61 @@ export class AuthModule {
         ?.EstablishmentEntity as typeof EstablishmentEntity) ||
       EstablishmentEntity;
 
-    // Create providers for extendable services
-    // We use ModuleRef.resolve() directly to create instances
-    // This allows NestJS to automatically inject all dependencies, including custom ones
-    // Note: Extended service classes should be registered as providers in the user's module
-    // for their custom dependencies to be injected
+    // Default providers that can be overriden
     const userServiceProvider: Provider<UserService> = {
       provide: UserServiceToken,
-      inject: [ModuleRef, ExtendedConfigToken],
-      useFactory: async (
-        moduleRef: ModuleRef,
-        extendedConfig: ExtentedConfig,
-      ): Promise<UserService> => {
-        return moduleRef.resolve(extendedConfig.services.UserService);
+      inject: [
+        UserConfigToken,
+        DataSource,
+        getRepositoryToken(UserEntityClass),
+        CredentialService,
+        ActionService,
+      ],
+      useFactory: (
+        userConfig: UserConfig,
+        dataSource: DataSource,
+        userRepository: Repository<UserEntity>,
+        credentialService: CredentialService,
+        actionService: ActionService,
+      ): UserService => {
+        return new DefaultUserService(userConfig, dataSource, userRepository, credentialService, actionService);
       },
     };
 
     const organisationServiceProvider: Provider<OrganisationService> = {
       provide: OrganisationServiceToken,
-      inject: [ModuleRef, ExtendedConfigToken],
-      useFactory: async (
-        moduleRef: ModuleRef,
-        extendedConfig: ExtentedConfig,
-      ): Promise<OrganisationService> => {
-        return moduleRef.resolve(extendedConfig.services.OrganisationService);
+      inject: [
+        DataSource,
+        getRepositoryToken(OrganisationEntityClass),
+      ],
+      useFactory: (
+        dataSource: DataSource,
+        organisationRepository: Repository<OrganisationEntity>,
+      ): OrganisationService => {
+        return new DefaultOrganisationService(
+          dataSource,
+          organisationRepository
+        );
       },
     };
 
     const establishmentServiceProvider: Provider<EstablishmentService> = {
       provide: EstablishmentServiceToken,
-      inject: [ModuleRef, ExtendedConfigToken],
-      useFactory: async (
-        moduleRef: ModuleRef,
-        extendedConfig: ExtentedConfig,
-      ): Promise<EstablishmentService> => {
-        return moduleRef.resolve(extendedConfig.services.EstablishmentService);
+      inject: [
+        DataSource, 
+        getRepositoryToken(EstablishmentEntityClass),  // ✅ Utilise la classe d'entité configurée
+        OrganisationServiceToken
+      ],
+      useFactory: (
+        dataSource: DataSource,
+        establishmentRepository: Repository<EstablishmentEntity>,
+        organisationService: OrganisationService,
+      ): EstablishmentService => {
+        return new DefaultEstablishmentService(
+          dataSource,
+          establishmentRepository,
+          organisationService,
+        );
       },
     };
 
