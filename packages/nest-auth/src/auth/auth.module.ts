@@ -109,23 +109,26 @@ export class AuthModule {
         credentialService: CredentialService,
         actionService: ActionService,
       ): UserService => {
-        return new DefaultUserService(userConfig, dataSource, userRepository, credentialService, actionService);
+        return new DefaultUserService(
+          userConfig,
+          dataSource,
+          userRepository,
+          credentialService,
+          actionService,
+        );
       },
     };
 
     const organisationServiceProvider: Provider<OrganisationService> = {
       provide: OrganisationServiceToken,
-      inject: [
-        DataSource,
-        getRepositoryToken(OrganisationEntityClass),
-      ],
+      inject: [DataSource, getRepositoryToken(OrganisationEntityClass)],
       useFactory: (
         dataSource: DataSource,
         organisationRepository: Repository<OrganisationEntity>,
       ): OrganisationService => {
         return new DefaultOrganisationService(
           dataSource,
-          organisationRepository
+          organisationRepository,
         );
       },
     };
@@ -133,9 +136,9 @@ export class AuthModule {
     const establishmentServiceProvider: Provider<EstablishmentService> = {
       provide: EstablishmentServiceToken,
       inject: [
-        DataSource, 
-        getRepositoryToken(EstablishmentEntityClass),  // ✅ Utilise la classe d'entité configurée
-        OrganisationServiceToken
+        DataSource,
+        getRepositoryToken(EstablishmentEntityClass), // ✅ Utilise la classe d'entité configurée
+        OrganisationServiceToken,
       ],
       useFactory: (
         dataSource: DataSource,

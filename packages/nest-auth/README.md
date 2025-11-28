@@ -309,9 +309,9 @@ Le module utilise un **pattern "Override"** pour l'extension des services. Les s
 import { Injectable, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { 
-  DefaultUserService, 
-  UserService, 
+import {
+  DefaultUserService,
+  UserService,
   UserConfigToken,
   UserConfig,
   CredentialService,
@@ -356,7 +356,9 @@ export class ExtendedUserService
   }
 
   // Ajoutez vos méthodes personnalisées
-  async findByPhoneNumber(phoneNumber: string): Promise<ExtendedUserEntity | null> {
+  async findByPhoneNumber(
+    phoneNumber: string,
+  ): Promise<ExtendedUserEntity | null> {
     return this.userRepository.findOne({ where: { phoneNumber } });
   }
 }
@@ -521,7 +523,7 @@ export class AppModule {}
 Le module expose les tokens suivants pour l'override des services :
 
 ```typescript
-import { 
+import {
   UserServiceToken,
   OrganisationServiceToken,
   EstablishmentServiceToken,
