@@ -383,13 +383,13 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
           {
             name: 'organisation_id',
             type: 'uuid',
-            isNullable: false,
+            isNullable: true,
             comment: 'Foreign key to organisations.id, cascades on delete',
           },
           {
             name: 'establishment_id',
             type: 'uuid',
-            isNullable: false,
+            isNullable: true,
             comment: 'Foreign key to establishments.id, cascades on delete',
           },
           {
@@ -754,31 +754,6 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(adminPassword, saltRounds);
 
-    // Create Devlab organisation
-    let devlabOrganisation: OrganisationEntity | null =
-      await queryRunner.manager.findOne(OrganisationEntity, {
-        where: { name: 'Devlab' },
-      });
-    if (!devlabOrganisation) {
-      devlabOrganisation = queryRunner.manager.create(OrganisationEntity, {
-        name: 'Devlab',
-      });
-      devlabOrganisation = await queryRunner.manager.save(devlabOrganisation);
-    }
-
-    // Create Devlab establishment
-    let devlabEstablishment: EstablishmentEntity | null =
-      await queryRunner.manager.findOne(EstablishmentEntity, {
-        where: { name: 'Devlab', organisation: { id: devlabOrganisation.id } },
-      });
-    if (!devlabEstablishment) {
-      devlabEstablishment = queryRunner.manager.create(EstablishmentEntity, {
-        name: 'Devlab',
-        organisation: devlabOrganisation!,
-      });
-      devlabEstablishment = await queryRunner.manager.save(devlabEstablishment);
-    }
-
     // Create or get the admin role
     let adminRole = await queryRunner.manager.findOne(RoleEntity, {
       where: { name: 'admin' },
@@ -823,13 +798,13 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
       );
       await queryRunner.manager.save(credential);
 
-      // Create user account with admin role
+      // Create user account with admin role (without organisation or establishment)
       const account: UserAccountEntity = queryRunner.manager.create(
         UserAccountEntity,
         {
           user: user,
-          organisation: devlabOrganisation!,
-          establishment: devlabEstablishment!,
+          organisation: undefined,
+          establishment: undefined,
           roles: [adminRole],
         },
       );

@@ -184,8 +184,8 @@ export class JwtService {
       email: userAccount.user.email,
       username: userAccount.user.username,
       roles: userAccount.roles.map((role): string => role.name),
-      organisationId: userAccount.organisation.id,
-      establishmentId: userAccount.establishment.id,
+      organisationId: userAccount.organisation?.id,
+      establishmentId: userAccount.establishment?.id,
     };
 
     // Generate the token

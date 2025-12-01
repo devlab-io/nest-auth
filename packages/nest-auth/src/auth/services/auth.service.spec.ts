@@ -353,17 +353,25 @@ describe('AuthService', () => {
       );
     });
 
-    it('should throw BadRequestException if organisation or establishment not provided', async () => {
+    it('should allow invitation without organisation or establishment', async () => {
       const invite: InviteRequest = {
         email: 'test@example.com',
         roles: ['user'],
       } as any;
 
       userService.exists.mockResolvedValue(false);
+      actionService.create = jest.fn().mockResolvedValue({
+        token: 'test-token',
+        type: 1,
+        email: 'test@example.com',
+      } as any);
+      notificationService.sendActionTokenEmail = jest
+        .fn()
+        .mockResolvedValue(undefined);
 
-      await expect(service.sendInvitation(invite, frontendUrl)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.sendInvitation(invite, frontendUrl),
+      ).resolves.not.toThrow();
     });
 
     it('should throw BadRequestException if organisation not found', async () => {

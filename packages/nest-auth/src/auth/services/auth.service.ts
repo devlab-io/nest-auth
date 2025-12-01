@@ -308,51 +308,55 @@ export class AuthService {
     // Check organisation is provided (either in invite or in config)
     const organisationName =
       invite.organisation ?? this.actionConfig.invite.organisation;
-    if (!organisationName) {
-      const message: string =
-        'Organisation was not specified in the invite request nor in the config';
-      this.logger.warn(message);
-      throw new BadRequestException(message);
-    }
-    const organisation: Organisation | null =
-      await this.organisationService.findByName(organisationName);
-    if (!organisation) {
-      throw new BadRequestException(
-        `Organisation ${organisationName} not found`,
-      );
+    let organisation: Organisation | null = null;
+    let organisationId: string | undefined;
+
+    if (organisationName) {
+      organisation =
+        await this.organisationService.findByName(organisationName);
+      if (!organisation) {
+        throw new BadRequestException(
+          `Organisation ${organisationName} not found`,
+        );
+      }
+      organisationId = organisation.id;
     }
 
     // Check establishment is provided (either in invite or in config)
     const establishmentName =
       invite.establishment ?? this.actionConfig.invite.establishment;
-    if (!establishmentName) {
-      const message: string =
-        'Establishment was not specified in the invite request nor in the config';
-      this.logger.warn(message);
-      throw new BadRequestException(message);
-    }
+    let establishment: Establishment | null = null;
+    let establishmentId: string | undefined;
 
-    // Verify that the establishment exists
-    const establishment: Establishment | null =
-      await this.establishmentService.findByNameAndOrganisation(
+    if (establishmentName) {
+      if (!organisation) {
+        throw new BadRequestException(
+          'Establishment cannot be specified without an organisation',
+        );
+      }
+
+      // Verify that the establishment exists
+      establishment = await this.establishmentService.findByNameAndOrganisation(
         establishmentName,
         organisation.id,
       );
-    if (!establishment) {
-      const message: string = `Establishment ${establishmentName} not found for organisation ${organisation.name}`;
-      this.logger.warn(message);
-      throw new BadRequestException(message);
+      if (!establishment) {
+        const message: string = `Establishment ${establishmentName} not found for organisation ${organisation.name}`;
+        this.logger.warn(message);
+        throw new BadRequestException(message);
+      }
+      establishmentId = establishment.id;
     }
 
-    // Use sendActionToken with organisationId and establishmentId
+    // Use sendActionToken with organisationId and establishmentId (optional)
     await this.sendActionToken(
       {
         email: invite.email,
         type: ActionType.Invite,
         expiresIn: invite.expiresIn,
         roles: invite.roles ?? this.userConfig.user.defaultRoles,
-        organisationId: organisation.id,
-        establishmentId: establishment.id,
+        organisationId,
+        establishmentId,
       },
       frontendUrl,
     );
@@ -382,13 +386,6 @@ export class AuthService {
     );
     const password = passwordCredential?.password;
 
-    // Verify that organisationId and establishmentId are provided in the action token
-    if (!actionToken.organisationId || !actionToken.establishmentId) {
-      throw new BadRequestException(
-        'Invitation action token must include organisation and establishment information',
-      );
-    }
-
     // Create the user (with credentials if provided)
     const createUserRequest: SignUpRequest = {
       ...request,
@@ -396,7 +393,7 @@ export class AuthService {
     };
     const user: UserEntity = await this.userService.create(createUserRequest);
 
-    // Create UserAccount for the user using organisation and establishment from action token
+    // Create UserAccount for the user using organisation and establishment from action token (if provided)
     const userAccount = await this.userAccountService.create({
       userId: user.id,
       organisationId: actionToken.organisationId,

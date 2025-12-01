@@ -18,8 +18,8 @@ export interface JwtPayload {
   email: string;
   username: string;
   roles: string[];
-  organisationId: string;
-  establishmentId: string;
+  organisationId?: string;
+  establishmentId?: string;
   iat?: number;
   exp?: number;
 }

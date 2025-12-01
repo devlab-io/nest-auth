@@ -18,17 +18,17 @@ export class UserAccountDto implements UserAccount {
   })
   id: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: OrganisationDto,
     description: 'Organisation this user account belongs to',
   })
-  organisation: OrganisationDto;
+  organisation?: OrganisationDto;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: EstablishmentDto,
     description: 'Establishment this user account belongs to',
   })
-  establishment: EstablishmentDto;
+  establishment?: EstablishmentDto;
 
   @ApiProperty({
     type: UserDto,
@@ -69,19 +69,21 @@ export class CreateUserAccountRequestDto implements CreateUserAccountRequest {
   @IsUUID(4, { message: 'userId must be a valid UUID' })
   userId: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: '123e4567-e89b-12d3-a456-426614174000',
     description: 'ID of the organisation',
   })
+  @IsOptional()
   @IsUUID(4, { message: 'organisationId must be a valid UUID' })
-  organisationId: string;
+  organisationId?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: '123e4567-e89b-12d3-a456-426614174000',
     description: 'ID of the establishment',
   })
+  @IsOptional()
   @IsUUID(4, { message: 'establishmentId must be a valid UUID' })
-  establishmentId: string;
+  establishmentId?: string;
 
   @ApiPropertyOptional({
     description: 'Array of role names to assign to the user account',

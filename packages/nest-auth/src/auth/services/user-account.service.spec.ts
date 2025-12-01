@@ -145,7 +145,15 @@ describe('UserAccountService', () => {
       mockOrganisationService.getById.mockResolvedValue(mockOrganisation);
       mockEstablishmentService.getById.mockResolvedValue(mockEstablishment);
       mockRoleService.getAllByNames.mockResolvedValue(mockRoles);
-      mockRepository.findOne.mockResolvedValue(null);
+
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+
       mockRepository.create.mockReturnValue(createdUserAccount);
       mockRepository.save.mockResolvedValue(createdUserAccount);
 
@@ -215,7 +223,14 @@ describe('UserAccountService', () => {
       mockUserService.getById.mockResolvedValue(mockUser);
       mockOrganisationService.getById.mockResolvedValue(mockOrganisation);
       mockEstablishmentService.getById.mockResolvedValue(mockEstablishment);
-      mockRepository.findOne.mockResolvedValue(existingUserAccount);
+
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(existingUserAccount),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       await expect(service.create(request)).rejects.toThrow(
         BadRequestException,
@@ -296,7 +311,13 @@ describe('UserAccountService', () => {
         roles: mockRoles,
       } as UserAccountEntity;
 
-      mockRepository.findOne.mockResolvedValue(userAccount);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(userAccount),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       const result = await service.findByUserAndOrganisationAndEstablishment(
         userId,
@@ -304,14 +325,20 @@ describe('UserAccountService', () => {
         establishmentId,
       );
 
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: {
-          user: { id: userId },
-          organisation: { id: organisationId },
-          establishment: { id: establishmentId },
-        },
-        relations: ['user', 'organisation', 'establishment', 'roles'],
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'userAccount',
+      );
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith('user.id = :userId', {
+        userId,
       });
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'organisation.id = :organisationId',
+        { organisationId },
+      );
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'establishment.id = :establishmentId',
+        { establishmentId },
+      );
       expect(result).toEqual(userAccount);
     });
   });
@@ -435,8 +462,8 @@ describe('UserAccountService', () => {
 
       const result = await service.update(id, request);
 
-      expect(result.organisation.id).toBe('new-org-id');
-      expect(result.establishment.id).toBe('new-est-id');
+      expect(result.organisation?.id).toBe('new-org-id');
+      expect(result.establishment?.id).toBe('new-est-id');
     });
   });
 

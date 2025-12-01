@@ -28,24 +28,26 @@ export class UserAccountEntity implements UserAccount {
   @ApiProperty({
     description: 'Organisation this user account belongs to',
     type: () => OrganisationEntity,
+    required: false,
   })
   @ManyToOne(() => OrganisationEntity, {
-    nullable: false,
+    nullable: true,
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'organisation_id' })
-  organisation: OrganisationEntity;
+  organisation?: OrganisationEntity;
 
   @ApiProperty({
     description: 'Establishment this user account belongs to',
     type: () => EstablishmentEntity,
+    required: false,
   })
   @ManyToOne(() => EstablishmentEntity, {
-    nullable: false,
+    nullable: true,
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'establishment_id' })
-  establishment: EstablishmentEntity;
+  establishment?: EstablishmentEntity;
 
   @ApiProperty({
     description: 'User associated with this account',

@@ -7,7 +7,12 @@ import {
   Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { UserAccountEntity, UserEntity } from '../entities';
+import {
+  UserAccountEntity,
+  UserEntity,
+  OrganisationEntity,
+  EstablishmentEntity,
+} from '../entities';
 import { UserService, UserServiceToken } from './user.service';
 import {
   OrganisationService,
@@ -57,8 +62,8 @@ export class UserAccountService {
    *
    * @param request - The create user account request
    * @returns The created user account
-   * @throws NotFoundException if the user, organisation or establishment is not found
-   * @throws BadRequestException if a user account already exists for this user in this organisation/establishment
+   * @throws NotFoundException if the user, organisation or establishment (when provided) is not found
+   * @throws BadRequestException if a user account already exists for this user in this organisation/establishment combination
    */
   public async create(
     request: CreateUserAccountRequest,
@@ -66,33 +71,48 @@ export class UserAccountService {
     // Verify that the user exists
     const user = await this.userService.getById(request.userId);
 
-    // Verify that the organisation exists
-    const organisation = await this.organisationService.getById(
-      request.organisationId,
-    );
-
-    // Verify that the establishment exists
-    const establishment = await this.establishmentService.getById(
-      request.establishmentId,
-    );
-
-    // Verify that the establishment belongs to the organisation
-    if (establishment.organisation.id !== organisation.id) {
-      throw new BadRequestException(
-        `Establishment ${establishment.id} does not belong to organisation ${organisation.id}`,
+    // Verify that the organisation exists if provided
+    let organisation: OrganisationEntity | undefined;
+    if (request.organisationId) {
+      organisation = await this.organisationService.getById(
+        request.organisationId,
       );
     }
 
-    // Check if a user account already exists for this user in this organisation/establishment
+    // Verify that the establishment exists if provided
+    let establishment: EstablishmentEntity | undefined;
+    if (request.establishmentId) {
+      establishment = await this.establishmentService.getById(
+        request.establishmentId,
+      );
+
+      // If both organisation and establishment are provided, verify that the establishment belongs to the organisation
+      if (organisation && establishment.organisation.id !== organisation.id) {
+        throw new BadRequestException(
+          `Establishment ${establishment.id} does not belong to organisation ${organisation.id}`,
+        );
+      }
+
+      // If establishment is provided but organisation is not, use the establishment's organisation
+      if (!organisation) {
+        organisation = establishment.organisation;
+      }
+    }
+
+    // Determine the final organisation and establishment IDs
+    const finalOrganisationId = organisation?.id || null;
+    const finalEstablishmentId = establishment?.id || null;
+
+    // Check if a user account already exists for this user in this organisation/establishment combination
     const existing = await this.findByUserAndOrganisationAndEstablishment(
       request.userId,
-      request.organisationId,
-      request.establishmentId,
+      finalOrganisationId,
+      finalEstablishmentId,
     );
 
     if (existing) {
       throw new BadRequestException(
-        `User account already exists for this user in this organisation and establishment`,
+        `User account already exists for this user in this organisation and establishment combination`,
       );
     }
 
@@ -113,8 +133,14 @@ export class UserAccountService {
     const saved = await this.userAccountRepository.save(userAccount);
 
     // Log
+    const orgInfo = organisation
+      ? `organisation ${organisation.name}`
+      : 'no organisation';
+    const estInfo = establishment
+      ? `, establishment ${establishment.name}`
+      : ', no establishment';
     this.logger.debug(
-      `User account created with ID ${saved.id} for user ${user.email} in organisation ${organisation.name}, establishment ${establishment.name}`,
+      `User account created with ID ${saved.id} for user ${user.email} in ${orgInfo}${estInfo}`,
     );
 
     // Return the user account
@@ -155,23 +181,40 @@ export class UserAccountService {
    * Find a user account by user, organisation and establishment
    *
    * @param userId - The ID of the user
-   * @param organisationId - The ID of the organisation
-   * @param establishmentId - The ID of the establishment
+   * @param organisationId - The ID of the organisation (optional)
+   * @param establishmentId - The ID of the establishment (optional)
    * @returns The user account or null if not found
    */
   public async findByUserAndOrganisationAndEstablishment(
     userId: string,
-    organisationId: string,
-    establishmentId: string,
+    organisationId?: string | null,
+    establishmentId?: string | null,
   ): Promise<UserAccountEntity | null> {
-    return await this.userAccountRepository.findOne({
-      where: {
-        user: { id: userId },
-        organisation: { id: organisationId },
-        establishment: { id: establishmentId },
-      },
-      relations: ['user', 'organisation', 'establishment', 'roles'],
-    });
+    const queryBuilder = this.userAccountRepository
+      .createQueryBuilder('userAccount')
+      .leftJoinAndSelect('userAccount.user', 'user')
+      .leftJoinAndSelect('userAccount.organisation', 'organisation')
+      .leftJoinAndSelect('userAccount.establishment', 'establishment')
+      .leftJoinAndSelect('userAccount.roles', 'roles')
+      .where('user.id = :userId', { userId });
+
+    if (organisationId) {
+      queryBuilder.andWhere('organisation.id = :organisationId', {
+        organisationId,
+      });
+    } else {
+      queryBuilder.andWhere('organisation.id IS NULL');
+    }
+
+    if (establishmentId) {
+      queryBuilder.andWhere('establishment.id = :establishmentId', {
+        establishmentId,
+      });
+    } else {
+      queryBuilder.andWhere('establishment.id IS NULL');
+    }
+
+    return await queryBuilder.getOne();
   }
 
   /**
@@ -244,9 +287,9 @@ export class UserAccountService {
    * @param request - The update request
    * @returns The updated user account
    * @throws NotFoundException if the user account is not found
-   * @throws NotFoundException if the new organisation or establishment is not found
-   * @throws BadRequestException if the establishment does not belong to the organisation
-   * @throws BadRequestException if a user account already exists for this user in the new organisation/establishment
+   * @throws NotFoundException if the new organisation or establishment (when provided) is not found
+   * @throws BadRequestException if the establishment does not belong to the organisation (when both are provided)
+   * @throws BadRequestException if a user account already exists for this user in the new organisation/establishment combination
    */
   public async update(
     id: string,
@@ -256,41 +299,65 @@ export class UserAccountService {
     let userAccount: UserAccountEntity = await this.getById(id);
 
     // Handle organisation change if provided
-    if (request.organisationId) {
-      const newOrganisation = await this.organisationService.getById(
-        request.organisationId,
-      );
-      userAccount.organisation = newOrganisation;
+    let newOrganisation: OrganisationEntity | undefined;
+    if (request.organisationId !== undefined) {
+      if (request.organisationId) {
+        newOrganisation = await this.organisationService.getById(
+          request.organisationId,
+        );
+      }
+      userAccount.organisation = newOrganisation || undefined;
     }
 
     // Handle establishment change if provided
-    if (request.establishmentId) {
-      const newEstablishment = await this.establishmentService.getById(
-        request.establishmentId,
-      );
-      userAccount.establishment = newEstablishment;
-
-      // Verify that the establishment belongs to the organisation
-      const targetOrganisationId =
-        request.organisationId || userAccount.organisation.id;
-      if (newEstablishment.organisation.id !== targetOrganisationId) {
-        throw new BadRequestException(
-          `Establishment ${newEstablishment.id} does not belong to organisation ${targetOrganisationId}`,
+    let newEstablishment: EstablishmentEntity | undefined;
+    if (request.establishmentId !== undefined) {
+      if (request.establishmentId) {
+        newEstablishment = await this.establishmentService.getById(
+          request.establishmentId,
         );
+
+        // Verify that the establishment belongs to the organisation if both are set
+        const targetOrganisationId =
+          request.organisationId !== undefined
+            ? newOrganisation?.id || null
+            : userAccount.organisation?.id || null;
+
+        if (
+          targetOrganisationId &&
+          newEstablishment.organisation.id !== targetOrganisationId
+        ) {
+          throw new BadRequestException(
+            `Establishment ${newEstablishment.id} does not belong to organisation ${targetOrganisationId}`,
+          );
+        }
+
+        // If establishment is set but organisation is not (and wasn't set in this update), use establishment's organisation
+        if (!targetOrganisationId && newEstablishment) {
+          userAccount.organisation = newEstablishment.organisation;
+        }
       }
+      userAccount.establishment = newEstablishment || undefined;
     }
 
     // Check if changing organisation/establishment would create a duplicate
     const targetOrganisationId =
-      request.organisationId || userAccount.organisation.id;
+      request.organisationId !== undefined
+        ? request.organisationId || userAccount.organisation?.id || null
+        : userAccount.organisation?.id || null;
     const targetEstablishmentId =
-      request.establishmentId || userAccount.establishment.id;
+      request.establishmentId !== undefined
+        ? request.establishmentId || userAccount.establishment?.id || null
+        : userAccount.establishment?.id || null;
 
-    if (
-      (request.organisationId || request.establishmentId) &&
-      (targetOrganisationId !== userAccount.organisation.id ||
-        targetEstablishmentId !== userAccount.establishment.id)
-    ) {
+    const organisationChanged =
+      request.organisationId !== undefined &&
+      targetOrganisationId !== (userAccount.organisation?.id || null);
+    const establishmentChanged =
+      request.establishmentId !== undefined &&
+      targetEstablishmentId !== (userAccount.establishment?.id || null);
+
+    if (organisationChanged || establishmentChanged) {
       const existing = await this.findByUserAndOrganisationAndEstablishment(
         userAccount.user.id,
         targetOrganisationId,
@@ -299,7 +366,7 @@ export class UserAccountService {
 
       if (existing && existing.id !== userAccount.id) {
         throw new BadRequestException(
-          `User account already exists for this user in this organisation and establishment`,
+          `User account already exists for this user in this organisation and establishment combination`,
         );
       }
     }

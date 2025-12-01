@@ -5,8 +5,8 @@ import { Role } from './role.types';
 
 export interface UserAccount {
   id: string;
-  organisation: Organisation;
-  establishment: Establishment;
+  organisation?: Organisation;
+  establishment?: Establishment;
   user: User;
   roles: Role[];
   createdAt: Date;
@@ -16,8 +16,8 @@ export interface UserAccount {
 
 export interface CreateUserAccountRequest {
   userId: string;
-  organisationId: string;
-  establishmentId: string;
+  organisationId?: string;
+  establishmentId?: string;
   roles?: string[];
 }
 
