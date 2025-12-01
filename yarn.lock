@@ -346,20 +346,20 @@
     "@jridgewell/trace-mapping" "0.3.9"
 
 "@devlab-io/nest-auth-client@file:/home/runner/work/nest-auth/nest-auth/packages/nest-auth-client":
-  version "0.0.11"
+  version "0.0.12"
   resolved "file:packages/nest-auth-client"
   dependencies:
     "@devlab-io/nest-auth-types" "*"
     zod "^3.25.76"
 
 "@devlab-io/nest-auth-types@*", "@devlab-io/nest-auth-types@file:/home/runner/work/nest-auth/nest-auth/packages/nest-auth-types":
-  version "0.0.11"
+  version "0.0.12"
   resolved "file:packages/nest-auth-types"
   dependencies:
     zod "^3.23.8"
 
 "@devlab-io/nest-auth@file:/home/runner/work/nest-auth/nest-auth/packages/nest-auth":
-  version "0.0.11"
+  version "0.0.12"
   resolved "file:packages/nest-auth"
   dependencies:
     "@devlab-io/nest-auth-types" "*"
