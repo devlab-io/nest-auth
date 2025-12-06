@@ -4,9 +4,9 @@ import {
   CreateEstablishmentRequest,
   UpdateEstablishmentRequest,
   Establishment,
-  EstablishmentPage,
+  Organisation,
+  UserAccount,
 } from '@devlab-io/nest-auth-types';
-import { OrganisationDto } from './organisation.dtos';
 
 export class EstablishmentDto implements Establishment {
   @ApiProperty({
@@ -23,15 +23,15 @@ export class EstablishmentDto implements Establishment {
 
   @ApiProperty({
     description: 'Organisation that owns this establishment',
-    type: OrganisationDto,
   })
-  organisation: OrganisationDto;
+  organisation: Organisation;
 
   @ApiProperty({
     description: 'User accounts associated with this establishment',
-    type: [Object],
+    type: 'array',
+    items: { type: 'object' },
   })
-  accounts: any[];
+  accounts: UserAccount[];
 
   @ApiProperty({
     example: '2024-02-20T10:00:00.000Z',
@@ -52,9 +52,7 @@ export class EstablishmentDto implements Establishment {
   enabled: boolean;
 }
 
-export class CreateEstablishmentRequestDto
-  implements CreateEstablishmentRequest
-{
+export class CreateEstablishmentRequestDto implements CreateEstablishmentRequest {
   @ApiProperty({
     example: 'Restaurant Paris Centre',
     description: 'Name of the establishment',
@@ -71,9 +69,7 @@ export class CreateEstablishmentRequestDto
   organisationId: string;
 }
 
-export class UpdateEstablishmentRequestDto
-  implements UpdateEstablishmentRequest
-{
+export class UpdateEstablishmentRequestDto implements UpdateEstablishmentRequest {
   @ApiPropertyOptional({
     example: 'Restaurant Paris Centre',
     description: 'Name of the establishment',
@@ -90,30 +86,4 @@ export class UpdateEstablishmentRequestDto
   @IsOptional()
   @IsUUID(4, { message: 'organisationId must be a valid UUID' })
   organisationId?: string;
-}
-
-export class EstablishmentPageDto implements EstablishmentPage {
-  @ApiProperty({
-    description: 'List of establishments',
-    type: [EstablishmentDto],
-  })
-  data: EstablishmentDto[];
-
-  @ApiProperty({
-    example: 100,
-    description: 'Total number of establishments',
-  })
-  total: number;
-
-  @ApiProperty({
-    example: 1,
-    description: 'Current page number',
-  })
-  page: number;
-
-  @ApiProperty({
-    example: 10,
-    description: 'Number of establishments per page',
-  })
-  limit: number;
 }

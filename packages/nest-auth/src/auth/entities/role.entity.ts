@@ -1,22 +1,22 @@
-import { Column, Entity, ManyToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { ApiProperty } from '@nestjs/swagger';
+import {
+  Column,
+  Entity,
+  JoinTable,
+  ManyToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { Role } from '@devlab-io/nest-auth-types';
 import { ActionEntity } from './action-token.entity';
+import { ClaimEntity } from './claim.entity';
 
 @Entity({ name: 'roles' })
 export class RoleEntity implements Role {
-  @ApiProperty({ example: 1, description: 'Unique identifier of the role' })
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ApiProperty({ example: 'admin', description: 'Name of the role' })
   @Column({ name: 'name', unique: true })
   name: string;
 
-  @ApiProperty({
-    example: "Donne accès à toute l'application",
-    description: 'Description du role',
-  })
   @Column({ name: 'description', nullable: true })
   description?: string;
 
@@ -24,4 +24,20 @@ export class RoleEntity implements Role {
     cascade: false,
   })
   actionTokens: ActionEntity[];
+
+  @ManyToMany(() => ClaimEntity, (claim) => claim.roles, {
+    cascade: false,
+  })
+  @JoinTable({
+    name: 'role_claims',
+    joinColumn: {
+      name: 'role_id',
+      referencedColumnName: 'id',
+    },
+    inverseJoinColumn: {
+      name: 'claim',
+      referencedColumnName: 'claim',
+    },
+  })
+  claims: ClaimEntity[];
 }

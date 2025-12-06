@@ -15,7 +15,16 @@ import {
   UserAccountDto,
 } from '../dtos';
 import { FrontendUrl } from '../decorators';
-import { FrontendUrlGuard, JwtAuthGuard } from '../guards';
+import { FrontendUrlGuard, AuthGuard } from '../guards';
+import { Claims } from '../decorators/claims';
+import {
+  ClaimAction,
+  ClaimScope,
+  CREATE_ANY_USER_ACCOUNTS,
+  CREATE_EST_USER_ACCOUNTS,
+  CREATE_ORG_USER_ACCOUNTS,
+  READ_OWN_USER_ACCOUNTS,
+} from '@devlab-io/nest-auth-types';
 
 /**
  * Authentication controller
@@ -32,7 +41,8 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Get('account')
-  @UseGuards(JwtAuthGuard, FrontendUrlGuard)
+  @UseGuards(AuthGuard, FrontendUrlGuard)
+  @Claims(READ_OWN_USER_ACCOUNTS)
   @ApiOperation({ summary: 'Get the current user account' })
   @ApiResponse({
     status: 200,
@@ -44,7 +54,12 @@ export class AuthController {
   }
 
   @Post('invite')
-  @UseGuards(FrontendUrlGuard)
+  @UseGuards(AuthGuard, FrontendUrlGuard)
+  @Claims(
+    CREATE_ANY_USER_ACCOUNTS,
+    CREATE_ORG_USER_ACCOUNTS,
+    CREATE_EST_USER_ACCOUNTS,
+  )
   @ApiOperation({ summary: 'Send an invitation to a user' })
   @ApiResponse({ status: 200, description: 'Invitation sent successfully' })
   @ApiResponse({
@@ -102,12 +117,14 @@ export class AuthController {
   @Post('sign-out')
   @ApiOperation({ summary: 'Sign out and invalidate the current session' })
   @ApiResponse({ status: 200, description: 'Signed out successfully' })
+  @UseGuards(AuthGuard)
   async signOut(): Promise<void> {
     return await this.authService.signOut();
   }
 
   @Post('send-email-validation')
-  @UseGuards(FrontendUrlGuard)
+  @UseGuards(AuthGuard, FrontendUrlGuard)
+  @Claims([ClaimAction.CREATE, ClaimScope.ANY, 'actions'])
   @ApiOperation({ summary: 'Send an email validation token' })
   @ApiQuery({ name: 'id', type: String, description: 'User ID' })
   @ApiResponse({ status: 200, description: 'Email validation token sent' })
@@ -138,7 +155,8 @@ export class AuthController {
   }
 
   @Post('send-change-password')
-  @UseGuards(FrontendUrlGuard)
+  @UseGuards(AuthGuard, FrontendUrlGuard)
+  @Claims([ClaimAction.CREATE, ClaimScope.ANY, 'actions'])
   @ApiOperation({ summary: 'Send a change password token' })
   @ApiQuery({ name: 'id', type: String, description: 'User ID' })
   @ApiResponse({ status: 200, description: 'Change password token sent' })
@@ -159,6 +177,7 @@ export class AuthController {
   }
 
   @Post('accept-change-password')
+  @UseGuards(AuthGuard)
   @ApiOperation({ summary: 'Change a password using a token' })
   @ApiResponse({ status: 200, description: 'Password changed successfully' })
   @ApiResponse({ status: 403, description: 'Invalid or expired token' })
@@ -169,7 +188,8 @@ export class AuthController {
   }
 
   @Post('send-reset-password')
-  @UseGuards(FrontendUrlGuard)
+  @UseGuards(AuthGuard, FrontendUrlGuard)
+  @Claims([ClaimAction.CREATE, ClaimScope.ANY, 'actions'])
   @ApiOperation({ summary: 'Send a password reset token' })
   @ApiQuery({ name: 'email', type: String, description: 'User email' })
   @ApiResponse({ status: 200, description: 'Password reset token sent' })
@@ -200,6 +220,8 @@ export class AuthController {
   }
 
   @Post('add-accept-terms')
+  @UseGuards(AuthGuard, FrontendUrlGuard)
+  @Claims([ClaimAction.CREATE, ClaimScope.ANY, 'actions'])
   @ApiOperation({ summary: 'Send an accept terms token' })
   @ApiQuery({ name: 'id', type: String, description: 'User ID' })
   @ApiResponse({ status: 200, description: 'Accept terms token sent' })
@@ -219,6 +241,8 @@ export class AuthController {
   }
 
   @Post('add-accept-privacy-policy')
+  @UseGuards(AuthGuard, FrontendUrlGuard)
+  @Claims([ClaimAction.CREATE, ClaimScope.ANY, 'actions'])
   @ApiOperation({ summary: 'Send an accept privacy policy token' })
   @ApiQuery({ name: 'id', type: String, description: 'User ID' })
   @ApiResponse({ status: 200, description: 'Accept privacy policy token sent' })

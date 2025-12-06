@@ -16,5 +16,11 @@ export * from './establishment.dtos';
 // User Account DTOs
 export * from './user-account.dtos';
 
+// Claim DTOs
+export * from './claim.dtos';
+
+// Page DTOs
+export * from './page.dtos';
+
 // Role DTOs
 export * from './role.dtos';

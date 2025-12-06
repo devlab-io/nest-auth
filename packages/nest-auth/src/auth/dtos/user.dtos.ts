@@ -12,7 +12,6 @@ import {
   PatchUserRequest,
   UpdateUserRequest,
   User,
-  UserPage,
 } from '@devlab-io/nest-auth-types';
 
 export class UserDto implements User {
@@ -309,30 +308,4 @@ export class UpdateUserRequestDto
   @IsOptional()
   @IsBoolean({ message: 'acceptedPrivacyPolicy must be a boolean' })
   acceptedPrivacyPolicy?: boolean;
-}
-
-export class UserPageDto implements UserPage {
-  @ApiProperty({
-    description: 'Array of users',
-    type: [UserDto],
-  })
-  data: UserDto[];
-
-  @ApiProperty({
-    example: 100,
-    description: 'Total number of users',
-  })
-  total: number;
-
-  @ApiProperty({
-    example: 1,
-    description: 'Current page number',
-  })
-  page: number;
-
-  @ApiProperty({
-    example: 10,
-    description: 'Number of users per page',
-  })
-  limit: number;
 }

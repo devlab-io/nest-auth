@@ -28,11 +28,11 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "type-check": "tsc --noEmit",
-    "prepublishOnly": "yarn build && yarn format:check && yarn lint:check && yarn type-check",
+    "prepublishOnly": "pnpm build && pnpm format:check && pnpm lint:check && pnpm type-check",
     "clean": "rm -rf dist *.tsbuildinfo || true"
   },
   "dependencies": {
-    "@devlab-io/nest-auth-types": "*",
+    "@devlab-io/nest-auth-types": "workspace:*",
     "@devlab-io/nest-mailer": "^0.0.1",
     "@nestjs/common": "^11.1.8",
     "@nestjs/swagger": "^11.2.1",

@@ -1,4 +1,4 @@
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, Repository, SelectQueryBuilder } from 'typeorm';
 import {
   Injectable,
   NotFoundException,
@@ -23,11 +23,15 @@ import {
   EstablishmentServiceToken,
 } from './establishment.service';
 import { RoleService } from './role.service';
+import { ScopeService } from './scope.service';
 import {
   CreateUserAccountRequest,
   UpdateUserAccountRequest,
   UserAccountQueryParams,
-  UserAccountPage,
+  UserAccount,
+  Page,
+  USER_ACCOUNTS,
+  AuthScope,
 } from '@devlab-io/nest-auth-types';
 
 @Injectable()
@@ -43,6 +47,7 @@ export class UserAccountService {
    * @param organisationService - The organisation service
    * @param establishmentService - The establishment service
    * @param roleService - The role service
+   * @param scopeService - The scope service
    */
   public constructor(
     private readonly dataSource: DataSource,
@@ -55,6 +60,7 @@ export class UserAccountService {
     @Inject(EstablishmentServiceToken)
     private readonly establishmentService: EstablishmentService,
     private readonly roleService: RoleService,
+    private readonly scopeService: ScopeService,
   ) {}
 
   /**
@@ -118,7 +124,7 @@ export class UserAccountService {
 
     // Get the roles
     const roles = request.roles
-      ? await this.roleService.getAllByNames(request.roles)
+      ? await this.roleService.getByNames(request.roles)
       : [];
 
     // Create new user account
@@ -148,11 +154,52 @@ export class UserAccountService {
   }
 
   /**
+   * Apply scope filters to a query builder for user accounts
+   *
+   * @param queryBuilder - The query builder
+   */
+  private applyScopeFilters(
+    queryBuilder: SelectQueryBuilder<UserAccountEntity>,
+  ): void {
+    const authScope: AuthScope | null = this.scopeService.getScopeFromRequest();
+
+    if (!authScope || authScope.resource !== USER_ACCOUNTS) {
+      return;
+    }
+
+    // If OWN scope, filter by user ID
+    if (authScope.userId) {
+      queryBuilder.andWhere('user.id = :userId', {
+        userId: authScope.userId,
+      });
+      return;
+    }
+
+    // If ORGANISATION scope, filter by organisation
+    if (authScope.organisationId) {
+      queryBuilder.andWhere('organisation.id = :organisationId', {
+        organisationId: authScope.organisationId,
+      });
+      return;
+    }
+
+    // If ESTABLISHMENT scope, filter by establishment
+    if (authScope.establishmentId) {
+      queryBuilder.andWhere('establishment.id = :establishmentId', {
+        establishmentId: authScope.establishmentId,
+      });
+      return;
+    }
+
+    // If ANY scope, no constraints needed
+  }
+
+  /**
    * Get a user account by ID
    *
    * @param id - The ID of the user account
    * @returns The user account
-   * @throws NotFoundException if the user account is not found
+   * @throws NotFoundException if the user account is not found or out of scope
    */
   public async getById(id: string): Promise<UserAccountEntity> {
     const userAccount = await this.findById(id);
@@ -166,24 +213,55 @@ export class UserAccountService {
 
   /**
    * Find a user account by ID
+   * Applies scope filters to ensure user accounts outside the current scope are not found.
    *
    * @param id - The ID of the user account
-   * @returns The user account or null if not found
+   * @returns The user account or null if not found or out of scope
    */
   public async findById(id: string): Promise<UserAccountEntity | null> {
-    return await this.userAccountRepository.findOne({
-      where: { id },
-      relations: ['user', 'organisation', 'establishment', 'roles'],
-    });
+    const queryBuilder = this.userAccountRepository
+      .createQueryBuilder('userAccount')
+      .leftJoinAndSelect('userAccount.user', 'user')
+      .leftJoinAndSelect('userAccount.organisation', 'organisation')
+      .leftJoinAndSelect('userAccount.establishment', 'establishment')
+      .leftJoinAndSelect('userAccount.roles', 'roles')
+      .leftJoinAndSelect('roles.claims', 'claims')
+      .where('userAccount.id = :id', { id });
+
+    this.applyScopeFilters(queryBuilder);
+
+    return await queryBuilder.getOne();
+  }
+
+  /**
+   * Find all user accounts for a given user
+   * Applies scope filters to ensure user accounts outside the current scope are not found.
+   *
+   * @param userId - The ID of the user
+   * @returns Array of user accounts within scope
+   */
+  public async findByUserId(userId: string): Promise<UserAccountEntity[]> {
+    const queryBuilder = this.userAccountRepository
+      .createQueryBuilder('userAccount')
+      .leftJoinAndSelect('userAccount.user', 'user')
+      .leftJoinAndSelect('userAccount.organisation', 'organisation')
+      .leftJoinAndSelect('userAccount.establishment', 'establishment')
+      .leftJoinAndSelect('userAccount.roles', 'roles')
+      .where('user.id = :userId', { userId });
+
+    this.applyScopeFilters(queryBuilder);
+
+    return await queryBuilder.getMany();
   }
 
   /**
    * Find a user account by user, organisation and establishment
+   * Applies scope filters to ensure user accounts outside the current scope are not found.
    *
    * @param userId - The ID of the user
    * @param organisationId - The ID of the organisation (optional)
    * @param establishmentId - The ID of the establishment (optional)
-   * @returns The user account or null if not found
+   * @returns The user account or null if not found or out of scope
    */
   public async findByUserAndOrganisationAndEstablishment(
     userId: string,
@@ -214,6 +292,8 @@ export class UserAccountService {
       queryBuilder.andWhere('establishment.id IS NULL');
     }
 
+    this.applyScopeFilters(queryBuilder);
+
     return await queryBuilder.getOne();
   }
 
@@ -222,15 +302,15 @@ export class UserAccountService {
    *
    * @param params - The query parameters
    * @param page - The page number (default: 1)
-   * @param limit - The number of user accounts per page (default: 10)
-   * @returns The user accounts page
+   * @param size - The number of user accounts per page (default: 10)
+   * @returns A page of user accounts
    */
   public async search(
     params: UserAccountQueryParams,
     page: number = 1,
-    limit: number = 10,
-  ): Promise<UserAccountPage> {
-    const skip = (page - 1) * limit;
+    size: number = 10,
+  ): Promise<Page<UserAccount>> {
+    const skip = (page - 1) * size;
     const queryBuilder = this.userAccountRepository
       .createQueryBuilder('userAccount')
       .leftJoinAndSelect('userAccount.user', 'user')
@@ -261,22 +341,28 @@ export class UserAccountService {
       });
     }
 
+    // Apply scope filters
+    this.applyScopeFilters(queryBuilder);
+
     // Apply pagination and ordering
     queryBuilder
       .distinct(true)
       .skip(skip)
-      .take(limit)
+      .take(size)
       .orderBy('userAccount.id', 'ASC');
 
     // Execute query
-    const [data, total]: [UserAccountEntity[], number] =
+    const [contents, total]: [UserAccountEntity[], number] =
       await queryBuilder.getManyAndCount();
 
+    const pages = Math.ceil(total / size);
+
     return {
-      data,
+      contents,
       total,
       page,
-      limit,
+      pages,
+      size,
     };
   }
 
@@ -373,7 +459,7 @@ export class UserAccountService {
 
     // Update roles if provided
     if (request.roles !== undefined) {
-      userAccount.roles = await this.roleService.getAllByNames(request.roles);
+      userAccount.roles = await this.roleService.getByNames(request.roles);
     }
 
     // Save the user account

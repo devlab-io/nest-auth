@@ -11,16 +11,24 @@ import { UserEntity, UserAccountEntity } from '../entities';
 import {
   UserQueryParams,
   UpdateUserRequest,
-  UserPage,
+  User,
+  Page,
   GenerateUsernameRequest,
   CreateUserRequest,
   PatchUserRequest,
 } from '@devlab-io/nest-auth-types';
 import { CredentialService } from './credential.service';
 import { ActionService } from './action.service';
+import { ScopeService } from './scope.service';
 import { UserConfig, UserConfigToken } from '../config/user.config';
 import { capitalize, normalize } from '../utils';
-import { ActionType, CreateActionRequest } from '@devlab-io/nest-auth-types';
+import {
+  ActionType,
+  CreateActionRequest,
+  USERS,
+  AuthScope,
+} from '@devlab-io/nest-auth-types';
+import { SelectQueryBuilder } from 'typeorm';
 
 /**
  * Symbol used to inject the UserService.
@@ -41,8 +49,8 @@ export interface UserService {
   search(
     params: UserQueryParams,
     page?: number,
-    limit?: number,
-  ): Promise<UserPage>;
+    size?: number,
+  ): Promise<Page<User>>;
   findByEmail(email: string): Promise<UserEntity | null>;
   findById(id: string): Promise<UserEntity | null>;
   getById(id: string): Promise<UserEntity>;
@@ -102,8 +110,9 @@ export class DefaultUserService implements UserService {
     private readonly dataSource: DataSource,
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
-    @Inject() private readonly credentialService: CredentialService,
-    @Inject() private readonly actionService: ActionService,
+    private readonly credentialService: CredentialService,
+    private readonly actionService: ActionService,
+    private readonly scopeService: ScopeService,
   ) {}
 
   /**
@@ -274,13 +283,13 @@ export class DefaultUserService implements UserService {
    * @param id - The ID of the user
    * @param request - The update request
    * @returns The updated user
-   * @throws NotFoundException if the user is not found
+   * @throws NotFoundException if the user is not found or out of scope
    */
   public async update(
     id: string,
     request: UpdateUserRequest,
   ): Promise<UserEntity> {
-    // Get the user with the given ID
+    // Get the user with scope filters applied
     let user: UserEntity = await this.getById(id);
 
     // Update the user
@@ -353,25 +362,69 @@ export class DefaultUserService implements UserService {
   }
 
   /**
+   * Apply scope filters to a query builder for users
+   *
+   * @param queryBuilder - The query builder
+   */
+  private applyScopeFilters(
+    queryBuilder: SelectQueryBuilder<UserEntity>,
+  ): void {
+    const authScope: AuthScope | null = this.scopeService.getScopeFromRequest();
+
+    if (!authScope || authScope.resource !== USERS) {
+      return;
+    }
+
+    // If OWN scope, filter by user ID
+    if (authScope.userId) {
+      queryBuilder.andWhere('user.id = :userId', {
+        userId: authScope.userId,
+      });
+      return;
+    }
+
+    // If ORGANISATION scope, filter by organisation
+    if (authScope.organisationId) {
+      queryBuilder.andWhere('organisation.id = :organisationId', {
+        organisationId: authScope.organisationId,
+      });
+      return;
+    }
+
+    // If ESTABLISHMENT scope, filter by establishment
+    if (authScope.establishmentId) {
+      queryBuilder.andWhere('establishment.id = :establishmentId', {
+        establishmentId: authScope.establishmentId,
+      });
+      return;
+    }
+
+    // If ANY scope, no constraints needed
+  }
+
+  /**
    * Search users with pagination and filters
    *
    * @param params - The query parameters
-   * @param page - The page number
-   * @param limit - The number of users per page
-   * @returns The users page
+   * @param page - The page number (default: 1)
+   * @param size - The number of users per page (default: 10)
+   * @returns A page of users
    */
   public async search(
     params: UserQueryParams,
     page: number = 1,
-    limit: number = 10,
-  ): Promise<UserPage> {
-    const skip = (page - 1) * limit;
+    size: number = 10,
+  ): Promise<Page<User>> {
+    const skip = (page - 1) * size;
     const queryBuilder = this.userRepository
       .createQueryBuilder('user')
       .leftJoinAndSelect('user.credentials', 'credentials')
       .leftJoinAndSelect('user.actions', 'actions')
       .leftJoinAndSelect('user.accounts', 'accounts')
-      .leftJoinAndSelect('accounts.roles', 'roles');
+      .leftJoinAndSelect('accounts.roles', 'roles')
+      .leftJoinAndSelect('roles.claims', 'claims')
+      .leftJoinAndSelect('accounts.organisation', 'organisation')
+      .leftJoinAndSelect('accounts.establishment', 'establishment');
 
     // Apply basic filters
     if (params.id) {
@@ -434,49 +487,81 @@ export class DefaultUserService implements UserService {
       });
     }
 
+    // Apply scope filters
+    this.applyScopeFilters(queryBuilder);
+
     // Apply pagination and ordering
     queryBuilder
       .distinct(true)
       .skip(skip)
-      .take(limit)
+      .take(size)
       .orderBy('user.username', 'ASC');
 
     // Execute query
-    const [data, total]: [UserEntity[], number] =
+    const [contents, total]: [UserEntity[], number] =
       await queryBuilder.getManyAndCount();
 
+    const pages = Math.ceil(total / size);
+
     return {
-      data,
+      contents,
       total,
       page,
-      limit,
+      pages,
+      size,
     };
   }
 
   /**
    * Find a user by its email
+   * Applies scope filters to ensure users outside the current scope are not found,
+   * preventing information disclosure about user existence.
    *
    * @param email - The email of the user
-   * @returns The user or null if not found
+   * @returns The user or null if not found or out of scope
    */
   public async findByEmail(email: string): Promise<UserEntity | null> {
-    return await this.userRepository.findOne({
-      where: { email: email.toLowerCase() },
-      relations: ['credentials', 'actions', 'accounts', 'accounts.roles'],
-    });
+    const queryBuilder = this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.credentials', 'credentials')
+      .leftJoinAndSelect('user.actions', 'actions')
+      .leftJoinAndSelect('user.accounts', 'accounts')
+      .leftJoinAndSelect('accounts.roles', 'roles')
+      .leftJoinAndSelect('roles.claims', 'claims')
+      .leftJoinAndSelect('accounts.organisation', 'organisation')
+      .leftJoinAndSelect('accounts.establishment', 'establishment')
+      .where('user.email = :email', { email: email.toLowerCase() });
+
+    // Apply scope filters - if user is out of scope, query returns null
+    this.applyScopeFilters(queryBuilder);
+
+    return await queryBuilder.getOne();
   }
 
   /**
    * Find a user by ID
+   * Applies scope filters to ensure users outside the current scope are not found,
+   * preventing information disclosure about user existence.
    *
    * @param id - The ID of the user
-   * @returns The user or null if not found
+   * @returns The user or null if not found or out of scope
    */
   public async findById(id: string): Promise<UserEntity | null> {
-    return await this.userRepository.findOne({
-      where: { id },
-      relations: ['credentials', 'actions', 'accounts', 'accounts.roles'],
-    });
+    const queryBuilder = this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.credentials', 'credentials')
+      .leftJoinAndSelect('user.actions', 'actions')
+      .leftJoinAndSelect('user.accounts', 'accounts')
+      .leftJoinAndSelect('accounts.roles', 'roles')
+      .leftJoinAndSelect('roles.claims', 'claims')
+      .leftJoinAndSelect('accounts.organisation', 'organisation')
+      .leftJoinAndSelect('accounts.establishment', 'establishment')
+      .where('user.id = :id', { id });
+
+    // Apply scope filters - if user is out of scope, query returns null
+    this.applyScopeFilters(queryBuilder);
+
+    return await queryBuilder.getOne();
   }
 
   /**
@@ -516,10 +601,10 @@ export class DefaultUserService implements UserService {
    *
    * @param id - The ID of the user
    * @returns The enabled user
-   * @throws NotFoundException if the user is not found
+   * @throws NotFoundException if the user is not found or out of scope
    */
   public async enable(id: string): Promise<UserEntity> {
-    // Get the user with the given ID
+    // Get the user with scope filters applied
     const user: UserEntity = await this.getById(id);
 
     // Enable the user
@@ -534,25 +619,31 @@ export class DefaultUserService implements UserService {
    *
    * @param id - The ID of the user
    * @returns The disabled user
-   * @throws NotFoundException if the user is not found
+   * @throws NotFoundException if the user is not found or out of scope
    */
   public async disable(id: string): Promise<UserEntity> {
+    // Get the user with scope filters applied
+    await this.getById(id);
+
     // Use a transaction to ensure all operations are atomic
     return await this.dataSource.transaction(async (manager) => {
-      // Get the user with the given ID
-      const user: UserEntity | null = await manager.findOne(UserEntity, {
-        where: { id },
-      });
+      // Get the user again in the transaction context
+      const userInTransaction: UserEntity | null = await manager.findOne(
+        UserEntity,
+        {
+          where: { id },
+        },
+      );
 
-      if (!user) {
+      if (!userInTransaction) {
         throw new NotFoundException(`User with ID ${id} not found`);
       }
 
       // Disable the user
-      user.enabled = false;
+      userInTransaction.enabled = false;
 
       // Save the user
-      const savedUser = await manager.save(UserEntity, user);
+      const savedUser = await manager.save(UserEntity, userInTransaction);
 
       // Disable all associated user accounts
       const userAccounts = await manager.find(UserAccountEntity, {
@@ -580,10 +671,10 @@ export class DefaultUserService implements UserService {
    * Permanently delete a user
    *
    * @param id - The ID of the user
-   * @throws NotFoundException if the user is not found
+   * @throws NotFoundException if the user is not found or out of scope
    */
   public async delete(id: string): Promise<void> {
-    // Get the user with the given ID
+    // Get the user with scope filters applied
     const user: UserEntity = await this.getById(id);
 
     // Delete the user
@@ -785,18 +876,18 @@ export class DefaultUserService implements UserService {
     const actionsPage = await this.actionService.findAll(
       { username: user.username },
       1,
-      1000, // Get all actions (assuming reasonable limit)
+      1000, // Get all actions (assuming reasonable size)
     );
 
     // Revoke all action tokens
-    for (const action of actionsPage.data) {
+    for (const action of actionsPage.contents) {
       if (action.user && action.user.id === userId) {
         await this.actionService.revoke(action.token);
       }
     }
 
     this.logger.debug(
-      `All actions removed from user ${userId} (${actionsPage.data.length} tokens)`,
+      `All actions removed from user ${userId} (${actionsPage.contents.length} tokens)`,
     );
   }
 }

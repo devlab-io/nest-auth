@@ -27,9 +27,9 @@ export class JwtService {
   public constructor(
     @Inject(REQUEST) private readonly request: Request,
     @Inject(JwtConfigToken) private readonly jwtConfig: JwtConfig,
-    @Inject() private readonly userAccountService: UserAccountService,
-    @Inject() private readonly credentialService: CredentialService,
-    @Inject() private readonly sessionService: SessionService,
+    private readonly userAccountService: UserAccountService,
+    private readonly credentialService: CredentialService,
+    private readonly sessionService: SessionService,
   ) {}
 
   /**
@@ -229,7 +229,7 @@ export class JwtService {
    * @param token - The JWT token
    * @throws UnauthorizedException if the token is invalid or the user account is not found
    */
-  public async loadUserFromToken(token: string): Promise<void> {
+  public async loadUserFromToken(token: string): Promise<UserAccount> {
     // Parse token
     const payload: JwtPayload = await this.verifyToken(token);
 
@@ -256,6 +256,9 @@ export class JwtService {
 
     // Set the user account in the request context
     this.setUserAccountInContext(userAccount);
+
+    // Done
+    return userAccount;
   }
 
   /**

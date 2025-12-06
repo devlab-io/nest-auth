@@ -34,10 +34,3 @@ export interface UserAccountQueryParams {
   establishmentId?: string;
   roles?: string[];
 }
-
-export interface UserAccountPage {
-  data: UserAccount[];
-  total: number;
-  page: number;
-  limit: number;
-}

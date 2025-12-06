@@ -1,4 +1,5 @@
 export { ActionEntity } from './action-token.entity';
+export { ClaimEntity } from './claim.entity';
 export { OrganisationEntity } from './organisation.entity';
 export { EstablishmentEntity } from './establishment.entity';
 export { CredentialEntity } from './credential.entity';

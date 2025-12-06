@@ -4,9 +4,8 @@ import {
   CreateOrganisationRequest,
   UpdateOrganisationRequest,
   Organisation,
-  OrganisationPage,
+  Establishment,
 } from '@devlab-io/nest-auth-types';
-import { EstablishmentDto } from './establishment.dtos';
 
 export class OrganisationDto implements Organisation {
   @ApiProperty({
@@ -23,9 +22,10 @@ export class OrganisationDto implements Organisation {
 
   @ApiProperty({
     description: 'Establishments belonging to this organisation',
-    type: [EstablishmentDto],
+    type: 'array',
+    items: { type: 'object' },
   })
-  establishments: EstablishmentDto[];
+  establishments: Establishment[];
 
   @ApiProperty({
     example: '2024-02-20T10:00:00.000Z',
@@ -65,30 +65,4 @@ export class UpdateOrganisationRequestDto implements UpdateOrganisationRequest {
   @IsString({ message: 'name must be a string' })
   @MinLength(1, { message: 'name must not be empty' })
   name?: string;
-}
-
-export class OrganisationPageDto implements OrganisationPage {
-  @ApiProperty({
-    description: 'List of organisations',
-    type: [OrganisationDto],
-  })
-  data: OrganisationDto[];
-
-  @ApiProperty({
-    example: 100,
-    description: 'Total number of organisations',
-  })
-  total: number;
-
-  @ApiProperty({
-    example: 1,
-    description: 'Current page number',
-  })
-  page: number;
-
-  @ApiProperty({
-    example: 10,
-    description: 'Number of organisations per page',
-  })
-  limit: number;
 }

@@ -11,11 +11,24 @@ import { resolve } from 'path';
 import * as bcrypt from 'bcryptjs';
 import { UserEntity } from '../../auth/entities/user.entity';
 import { RoleEntity } from '../../auth/entities/role.entity';
+import { ClaimEntity } from '../../auth/entities/claim.entity';
 import { OrganisationEntity } from '../../auth/entities/organisation.entity';
 import { EstablishmentEntity } from '../../auth/entities/establishment.entity';
 import { CredentialEntity } from '../../auth/entities/credential.entity';
 import { UserAccountEntity } from '../../auth/entities/user-account.entity';
 import { BadRequestException } from '@nestjs/common';
+import {
+  ClaimAction,
+  ClaimScope,
+  ANY,
+  ESTABLISHMENTS,
+  ORGANISATIONS,
+  ROLES,
+  SESSIONS,
+  USER_ACCOUNTS,
+  USERS,
+} from '@devlab-io/nest-auth-types';
+import { createClaimsForResource } from '../utils/claims.utils';
 
 // Load environment variables
 config({ path: resolve(process.cwd(), '.env') });
@@ -68,6 +81,78 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
         isUnique: true,
       }),
     );
+
+    // Create claims table
+    await queryRunner.createTable(
+      new Table({
+        name: 'claims',
+        comment:
+          'Stores claims (permissions) that define what actions can be performed on resources. Format: action:scope:resource',
+        columns: [
+          {
+            name: 'claim',
+            type: 'text',
+            isPrimary: true,
+            isNullable: false,
+            comment:
+              'Primary key, concatenated claim string in format "action:scope:resource"',
+            primaryKeyConstraintName: 'PK_claims_claim',
+          },
+        ],
+      }),
+      true,
+    );
+
+    // Create role_claims junction table
+    await queryRunner.createTable(
+      new Table({
+        name: 'role_claims',
+        comment:
+          'Junction table for many-to-many relationship between roles and claims',
+        columns: [
+          {
+            name: 'role_id',
+            type: 'integer',
+            isPrimary: true,
+            comment: 'Foreign key to roles.id, cascades on delete',
+            primaryKeyConstraintName: 'PK_role_claims_composite',
+          },
+          {
+            name: 'claim',
+            type: 'text',
+            isPrimary: true,
+            comment: 'Foreign key to claims.claim, cascades on delete',
+          },
+        ],
+      }),
+      true,
+    );
+
+    // Create foreign keys for role_claims
+    await queryRunner.createForeignKey(
+      'role_claims',
+      new TableForeignKey({
+        name: 'FK_role_claims_role_id_roles_id',
+        columnNames: ['role_id'],
+        referencedColumnNames: ['id'],
+        referencedTableName: 'roles',
+        onDelete: 'CASCADE',
+      }),
+    );
+
+    await queryRunner.createForeignKey(
+      'role_claims',
+      new TableForeignKey({
+        name: 'FK_role_claims_claim_claims_claim',
+        columnNames: ['claim'],
+        referencedColumnNames: ['claim'],
+        referencedTableName: 'claims',
+        onDelete: 'CASCADE',
+      }),
+    );
+
+    // Create initial claims
+    await this.createInitialClaims(queryRunner);
 
     // Create users table
     await queryRunner.createTable(
@@ -192,7 +277,7 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
       new Table({
         name: 'organisations',
         comment:
-          'Stores organisations (companies that manage multiple establishments)',
+          'Stores organisations (optional grouping level for users, companies that manage multiple establishments)',
         columns: [
           {
             name: 'id',
@@ -240,7 +325,8 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
     await queryRunner.createTable(
       new Table({
         name: 'establishments',
-        comment: 'Stores establishments (restaurants, stores, etc.)',
+        comment:
+          'Stores establishments (optional grouping level for users, restaurants, stores, etc.)',
         columns: [
           {
             name: 'id',
@@ -369,7 +455,7 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
       new Table({
         name: 'user_accounts',
         comment:
-          'Stores user accounts linking users to organisations, establishments and roles',
+          'Stores user accounts linking users to organisations, establishments and roles. Organisation and establishment are optional grouping levels.',
         columns: [
           {
             name: 'id',
@@ -384,13 +470,15 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
             name: 'organisation_id',
             type: 'uuid',
             isNullable: true,
-            comment: 'Foreign key to organisations.id, cascades on delete',
+            comment:
+              'Optional foreign key to organisations.id (grouping level), cascades on delete',
           },
           {
             name: 'establishment_id',
             type: 'uuid',
             isNullable: true,
-            comment: 'Foreign key to establishments.id, cascades on delete',
+            comment:
+              'Optional foreign key to establishments.id (grouping level), cascades on delete',
           },
           {
             name: 'user_id',
@@ -742,6 +830,117 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
   }
 
   /**
+   * Create all initial claims based on the claims constants.
+   *
+   * @param queryRunner - The query runner
+   */
+  private async createInitialClaims(queryRunner: QueryRunner): Promise<void> {
+    // ADMIN claim
+    await createClaimsForResource(
+      queryRunner,
+      [ClaimAction.ADMIN],
+      [ClaimScope.ADMIN],
+      ANY,
+    );
+
+    // ESTABLISHMENTS
+    await createClaimsForResource(
+      queryRunner,
+      [
+        ClaimAction.CREATE,
+        ClaimAction.READ,
+        ClaimAction.UPDATE,
+        ClaimAction.ENABLE,
+        ClaimAction.DISABLE,
+        ClaimAction.DELETE,
+      ],
+      [ClaimScope.ANY, ClaimScope.ORGANISATION, ClaimScope.OWN],
+      ESTABLISHMENTS,
+    );
+
+    // ORGANISATIONS
+    await createClaimsForResource(
+      queryRunner,
+      [
+        ClaimAction.CREATE,
+        ClaimAction.READ,
+        ClaimAction.UPDATE,
+        ClaimAction.ENABLE,
+        ClaimAction.DISABLE,
+        ClaimAction.DELETE,
+      ],
+      [ClaimScope.ANY, ClaimScope.OWN],
+      ORGANISATIONS,
+    );
+
+    // ROLES
+    await createClaimsForResource(
+      queryRunner,
+      [
+        ClaimAction.CREATE,
+        ClaimAction.READ,
+        ClaimAction.UPDATE,
+        ClaimAction.DELETE,
+      ],
+      [ClaimScope.ANY],
+      ROLES,
+    );
+
+    // SESSIONS
+    await createClaimsForResource(
+      queryRunner,
+      [ClaimAction.READ, ClaimAction.DELETE],
+      [
+        ClaimScope.ANY,
+        ClaimScope.ORGANISATION,
+        ClaimScope.ESTABLISHMENT,
+        ClaimScope.OWN,
+      ],
+      SESSIONS,
+    );
+
+    // USER_ACCOUNTS
+    await createClaimsForResource(
+      queryRunner,
+      [
+        ClaimAction.CREATE,
+        ClaimAction.READ,
+        ClaimAction.UPDATE,
+        ClaimAction.ENABLE,
+        ClaimAction.DISABLE,
+        ClaimAction.DELETE,
+      ],
+      [
+        ClaimScope.ANY,
+        ClaimScope.ORGANISATION,
+        ClaimScope.ESTABLISHMENT,
+        ClaimScope.OWN,
+      ],
+      USER_ACCOUNTS,
+    );
+
+    // USERS
+    await createClaimsForResource(
+      queryRunner,
+      [
+        ClaimAction.CREATE,
+        ClaimAction.READ,
+        ClaimAction.UPDATE,
+        ClaimAction.ENABLE,
+        ClaimAction.DISABLE,
+        ClaimAction.DELETE,
+      ],
+      [
+        ClaimScope.ANY,
+        ClaimScope.ORGANISATION,
+        ClaimScope.ESTABLISHMENT,
+        ClaimScope.OWN,
+      ],
+      USERS,
+    );
+  }
+
+  /**
    * Create the super administrator user
    *
    * @param queryRunner - The query runner
@@ -754,16 +953,33 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(adminPassword, saltRounds);
 
+    // Get the admin claim
+    const adminClaim = await queryRunner.manager.findOne(ClaimEntity, {
+      where: { claim: 'admin:admin:any' },
+    });
+
+    if (!adminClaim) {
+      throw new BadRequestException(
+        'Admin claim (admin:admin:any) must be created before creating admin role',
+      );
+    }
+
     // Create or get the admin role
     let adminRole = await queryRunner.manager.findOne(RoleEntity, {
       where: { name: 'admin' },
+      relations: ['claims'],
     });
     if (!adminRole) {
-      // Create admin role
+      // Create admin role with admin claim
       adminRole = queryRunner.manager.create(RoleEntity, {
         name: 'admin',
         description: 'Super administrator with full access',
+        claims: [adminClaim],
       });
+      adminRole = await queryRunner.manager.save(adminRole);
+    } else if (!adminRole.claims || adminRole.claims.length === 0) {
+      // If admin role exists but has no claims, add the admin claim
+      adminRole.claims = [adminClaim];
       adminRole = await queryRunner.manager.save(adminRole);
     }
 
@@ -901,6 +1117,8 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
     await queryRunner.dropTable('establishments', true);
     await queryRunner.dropTable('organisations', true);
     await queryRunner.dropTable('users', true);
+    await queryRunner.dropTable('role_claims', true);
+    await queryRunner.dropTable('claims', true);
     await queryRunner.dropTable('roles', true);
 
     // Note: We don't drop the UUID extension as it might be used by other tables

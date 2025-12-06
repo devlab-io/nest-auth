@@ -370,10 +370,10 @@ describe('ActionService', () => {
 
       const result = await service.findAll({}, 1, 10);
 
-      expect(result.data).toEqual(tokens);
+      expect(result.contents).toEqual(tokens);
       expect(result.total).toBe(total);
       expect(result.page).toBe(1);
-      expect(result.limit).toBe(10);
+      expect(result.size).toBe(10);
     });
 
     it('should filter by type', async () => {
@@ -390,7 +390,7 @@ describe('ActionService', () => {
           where: expect.objectContaining({ type: ActionType.Invite }),
         }),
       );
-      expect(result.data).toEqual(tokens);
+      expect(result.contents).toEqual(tokens);
     });
   });
 

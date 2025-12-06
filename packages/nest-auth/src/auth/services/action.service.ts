@@ -18,7 +18,8 @@ import {
   CreateActionRequest,
   ActionType,
   ActionQueryParams,
-  ActionPage,
+  Action,
+  Page,
   ActionRequest,
 } from '@devlab-io/nest-auth-types';
 import { ActionTypeUtils } from '../utils';
@@ -178,16 +179,18 @@ export class ActionService {
   }
 
   /**
-   * Find all action tokens by query parameters
+   * Find all action tokens by query parameters with pagination
    *
    * @param params - The query parameters
-   * @returns The action tokens
+   * @param page - The page number (default: 1)
+   * @param size - The number of action tokens per page (default: 10)
+   * @returns A page of action tokens
    */
   public async findAll(
     params: ActionQueryParams,
     page: number = 1,
-    limit: number = 10,
-  ): Promise<ActionPage> {
+    size: number = 10,
+  ): Promise<Page<Action>> {
     const where: FindOptionsWhere<ActionEntity> = {};
     if (params.type) {
       where.type = params.type;
@@ -207,18 +210,20 @@ export class ActionService {
     if (params.username) {
       where.user = { username: params.username };
     }
-    const skip: number = (page - 1) * limit;
-    const [data, total]: [ActionEntity[], number] =
+    const skip: number = (page - 1) * size;
+    const [contents, total]: [ActionEntity[], number] =
       await this.actionTokenRepository.findAndCount({
         where,
         skip,
-        take: limit,
+        take: size,
       });
+    const pages = Math.ceil(total / size);
     return {
-      data,
+      contents,
       total,
       page,
-      limit,
+      pages,
+      size,
     };
   }
 

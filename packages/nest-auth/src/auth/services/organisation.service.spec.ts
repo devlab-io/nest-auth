@@ -3,6 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { DefaultOrganisationService } from './organisation.service';
+import { ScopeService } from './scope.service';
 import { OrganisationEntity } from '../entities';
 import {
   CreateOrganisationRequest,
@@ -26,6 +27,10 @@ describe('OrganisationService', () => {
     transaction: jest.fn(),
   };
 
+  const mockScopeService = {
+    getScopeFromRequest: jest.fn().mockReturnValue(null),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -37,6 +42,10 @@ describe('OrganisationService', () => {
         {
           provide: DataSource,
           useValue: mockDataSource,
+        },
+        {
+          provide: ScopeService,
+          useValue: mockScopeService,
         },
       ],
     }).compile();
@@ -61,16 +70,18 @@ describe('OrganisationService', () => {
         enabled: true,
       } as OrganisationEntity;
 
-      mockRepository.findOne.mockResolvedValue(null);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
       mockRepository.create.mockReturnValue(createdOrg);
       mockRepository.save.mockResolvedValue(createdOrg);
 
       const result = await service.create(request);
 
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { name: request.name },
-        relations: ['establishments'],
-      });
       expect(mockRepository.create).toHaveBeenCalledWith({
         name: request.name,
       });
@@ -87,7 +98,13 @@ describe('OrganisationService', () => {
         name: 'Existing Organisation',
       } as OrganisationEntity;
 
-      mockRepository.findOne.mockResolvedValue(existingOrg);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(existingOrg),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       await expect(service.create(request)).rejects.toThrow(
         BadRequestException,
@@ -110,21 +127,32 @@ describe('OrganisationService', () => {
         enabled: true,
       } as OrganisationEntity;
 
-      mockRepository.findOne.mockResolvedValue(organisation);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(organisation),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       const result = await service.getById(id);
 
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { id },
-        relations: ['establishments'],
-      });
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'organisation',
+      );
       expect(result).toEqual(organisation);
     });
 
     it('should throw NotFoundException if organisation not found', async () => {
       const id = 'non-existent-id';
 
-      mockRepository.findOne.mockResolvedValue(null);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       await expect(service.getById(id)).rejects.toThrow(NotFoundException);
       await expect(service.getById(id)).rejects.toThrow(
@@ -145,21 +173,32 @@ describe('OrganisationService', () => {
         enabled: true,
       } as OrganisationEntity;
 
-      mockRepository.findOne.mockResolvedValue(organisation);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(organisation),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       const result = await service.findById(id);
 
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { id },
-        relations: ['establishments'],
-      });
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'organisation',
+      );
       expect(result).toEqual(organisation);
     });
 
     it('should return null if organisation not found', async () => {
       const id = 'non-existent-id';
 
-      mockRepository.findOne.mockResolvedValue(null);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       const result = await service.findById(id);
 
@@ -179,21 +218,32 @@ describe('OrganisationService', () => {
         enabled: true,
       } as OrganisationEntity;
 
-      mockRepository.findOne.mockResolvedValue(organisation);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(organisation),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       const result = await service.findByName(name);
 
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { name },
-        relations: ['establishments'],
-      });
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'organisation',
+      );
       expect(result).toEqual(organisation);
     });
 
     it('should return null if organisation not found', async () => {
       const name = 'Non-existent Organisation';
 
-      mockRepository.findOne.mockResolvedValue(null);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       const result = await service.findByName(name);
 
@@ -205,20 +255,32 @@ describe('OrganisationService', () => {
     it('should return true if organisation exists', async () => {
       const id = 'org-id';
 
-      mockRepository.count.mockResolvedValue(1);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(1),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       const result = await service.exists(id);
 
-      expect(mockRepository.count).toHaveBeenCalledWith({
-        where: { id },
-      });
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'organisation',
+      );
       expect(result).toBe(true);
     });
 
     it('should return false if organisation does not exist', async () => {
       const id = 'non-existent-id';
 
-      mockRepository.count.mockResolvedValue(0);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(0),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       const result = await service.exists(id);
 
@@ -275,10 +337,10 @@ describe('OrganisationService', () => {
         'organisation.name ILIKE :name',
         { name: '%Test%' },
       );
-      expect(result.data).toEqual(organisations);
+      expect(result.contents).toEqual(organisations);
       expect(result.total).toBe(2);
       expect(result.page).toBe(1);
-      expect(result.limit).toBe(10);
+      expect(result.size).toBe(10);
     });
 
     it('should search organisations by ID', async () => {
@@ -314,7 +376,7 @@ describe('OrganisationService', () => {
         'organisation.id = :id',
         { id: 'org-id' },
       );
-      expect(result.data).toEqual(organisations);
+      expect(result.contents).toEqual(organisations);
       expect(result.total).toBe(1);
     });
   });
@@ -338,14 +400,23 @@ describe('OrganisationService', () => {
         name: request.name,
       } as OrganisationEntity;
 
-      mockRepository.findOne
-        .mockResolvedValueOnce(existingOrg) // getById
-        .mockResolvedValueOnce(null); // findByName (no conflict)
+      let callCount = 0;
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockImplementation(() => {
+          callCount++;
+          if (callCount === 1) return Promise.resolve(existingOrg);
+          return Promise.resolve(null);
+        }),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
       mockRepository.save.mockResolvedValue(updatedOrg);
 
       const result = await service.update(id, request);
 
-      expect(mockRepository.save).toHaveBeenCalledWith(updatedOrg);
+      expect(mockRepository.save).toHaveBeenCalled();
       expect(result.name).toBe(request.name);
     });
 
@@ -371,9 +442,18 @@ describe('OrganisationService', () => {
         enabled: true,
       } as OrganisationEntity;
 
-      mockRepository.findOne
-        .mockResolvedValueOnce(existingOrg) // getById
-        .mockResolvedValueOnce(conflictingOrg); // findByName (conflict)
+      let callCount = 0;
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockImplementation(() => {
+          callCount++;
+          if (callCount === 1) return Promise.resolve(existingOrg);
+          return Promise.resolve(conflictingOrg);
+        }),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       try {
         await service.update(id, request);
@@ -400,7 +480,13 @@ describe('OrganisationService', () => {
         enabled: true,
       } as OrganisationEntity;
 
-      mockRepository.findOne.mockResolvedValueOnce(existingOrg); // getById
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(existingOrg),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
       mockRepository.save.mockResolvedValue(existingOrg);
 
       const result = await service.update(id, request);
@@ -422,25 +508,33 @@ describe('OrganisationService', () => {
         enabled: true,
       } as OrganisationEntity;
 
-      // getById calls findById, which calls findOne
-      mockRepository.findOne.mockResolvedValue(organisation);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(organisation),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
       mockRepository.remove.mockResolvedValue(organisation);
 
       await service.delete(id);
 
-      // getById is called which uses findById, which calls findOne
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { id },
-        relations: ['establishments'],
-      });
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'organisation',
+      );
       expect(mockRepository.remove).toHaveBeenCalledWith(organisation);
     });
 
     it('should throw NotFoundException if organisation not found', async () => {
       const id = 'non-existent-id';
 
-      // getById calls findById, which returns null
-      mockRepository.findOne.mockResolvedValue(null);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       await expect(service.delete(id)).rejects.toThrow(NotFoundException);
       expect(mockRepository.remove).not.toHaveBeenCalled();

@@ -14,7 +14,7 @@ Bibliothèque client pour applications frontend (Next.js, React, etc.) permettan
 ## Installation
 
 ```bash
-yarn add @devlab-io/nest-auth-client
+pnpm add @devlab-io/nest-auth-client
 # ou
 npm install @devlab-io/nest-auth-client
 ```

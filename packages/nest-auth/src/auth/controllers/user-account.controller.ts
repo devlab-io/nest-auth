@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiOperation,
@@ -15,21 +16,49 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { UserAccountService } from '../services';
-import { UserAccountQueryParams } from '@devlab-io/nest-auth-types';
+import {
+  UserAccountQueryParams,
+  USER_ACCOUNTS,
+  CREATE_ANY_USER_ACCOUNTS,
+  CREATE_EST_USER_ACCOUNTS,
+  CREATE_ORG_USER_ACCOUNTS,
+  READ_ANY_USER_ACCOUNTS,
+  READ_EST_USER_ACCOUNTS,
+  READ_ORG_USER_ACCOUNTS,
+  READ_OWN_USER_ACCOUNTS,
+  UPDATE_ANY_USER_ACCOUNTS,
+  UPDATE_EST_USER_ACCOUNTS,
+  UPDATE_ORG_USER_ACCOUNTS,
+  UPDATE_OWN_USER_ACCOUNTS,
+  ENABLE_ANY_USER_ACCOUNTS,
+  ENABLE_ORG_USER_ACCOUNTS,
+  ENABLE_EST_USER_ACCOUNTS,
+  ENABLE_OWN_USER_ACCOUNTS,
+  DISABLE_ANY_USER_ACCOUNTS,
+  DISABLE_ORG_USER_ACCOUNTS,
+  DISABLE_EST_USER_ACCOUNTS,
+  DISABLE_OWN_USER_ACCOUNTS,
+  DELETE_ANY_USER_ACCOUNTS,
+  DELETE_ORG_USER_ACCOUNTS,
+  DELETE_EST_USER_ACCOUNTS,
+  DELETE_OWN_USER_ACCOUNTS,
+} from '@devlab-io/nest-auth-types';
+import { Claims } from '../decorators';
 import {
   CreateUserAccountRequestDto,
   UpdateUserAccountRequestDto,
   UserAccountDto,
-  UserAccountPageDto,
+  PageDto,
 } from '../dtos';
+import { AuthGuard } from '../guards';
+import { UserAccountService } from '../services';
 
 /**
  * User account controller
  * Provides CRUD operations for user accounts
  */
-@ApiTags('user-accounts')
-@Controller('user-accounts')
+@ApiTags(USER_ACCOUNTS)
+@Controller(USER_ACCOUNTS)
 export class UserAccountController {
   /**
    * Constructor
@@ -45,12 +74,14 @@ export class UserAccountController {
    * @returns The created user account
    */
   @Post()
+  @UseGuards(AuthGuard)
+  @Claims(
+    CREATE_ANY_USER_ACCOUNTS,
+    CREATE_ORG_USER_ACCOUNTS,
+    CREATE_EST_USER_ACCOUNTS,
+  )
   @ApiOperation({ summary: 'Create a new user account' })
-  @ApiResponse({
-    status: 201,
-    type: UserAccountDto,
-    description: 'User account created successfully',
-  })
+  @ApiResponse({ status: 201, type: UserAccountDto })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({
     status: 404,
@@ -66,11 +97,18 @@ export class UserAccountController {
    * Search for user accounts with pagination and filters
    *
    * @param query - The query parameters
-   * @param page - The page number
-   * @param limit - The number of user accounts per page
-   * @returns The user accounts page
+   * @param page - The page number (default: 1)
+   * @param size - The number of user accounts per page (default: 10)
+   * @returns A page of user accounts
    */
   @Get()
+  @UseGuards(AuthGuard)
+  @Claims(
+    READ_ANY_USER_ACCOUNTS,
+    READ_ORG_USER_ACCOUNTS,
+    READ_EST_USER_ACCOUNTS,
+    READ_OWN_USER_ACCOUNTS,
+  )
   @ApiOperation({
     summary: 'Search for user accounts with pagination and filters',
   })
@@ -81,7 +119,7 @@ export class UserAccountController {
     description: 'Page number (default: 1)',
   })
   @ApiQuery({
-    name: 'limit',
+    name: 'size',
     required: false,
     type: Number,
     description: 'Number of user accounts per page (default: 10)',
@@ -89,14 +127,14 @@ export class UserAccountController {
   @ApiResponse({
     status: 200,
     description: 'User accounts page with pagination',
-    type: UserAccountPageDto,
+    type: PageDto,
   })
   async search(
     @Query() query: UserAccountQueryParams,
     @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-  ): Promise<UserAccountPageDto> {
-    return await this.userAccountService.search(query, page, limit);
+    @Query('size') size: number = 10,
+  ): Promise<PageDto<UserAccountDto>> {
+    return await this.userAccountService.search(query, page, size);
   }
 
   /**
@@ -106,6 +144,13 @@ export class UserAccountController {
    * @returns The user account
    */
   @Get('by-id')
+  @UseGuards(AuthGuard)
+  @Claims(
+    READ_ANY_USER_ACCOUNTS,
+    READ_ORG_USER_ACCOUNTS,
+    READ_EST_USER_ACCOUNTS,
+    READ_OWN_USER_ACCOUNTS,
+  )
   @ApiOperation({ summary: 'Find a user account by ID' })
   @ApiQuery({ name: 'id', type: String, description: 'User account ID' })
   @ApiResponse({ status: 200, type: UserAccountDto })
@@ -120,6 +165,13 @@ export class UserAccountController {
    * @returns The user account
    */
   @Get(':id')
+  @UseGuards(AuthGuard)
+  @Claims(
+    READ_ANY_USER_ACCOUNTS,
+    READ_ORG_USER_ACCOUNTS,
+    READ_EST_USER_ACCOUNTS,
+    READ_OWN_USER_ACCOUNTS,
+  )
   @ApiOperation({ summary: 'Get a user account by ID' })
   @ApiParam({ name: 'id', type: String, description: 'User account ID' })
   @ApiResponse({ status: 200, type: UserAccountDto })
@@ -135,6 +187,13 @@ export class UserAccountController {
    * @returns True if the user account exists, false otherwise
    */
   @Get(':id/exists')
+  @UseGuards(AuthGuard)
+  @Claims(
+    READ_ANY_USER_ACCOUNTS,
+    READ_ORG_USER_ACCOUNTS,
+    READ_EST_USER_ACCOUNTS,
+    READ_OWN_USER_ACCOUNTS,
+  )
   @ApiOperation({ summary: 'Check if a user account exists by ID' })
   @ApiParam({ name: 'id', type: String, description: 'User account ID' })
   @ApiResponse({ status: 200, type: Boolean })
@@ -151,6 +210,13 @@ export class UserAccountController {
    * @returns The updated user account
    */
   @Post(':id')
+  @UseGuards(AuthGuard)
+  @Claims(
+    UPDATE_ANY_USER_ACCOUNTS,
+    UPDATE_ORG_USER_ACCOUNTS,
+    UPDATE_EST_USER_ACCOUNTS,
+    UPDATE_OWN_USER_ACCOUNTS,
+  )
   @ApiOperation({ summary: 'Update a user account (full update)' })
   @ApiParam({ name: 'id', type: String, description: 'User account ID' })
   @ApiResponse({ status: 200, type: UserAccountDto })
@@ -171,6 +237,13 @@ export class UserAccountController {
    * @returns The patched user account
    */
   @Patch(':id')
+  @UseGuards(AuthGuard)
+  @Claims(
+    UPDATE_ANY_USER_ACCOUNTS,
+    UPDATE_ORG_USER_ACCOUNTS,
+    UPDATE_EST_USER_ACCOUNTS,
+    UPDATE_OWN_USER_ACCOUNTS,
+  )
   @ApiOperation({ summary: 'Partially update a user account' })
   @ApiParam({ name: 'id', type: String, description: 'User account ID' })
   @ApiResponse({ status: 200, type: UserAccountDto })
@@ -190,6 +263,13 @@ export class UserAccountController {
    * @returns The enabled user account
    */
   @Patch(':id/enable')
+  @UseGuards(AuthGuard)
+  @Claims(
+    ENABLE_ANY_USER_ACCOUNTS,
+    ENABLE_ORG_USER_ACCOUNTS,
+    ENABLE_EST_USER_ACCOUNTS,
+    ENABLE_OWN_USER_ACCOUNTS,
+  )
   @ApiOperation({ summary: 'Enable a user account' })
   @ApiParam({ name: 'id', type: String, description: 'User account ID' })
   @ApiResponse({ status: 200, type: UserAccountDto })
@@ -205,6 +285,13 @@ export class UserAccountController {
    * @returns The disabled user account
    */
   @Patch(':id/disable')
+  @UseGuards(AuthGuard)
+  @Claims(
+    DISABLE_ANY_USER_ACCOUNTS,
+    DISABLE_ORG_USER_ACCOUNTS,
+    DISABLE_EST_USER_ACCOUNTS,
+    DISABLE_OWN_USER_ACCOUNTS,
+  )
   @ApiOperation({ summary: 'Disable a user account' })
   @ApiParam({ name: 'id', type: String, description: 'User account ID' })
   @ApiResponse({ status: 200, type: UserAccountDto })
@@ -219,6 +306,13 @@ export class UserAccountController {
    * @param id The ID of the user account
    */
   @Delete(':id')
+  @UseGuards(AuthGuard)
+  @Claims(
+    DELETE_ANY_USER_ACCOUNTS,
+    DELETE_ORG_USER_ACCOUNTS,
+    DELETE_EST_USER_ACCOUNTS,
+    DELETE_OWN_USER_ACCOUNTS,
+  )
   @ApiOperation({ summary: 'Delete a user account' })
   @ApiParam({ name: 'id', type: String, description: 'User account ID' })
   @ApiResponse({

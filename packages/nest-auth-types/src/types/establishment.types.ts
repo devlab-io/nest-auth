@@ -26,10 +26,3 @@ export interface EstablishmentQueryParams {
   name?: string;
   organisationId?: string;
 }
-
-export interface EstablishmentPage {
-  data: Establishment[];
-  total: number;
-  page: number;
-  limit: number;
-}

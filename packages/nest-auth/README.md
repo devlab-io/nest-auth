@@ -16,7 +16,7 @@ Module d'authentification complet pour NestJS avec support multi-comptes, rôles
 Ce package est distribué via GitHub Packages (registry npm privé). Consultez le [README principal](../../README.md) pour les instructions d'installation et de configuration.
 
 ```bash
-yarn add @devlab-io/nest-auth
+pnpm add @devlab-io/nest-auth
 # ou
 npm install @devlab-io/nest-auth
 ```
@@ -1220,19 +1220,19 @@ Supprime toutes les sessions expirées.
 
 ```bash
 # Installer les dépendances
-yarn install
+pnpm install
 
 # Build
-yarn run build
+pnpm run build
 
 # Vérification des types
-yarn run type-check
+pnpm run type-check
 
 # Formatage du code
-yarn run format
+pnpm run format
 
 # Lint
-yarn run lint
+pnpm run lint
 ```
 
 ## Publishing

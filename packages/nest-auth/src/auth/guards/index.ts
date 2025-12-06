@@ -1,2 +1,2 @@
-export { JwtAuthGuard } from './jwt-auth.guard';
+export { AuthGuard } from './auth.guard';
 export { FrontendUrlGuard } from './frontend-origin.guard';

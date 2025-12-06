@@ -4,7 +4,7 @@ import {
   CreateOrganisationRequest,
   UpdateOrganisationRequest,
   OrganisationQueryParams,
-  OrganisationPage,
+  Page,
 } from '@devlab-io/nest-auth-types';
 
 /**
@@ -26,16 +26,21 @@ export class OrganisationService extends BaseService {
   /**
    * Search for organisations with pagination and filters
    * GET /organisations
+   *
+   * @param query - The query parameters
+   * @param page - The page number (default: 1)
+   * @param size - The number of organisations per page (default: 10)
+   * @returns A page of organisations
    */
   public async search(
     query?: OrganisationQueryParams,
     page: number = 1,
-    limit: number = 10,
-  ): Promise<OrganisationPage> {
+    size: number = 10,
+  ): Promise<Page<Organisation>> {
     this.ensureInitialized();
-    return this.request<OrganisationPage>('/organisations', {
+    return this.request<Page<Organisation>>('/organisations', {
       method: 'GET',
-      params: { ...query, page, limit },
+      params: { ...query, page, size },
     });
   }
 

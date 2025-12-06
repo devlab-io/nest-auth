@@ -2,7 +2,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { RoleService } from './role.service';
-import { RoleEntity } from '../entities';
+import { ClaimService } from './claim.service';
+import { RoleEntity, ClaimEntity } from '../entities';
+import { CreateRoleRequest } from '@devlab-io/nest-auth-types';
 
 describe('RoleService', () => {
   let service: RoleService;
@@ -13,6 +15,11 @@ describe('RoleService', () => {
     create: jest.fn(),
     save: jest.fn(),
     remove: jest.fn(),
+    count: jest.fn(),
+  };
+
+  const mockClaimService = {
+    getClaims: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -22,6 +29,10 @@ describe('RoleService', () => {
         {
           provide: getRepositoryToken(RoleEntity),
           useValue: mockRepository,
+        },
+        {
+          provide: ClaimService,
+          useValue: mockClaimService,
         },
       ],
     }).compile();
@@ -34,45 +45,74 @@ describe('RoleService', () => {
 
   describe('create', () => {
     it('should create a new role', async () => {
-      const roleData = { name: 'admin', description: 'Administrator' };
-      const createdRole = { id: 1, ...roleData } as RoleEntity;
+      const request: CreateRoleRequest = {
+        name: 'admin',
+        description: 'Administrator',
+        claims: [],
+      };
+      const createdRole = {
+        id: 1,
+        name: request.name,
+        description: request.description,
+        claims: [],
+        actionTokens: [],
+      } as RoleEntity;
 
-      mockRepository.findOne.mockResolvedValue(null);
+      mockRepository.count.mockResolvedValue(0);
+      mockClaimService.getClaims.mockResolvedValue([]);
       mockRepository.create.mockReturnValue(createdRole);
       mockRepository.save.mockResolvedValue(createdRole);
 
-      const result = await service.create(roleData.name, roleData.description);
+      const result = await service.create(request);
 
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { name: roleData.name },
+      expect(mockRepository.count).toHaveBeenCalledWith({
+        where: { name: request.name },
       });
-      expect(mockRepository.create).toHaveBeenCalledWith(roleData);
+      expect(mockClaimService.getClaims).toHaveBeenCalledWith([]);
+      expect(mockRepository.create).toHaveBeenCalledWith({
+        name: request.name,
+        description: request.description,
+        claims: [],
+      });
       expect(mockRepository.save).toHaveBeenCalledWith(createdRole);
       expect(result).toEqual(createdRole);
     });
 
-    it('should create a role without description', async () => {
-      const roleData = { name: 'user' };
-      const createdRole = { id: 1, ...roleData } as RoleEntity;
+    it('should create a role with claims', async () => {
+      const mockClaims = [{ claim: 'users:read:any' }] as ClaimEntity[];
+      const request: CreateRoleRequest = {
+        name: 'user',
+        claims: ['users:read:any'],
+      };
+      const createdRole = {
+        id: 1,
+        name: request.name,
+        claims: mockClaims,
+        actionTokens: [],
+      } as RoleEntity;
 
-      mockRepository.findOne.mockResolvedValue(null);
+      mockRepository.count.mockResolvedValue(0);
+      mockClaimService.getClaims.mockResolvedValue(mockClaims);
       mockRepository.create.mockReturnValue(createdRole);
       mockRepository.save.mockResolvedValue(createdRole);
 
-      const result = await service.create(roleData.name);
+      const result = await service.create(request);
 
+      expect(mockClaimService.getClaims).toHaveBeenCalledWith([
+        'users:read:any',
+      ]);
       expect(result).toEqual(createdRole);
     });
 
     it('should throw BadRequestException if role already exists', async () => {
-      const existingRole = { id: 1, name: 'admin' } as RoleEntity;
+      const request: CreateRoleRequest = { name: 'admin', claims: [] };
 
-      mockRepository.findOne.mockResolvedValue(existingRole);
+      mockRepository.count.mockResolvedValue(1);
 
-      await expect(service.create('admin')).rejects.toThrow(
+      await expect(service.create(request)).rejects.toThrow(
         BadRequestException,
       );
-      await expect(service.create('admin')).rejects.toThrow(
+      await expect(service.create(request)).rejects.toThrow(
         'Role with name admin already exists',
       );
     });
@@ -80,7 +120,12 @@ describe('RoleService', () => {
 
   describe('getByName', () => {
     it('should return a role by name', async () => {
-      const role = { id: 1, name: 'admin' } as RoleEntity;
+      const role = {
+        id: 1,
+        name: 'admin',
+        claims: [],
+        actionTokens: [],
+      } as RoleEntity;
 
       mockRepository.findOne.mockResolvedValue(role);
 
@@ -88,6 +133,7 @@ describe('RoleService', () => {
 
       expect(mockRepository.findOne).toHaveBeenCalledWith({
         where: { name: 'admin' },
+        relations: ['claims'],
       });
       expect(result).toEqual(role);
     });
@@ -104,48 +150,51 @@ describe('RoleService', () => {
     });
   });
 
-  describe('getAllByNames', () => {
+  describe('getByNames', () => {
     it('should return all roles by names', async () => {
       const roles = [
-        { id: 1, name: 'admin' },
-        { id: 2, name: 'user' },
+        { id: 1, name: 'admin', claims: [], actionTokens: [] },
+        { id: 2, name: 'user', claims: [], actionTokens: [] },
       ] as RoleEntity[];
 
       mockRepository.find.mockResolvedValue(roles);
 
-      const result = await service.getAllByNames(['admin', 'user']);
+      const result = await service.getByNames(['admin', 'user']);
 
       expect(mockRepository.find).toHaveBeenCalledWith({
         where: { name: expect.anything() },
+        relations: ['claims'],
       });
       expect(result).toEqual(roles);
       expect(result.length).toBe(2);
     });
 
     it('should return empty array if no names provided', async () => {
-      const result = await service.getAllByNames([]);
+      const result = await service.getByNames([]);
 
       expect(result).toEqual([]);
       expect(mockRepository.find).not.toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if not all roles are found', async () => {
-      const roles = [{ id: 1, name: 'admin' }] as RoleEntity[];
+      const roles = [
+        { id: 1, name: 'admin', claims: [], actionTokens: [] },
+      ] as RoleEntity[];
 
       mockRepository.find.mockResolvedValue(roles);
 
       await expect(
-        service.getAllByNames(['admin', 'nonexistent']),
+        service.getByNames(['admin', 'nonexistent']),
       ).rejects.toThrow(NotFoundException);
       await expect(
-        service.getAllByNames(['admin', 'nonexistent']),
+        service.getByNames(['admin', 'nonexistent']),
       ).rejects.toThrow('One or more roles not found');
     });
 
     it('should throw NotFoundException if no roles are found', async () => {
       mockRepository.find.mockResolvedValue([]);
 
-      await expect(service.getAllByNames(['admin'])).rejects.toThrow(
+      await expect(service.getByNames(['admin'])).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -153,7 +202,12 @@ describe('RoleService', () => {
 
   describe('delete', () => {
     it('should delete a role by name', async () => {
-      const role = { id: 1, name: 'admin' } as RoleEntity;
+      const role = {
+        id: 1,
+        name: 'admin',
+        claims: [],
+        actionTokens: [],
+      } as RoleEntity;
 
       mockRepository.findOne.mockResolvedValue(role);
       mockRepository.remove.mockResolvedValue(role);
@@ -162,6 +216,7 @@ describe('RoleService', () => {
 
       expect(mockRepository.findOne).toHaveBeenCalledWith({
         where: { name: 'admin' },
+        relations: ['claims'],
       });
       expect(mockRepository.remove).toHaveBeenCalledWith(role);
     });
