@@ -64,7 +64,7 @@ Ces packages sont distribués via GitHub Packages (registry npm privé). Vous de
      - `read:packages` - pour télécharger les packages
      - `repo` - si le repository est privé
 
-2. **Configurer npm/yarn pour utiliser GitHub Packages** :
+2. **Configurer npm/pnpm pour utiliser GitHub Packages** :
 
    Créez ou modifiez le fichier `.npmrc` à la racine de votre projet (ou `~/.npmrc` pour une configuration globale) :
 
@@ -80,9 +80,9 @@ Ces packages sont distribués via GitHub Packages (registry npm privé). Vous de
    npm config set @devlab-io:registry https://npm.pkg.github.com
    npm config set //npm.pkg.github.com/:_authToken YOUR_GITHUB_TOKEN
 
-   # Pour yarn
-   yarn config set @devlab-io:registry https://npm.pkg.github.com
-   yarn config set //npm.pkg.github.com/:_authToken YOUR_GITHUB_TOKEN
+   # Pour pnpm
+   pnpm config set @devlab-io:registry https://npm.pkg.github.com
+   pnpm config set //npm.pkg.github.com/:_authToken YOUR_GITHUB_TOKEN
    ```
 
    Utilisation d'une variable d'environnement (recommandé pour CI/CD) :
@@ -109,12 +109,12 @@ Une fois l'authentification configurée, vous pouvez installer les packages :
 
 ```bash
 # Installer tous les packages
-yarn add @devlab-io/nest-auth-types @devlab-io/nest-auth @devlab-io/nest-auth-client
+pnpm add @devlab-io/nest-auth-types @devlab-io/nest-auth @devlab-io/nest-auth-client
 
 # Ou individuellement
-yarn add @devlab-io/nest-auth-types
-yarn add @devlab-io/nest-auth
-yarn add @devlab-io/nest-auth-client
+pnpm add @devlab-io/nest-auth-types
+pnpm add @devlab-io/nest-auth
+pnpm add @devlab-io/nest-auth-client
 ```
 
 Pour voir les versions disponibles, consultez la [page des releases](https://github.com/devlab-io/nest-auth/releases) ou la [page GitHub Packages](https://github.com/orgs/devlab-io/packages/npm/package/nest-auth).
@@ -133,27 +133,27 @@ Pour apprendre à utiliser chaque package, consultez la documentation détaillé
 
 ```bash
 # Installer les dépendances (tous les packages)
-yarn install
+pnpm install
 
 # Build tous les packages
-yarn build
+pnpm build
 
 # Build un package spécifique
-yarn build:types    # nest-auth-types
-yarn build:auth     # nest-auth
-yarn build:client   # nest-auth-client
+pnpm build:types    # nest-auth-types
+pnpm build:auth     # nest-auth
+pnpm build:client   # nest-auth-client
 
 # Vérification des types
-yarn type-check
+pnpm type-check
 
 # Formatage du code
-yarn format
+pnpm format
 
 # Lint
-yarn lint
+pnpm lint
 
 # Nettoyer les dossiers dist
-yarn clean
+pnpm clean
 ```
 
 ### Structure des packages

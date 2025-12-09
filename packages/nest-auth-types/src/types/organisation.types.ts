@@ -21,10 +21,3 @@ export interface OrganisationQueryParams {
   id?: string;
   name?: string;
 }
-
-export interface OrganisationPage {
-  data: Organisation[];
-  total: number;
-  page: number;
-  limit: number;
-}

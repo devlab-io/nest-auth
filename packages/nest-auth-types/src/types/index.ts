@@ -1,26 +1,12 @@
-// Action Token
 export * from './action-token.types';
-
-// Role
-export * from './role.types';
-
-// Organisation
-export * from './organisation.types';
-
-// Establishment
-export * from './establishment.types';
-
-// Credential
-export * from './credential.types';
-
-// User
-export * from './user.types';
-
-// User Account
-export * from './user-account.types';
-
-// Session
-export * from './session.types';
-
-// Auth
 export * from './auth.types';
+export * from './auth-scope.types';
+export * from './claim.types';
+export * from './credential.types';
+export * from './establishment.types';
+export * from './organisation.types';
+export * from './page.types';
+export * from './role.types';
+export * from './session.types';
+export * from './user.types';
+export * from './user-account.types';

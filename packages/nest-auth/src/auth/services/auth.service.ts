@@ -23,6 +23,7 @@ import {
   ValidateEmailRequest,
   Organisation,
   Establishment,
+  UserAccount,
 } from '@devlab-io/nest-auth-types';
 import { UserConfig, UserConfigToken } from '../config/user.config';
 import { ActionConfig, ActionConfigToken } from '../config/action.config';
@@ -49,15 +50,15 @@ export class AuthService {
   public constructor(
     @Inject(UserConfigToken) private readonly userConfig: UserConfig,
     @Inject(ActionConfigToken) private readonly actionConfig: ActionConfig,
-    @Inject() private readonly actionService: ActionService,
+    private readonly actionService: ActionService,
     @Inject(UserServiceToken) private readonly userService: UserService,
-    @Inject() private readonly userAccountService: UserAccountService,
+    private readonly userAccountService: UserAccountService,
     @Inject(OrganisationServiceToken)
     private readonly organisationService: OrganisationService,
     @Inject(EstablishmentServiceToken)
     private readonly establishmentService: EstablishmentService,
-    @Inject() private readonly notificationService: NotificationService,
-    @Inject() private readonly jwtService: JwtService,
+    private readonly notificationService: NotificationService,
+    private readonly jwtService: JwtService,
   ) {}
 
   public async getAccount(): Promise<UserAccountDto | null> {
@@ -312,6 +313,7 @@ export class AuthService {
     let organisationId: string | undefined;
 
     if (organisationName) {
+      // findByName applies scope filters automatically - will return null if out of scope
       organisation =
         await this.organisationService.findByName(organisationName);
       if (!organisation) {
@@ -335,7 +337,7 @@ export class AuthService {
         );
       }
 
-      // Verify that the establishment exists
+      // findByNameAndOrganisation applies scope filters automatically - will return null if out of scope
       establishment = await this.establishmentService.findByNameAndOrganisation(
         establishmentName,
         organisation.id,
@@ -479,14 +481,14 @@ export class AuthService {
       1,
     );
 
-    if (accounts.data.length === 0) {
+    if (accounts.contents.length === 0) {
       throw new BadRequestException(
         'No user account found for this user. Please contact an administrator.',
       );
     }
 
     // Use the first user account (in a real scenario, you might want to choose based on context)
-    const userAccount = accounts.data[0];
+    const userAccount: UserAccount = accounts.contents[0];
 
     // Authenticate using UserAccount
     const token: JwtToken = await this.jwtService.authenticate(

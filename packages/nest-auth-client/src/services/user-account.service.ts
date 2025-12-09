@@ -4,7 +4,7 @@ import {
   CreateUserAccountRequest,
   UpdateUserAccountRequest,
   UserAccountQueryParams,
-  UserAccountPage,
+  Page,
 } from '@devlab-io/nest-auth-types';
 
 /**
@@ -26,16 +26,21 @@ export class UserAccountService extends BaseService {
   /**
    * Search for user accounts with pagination and filters
    * GET /user-accounts
+   *
+   * @param query - The query parameters
+   * @param page - The page number (default: 1)
+   * @param size - The number of user accounts per page (default: 10)
+   * @returns A page of user accounts
    */
   public async search(
     query?: UserAccountQueryParams,
     page: number = 1,
-    limit: number = 10,
-  ): Promise<UserAccountPage> {
+    size: number = 10,
+  ): Promise<Page<UserAccount>> {
     this.ensureInitialized();
-    return this.request<UserAccountPage>('/user-accounts', {
+    return this.request<Page<UserAccount>>('/user-accounts', {
       method: 'GET',
-      params: { ...query, page, limit },
+      params: { ...query, page, size },
     });
   }
 

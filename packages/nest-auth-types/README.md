@@ -14,7 +14,7 @@ Bibliothèque de typage TypeScript contenant toutes les interfaces et types util
 ## Installation
 
 ```bash
-yarn add @devlab-io/nest-auth-types
+pnpm add @devlab-io/nest-auth-types
 # ou
 npm install @devlab-io/nest-auth-types
 ```

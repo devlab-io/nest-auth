@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiOperation,
@@ -22,15 +23,36 @@ import {
   CreateEstablishmentRequestDto,
   UpdateEstablishmentRequestDto,
   EstablishmentDto,
-  EstablishmentPageDto,
+  PageDto,
 } from '../dtos';
+import { AuthGuard } from '../guards';
+import { Claims } from '../decorators/claims';
+import {
+  CREATE_ANY_ESTABLISHMENTS,
+  DELETE_OWN_ESTABLISHMENTS,
+  DELETE_ANY_ESTABLISHMENTS,
+  DELETE_ORG_ESTABLISHMENTS,
+  DISABLE_ANY_ESTABLISHMENTS,
+  DISABLE_ORG_ESTABLISHMENTS,
+  DISABLE_OWN_ESTABLISHMENTS,
+  ENABLE_ANY_ESTABLISHMENTS,
+  ENABLE_ORG_ESTABLISHMENTS,
+  ENABLE_OWN_ESTABLISHMENTS,
+  ESTABLISHMENTS,
+  READ_ANY_ESTABLISHMENTS,
+  READ_ORG_ESTABLISHMENTS,
+  READ_OWN_ESTABLISHMENTS,
+  UPDATE_ANY_ESTABLISHMENTS,
+  UPDATE_ORG_ESTABLISHMENTS,
+  UPDATE_OWN_ESTABLISHMENTS,
+} from '@devlab-io/nest-auth-types/constants';
 
 /**
  * Establishment controller
  * Provides CRUD operations for establishments
  */
-@ApiTags('establishments')
-@Controller('establishments')
+@ApiTags(ESTABLISHMENTS)
+@Controller(ESTABLISHMENTS)
 export class EstablishmentController {
   /**
    * Constructor
@@ -49,6 +71,8 @@ export class EstablishmentController {
    * @returns The created establishment
    */
   @Post()
+  @UseGuards(AuthGuard)
+  @Claims(CREATE_ANY_ESTABLISHMENTS)
   @ApiOperation({ summary: 'Create a new establishment' })
   @ApiResponse({
     status: 201,
@@ -67,11 +91,17 @@ export class EstablishmentController {
    * Search for establishments with pagination and filters
    *
    * @param query - The query parameters
-   * @param page - The page number
-   * @param limit - The number of establishments per page
-   * @returns The establishments page
+   * @param page - The page number (default: 1)
+   * @param size - The number of establishments per page (default: 10)
+   * @returns A page of establishments
    */
   @Get()
+  @UseGuards(AuthGuard)
+  @Claims(
+    READ_ANY_ESTABLISHMENTS,
+    READ_ORG_ESTABLISHMENTS,
+    READ_OWN_ESTABLISHMENTS,
+  )
   @ApiOperation({
     summary: 'Search for establishments with pagination and filters',
   })
@@ -82,7 +112,7 @@ export class EstablishmentController {
     description: 'Page number (default: 1)',
   })
   @ApiQuery({
-    name: 'limit',
+    name: 'size',
     required: false,
     type: Number,
     description: 'Number of establishments per page (default: 10)',
@@ -90,14 +120,14 @@ export class EstablishmentController {
   @ApiResponse({
     status: 200,
     description: 'Establishments page with pagination',
-    type: EstablishmentPageDto,
+    type: PageDto,
   })
   async search(
     @Query() query: EstablishmentQueryParams,
     @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-  ): Promise<EstablishmentPageDto> {
-    return await this.establishmentService.search(query, page, limit);
+    @Query('size') size: number = 10,
+  ): Promise<PageDto<EstablishmentDto>> {
+    return await this.establishmentService.search(query, page, size);
   }
 
   /**
@@ -107,6 +137,12 @@ export class EstablishmentController {
    * @returns The establishment
    */
   @Get('by-id')
+  @UseGuards(AuthGuard)
+  @Claims(
+    READ_ANY_ESTABLISHMENTS,
+    READ_ORG_ESTABLISHMENTS,
+    READ_OWN_ESTABLISHMENTS,
+  )
   @ApiOperation({ summary: 'Find an establishment by ID' })
   @ApiQuery({ name: 'id', type: String, description: 'Establishment ID' })
   @ApiResponse({ status: 200, type: EstablishmentDto })
@@ -122,6 +158,12 @@ export class EstablishmentController {
    * @returns The establishment
    */
   @Get('by-name')
+  @UseGuards(AuthGuard)
+  @Claims(
+    READ_ANY_ESTABLISHMENTS,
+    READ_ORG_ESTABLISHMENTS,
+    READ_OWN_ESTABLISHMENTS,
+  )
   @ApiOperation({
     summary: 'Find an establishment by name and organisation',
   })
@@ -153,6 +195,12 @@ export class EstablishmentController {
    * @returns The establishment
    */
   @Get(':id')
+  @UseGuards(AuthGuard)
+  @Claims(
+    READ_ANY_ESTABLISHMENTS,
+    READ_ORG_ESTABLISHMENTS,
+    READ_OWN_ESTABLISHMENTS,
+  )
   @ApiOperation({ summary: 'Get an establishment by ID' })
   @ApiParam({ name: 'id', type: String, description: 'Establishment ID' })
   @ApiResponse({ status: 200, type: EstablishmentDto })
@@ -168,6 +216,12 @@ export class EstablishmentController {
    * @returns True if the establishment exists, false otherwise
    */
   @Get(':id/exists')
+  @UseGuards(AuthGuard)
+  @Claims(
+    READ_ANY_ESTABLISHMENTS,
+    READ_ORG_ESTABLISHMENTS,
+    READ_OWN_ESTABLISHMENTS,
+  )
   @ApiOperation({ summary: 'Check if an establishment exists by ID' })
   @ApiParam({ name: 'id', type: String, description: 'Establishment ID' })
   @ApiResponse({ status: 200, type: Boolean })
@@ -183,6 +237,12 @@ export class EstablishmentController {
    * @returns The updated establishment
    */
   @Post(':id')
+  @UseGuards(AuthGuard)
+  @Claims(
+    UPDATE_ANY_ESTABLISHMENTS,
+    UPDATE_ORG_ESTABLISHMENTS,
+    UPDATE_OWN_ESTABLISHMENTS,
+  )
   @ApiOperation({ summary: 'Update an establishment (full update)' })
   @ApiParam({ name: 'id', type: String, description: 'Establishment ID' })
   @ApiResponse({ status: 200, type: EstablishmentDto })
@@ -206,6 +266,12 @@ export class EstablishmentController {
    * @returns The patched establishment
    */
   @Patch(':id')
+  @UseGuards(AuthGuard)
+  @Claims(
+    UPDATE_ANY_ESTABLISHMENTS,
+    UPDATE_ORG_ESTABLISHMENTS,
+    UPDATE_OWN_ESTABLISHMENTS,
+  )
   @ApiOperation({ summary: 'Partially update an establishment' })
   @ApiParam({ name: 'id', type: String, description: 'Establishment ID' })
   @ApiResponse({ status: 200, type: EstablishmentDto })
@@ -228,6 +294,12 @@ export class EstablishmentController {
    * @returns The enabled establishment
    */
   @Patch(':id/enable')
+  @UseGuards(AuthGuard)
+  @Claims(
+    ENABLE_ANY_ESTABLISHMENTS,
+    ENABLE_ORG_ESTABLISHMENTS,
+    ENABLE_OWN_ESTABLISHMENTS,
+  )
   @ApiOperation({ summary: 'Enable an establishment' })
   @ApiParam({ name: 'id', type: String, description: 'Establishment ID' })
   @ApiResponse({ status: 200, type: EstablishmentDto })
@@ -243,6 +315,12 @@ export class EstablishmentController {
    * @returns The disabled establishment
    */
   @Patch(':id/disable')
+  @UseGuards(AuthGuard)
+  @Claims(
+    DISABLE_ANY_ESTABLISHMENTS,
+    DISABLE_ORG_ESTABLISHMENTS,
+    DISABLE_OWN_ESTABLISHMENTS,
+  )
   @ApiOperation({ summary: 'Disable an establishment' })
   @ApiParam({ name: 'id', type: String, description: 'Establishment ID' })
   @ApiResponse({ status: 200, type: EstablishmentDto })
@@ -257,6 +335,12 @@ export class EstablishmentController {
    * @param id The ID of the establishment
    */
   @Delete(':id')
+  @UseGuards(AuthGuard)
+  @Claims(
+    DELETE_ANY_ESTABLISHMENTS,
+    DELETE_ORG_ESTABLISHMENTS,
+    DELETE_OWN_ESTABLISHMENTS,
+  )
   @ApiOperation({ summary: 'Delete an establishment' })
   @ApiParam({ name: 'id', type: String, description: 'Establishment ID' })
   @ApiResponse({

@@ -1,4 +1,4 @@
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, Repository, SelectQueryBuilder } from 'typeorm';
 import {
   Injectable,
   NotFoundException,
@@ -12,11 +12,15 @@ import {
   UserAccountEntity,
   UserEntity,
 } from '../entities';
+import { ScopeService } from './scope.service';
 import {
   CreateOrganisationRequest,
   UpdateOrganisationRequest,
   OrganisationQueryParams,
-  OrganisationPage,
+  Organisation,
+  Page,
+  AuthScope,
+  ClaimScope,
 } from '@devlab-io/nest-auth-types';
 
 /**
@@ -36,8 +40,8 @@ export interface OrganisationService {
   search(
     params: OrganisationQueryParams,
     page?: number,
-    limit?: number,
-  ): Promise<OrganisationPage>;
+    size?: number,
+  ): Promise<Page<Organisation>>;
   update(
     id: string,
     request: UpdateOrganisationRequest,
@@ -75,11 +79,13 @@ export class DefaultOrganisationService implements OrganisationService {
    *
    * @param dataSource - The data source for transactions
    * @param organisationRepository - The organisation repository
+   * @param scopeService - The scope service
    */
   public constructor(
     private readonly dataSource: DataSource,
     @InjectRepository(OrganisationEntity)
     private readonly organisationRepository: Repository<OrganisationEntity>,
+    private readonly scopeService: ScopeService,
   ) {}
 
   /**
@@ -121,11 +127,53 @@ export class DefaultOrganisationService implements OrganisationService {
   }
 
   /**
+   * Apply scope filters to a query builder for organisations.
+   * Filters based on organisationId of the connected account.
+   * This ensures cross-resource access respects organisation boundaries.
+   *
+   * @param queryBuilder - The query builder
+   */
+  private applyScopeFilters(
+    queryBuilder: SelectQueryBuilder<OrganisationEntity>,
+  ): void {
+    const authScope: AuthScope | null = this.scopeService.getScopeFromRequest();
+
+    // No scope = no filtering (e.g., unauthenticated or internal call)
+    if (!authScope) {
+      return;
+    }
+
+    // ANY scope = no constraints
+    if (authScope.scope === ClaimScope.ANY) {
+      return;
+    }
+
+    // If organisationId is defined, filter by it
+    // This applies regardless of the resource type (USER_ACCOUNTS, ORGANISATIONS, etc.)
+    if (authScope.organisationId) {
+      queryBuilder.andWhere('organisation.id = :organisationId', {
+        organisationId: authScope.organisationId,
+      });
+      return;
+    }
+
+    // If scope is ORGANISATION/ESTABLISHMENT/OWN but no organisationId, deny all (safety fallback)
+    if (
+      authScope.scope === ClaimScope.ORGANISATION ||
+      authScope.scope === ClaimScope.ESTABLISHMENT ||
+      authScope.scope === ClaimScope.OWN
+    ) {
+      queryBuilder.andWhere('1 = 0'); // No results
+      return;
+    }
+  }
+
+  /**
    * Get an organisation by ID
    *
    * @param id - The ID of the organisation
    * @returns The organisation
-   * @throws NotFoundException if the organisation is not found
+   * @throws NotFoundException if the organisation is not found or out of scope
    */
   public async getById(id: string): Promise<OrganisationEntity> {
     const organisation = await this.findById(id);
@@ -139,40 +187,55 @@ export class DefaultOrganisationService implements OrganisationService {
 
   /**
    * Find an organisation by ID
+   * Applies scope filters to ensure organisations outside the current scope are not found.
    *
    * @param id - The ID of the organisation
-   * @returns The organisation or null if not found
+   * @returns The organisation or null if not found or out of scope
    */
   public async findById(id: string): Promise<OrganisationEntity | null> {
-    return await this.organisationRepository.findOne({
-      where: { id },
-      relations: ['establishments'],
-    });
+    const queryBuilder = this.organisationRepository
+      .createQueryBuilder('organisation')
+      .leftJoinAndSelect('organisation.establishments', 'establishments')
+      .where('organisation.id = :id', { id });
+
+    this.applyScopeFilters(queryBuilder);
+
+    return await queryBuilder.getOne();
   }
 
   /**
    * Find an organisation by name
+   * Applies scope filters to ensure organisations outside the current scope are not found.
    *
    * @param name - The name of the organisation
-   * @returns The organisation or null if not found
+   * @returns The organisation or null if not found or out of scope
    */
   public async findByName(name: string): Promise<OrganisationEntity | null> {
-    return await this.organisationRepository.findOne({
-      where: { name },
-      relations: ['establishments'],
-    });
+    const queryBuilder = this.organisationRepository
+      .createQueryBuilder('organisation')
+      .leftJoinAndSelect('organisation.establishments', 'establishments')
+      .where('organisation.name = :name', { name });
+
+    this.applyScopeFilters(queryBuilder);
+
+    return await queryBuilder.getOne();
   }
 
   /**
    * Check if an organisation exists by ID
+   * Applies scope filters to ensure organisations outside the current scope are not found.
    *
    * @param id - The ID of the organisation
-   * @returns True if the organisation exists, false otherwise
+   * @returns True if the organisation exists within scope, false otherwise
    */
   public async exists(id: string): Promise<boolean> {
-    const count = await this.organisationRepository.count({
-      where: { id },
-    });
+    const queryBuilder = this.organisationRepository
+      .createQueryBuilder('organisation')
+      .where('organisation.id = :id', { id });
+
+    this.applyScopeFilters(queryBuilder);
+
+    const count = await queryBuilder.getCount();
     return count > 0;
   }
 
@@ -181,15 +244,15 @@ export class DefaultOrganisationService implements OrganisationService {
    *
    * @param params - The query parameters
    * @param page - The page number (default: 1)
-   * @param limit - The number of organisations per page (default: 10)
-   * @returns The organisations page
+   * @param size - The number of organisations per page (default: 10)
+   * @returns A page of organisations
    */
   public async search(
     params: OrganisationQueryParams,
     page: number = 1,
-    limit: number = 10,
-  ): Promise<OrganisationPage> {
-    const skip = (page - 1) * limit;
+    size: number = 10,
+  ): Promise<Page<Organisation>> {
+    const skip = (page - 1) * size;
     const queryBuilder = this.organisationRepository
       .createQueryBuilder('organisation')
       .leftJoinAndSelect('organisation.establishments', 'establishments');
@@ -204,22 +267,28 @@ export class DefaultOrganisationService implements OrganisationService {
       });
     }
 
+    // Apply scope filters
+    this.applyScopeFilters(queryBuilder);
+
     // Apply pagination and ordering
     queryBuilder
       .distinct(true)
       .skip(skip)
-      .take(limit)
+      .take(size)
       .orderBy('organisation.name', 'ASC');
 
     // Execute query
-    const [data, total]: [OrganisationEntity[], number] =
+    const [contents, total]: [OrganisationEntity[], number] =
       await queryBuilder.getManyAndCount();
 
+    const pages = Math.ceil(total / size);
+
     return {
-      data,
+      contents,
       total,
       page,
-      limit,
+      pages,
+      size,
     };
   }
 

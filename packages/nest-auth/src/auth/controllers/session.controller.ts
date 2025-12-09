@@ -1,4 +1,11 @@
-import { Controller, Delete, Get, Param, Query } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiOperation,
   ApiParam,
@@ -9,13 +16,26 @@ import {
 import { SessionService } from '../services';
 import { SessionQueryParams } from '@devlab-io/nest-auth-types';
 import { SessionDto, DeleteSessionsResponseDto } from '../dtos';
+import {
+  READ_ANY_SESSIONS,
+  READ_ORG_SESSIONS,
+  READ_EST_SESSIONS,
+  READ_OWN_SESSIONS,
+  DELETE_ANY_SESSIONS,
+  DELETE_ORG_SESSIONS,
+  DELETE_EST_SESSIONS,
+  DELETE_OWN_SESSIONS,
+  SESSIONS,
+} from '@devlab-io/nest-auth-types/constants';
+import { Claims } from '../decorators/claims';
+import { AuthGuard } from '../guards';
 
 /**
  * Session controller
  * Provides endpoints to manage and query user sessions
  */
-@ApiTags('sessions')
-@Controller('sessions')
+@ApiTags(SESSIONS)
+@Controller(SESSIONS)
 export class SessionController {
   /**
    * Constructor
@@ -31,6 +51,13 @@ export class SessionController {
    * @returns Array of sessions
    */
   @Get()
+  @UseGuards(AuthGuard)
+  @Claims(
+    READ_ANY_SESSIONS,
+    READ_ORG_SESSIONS,
+    READ_EST_SESSIONS,
+    READ_OWN_SESSIONS,
+  )
   @ApiOperation({ summary: 'Search sessions with filters' })
   @ApiQuery({ name: 'userId', required: false, type: String })
   @ApiQuery({ name: 'loginDate', required: false, type: Date })
@@ -52,6 +79,13 @@ export class SessionController {
    * @returns Array of active sessions
    */
   @Get('active')
+  @UseGuards(AuthGuard)
+  @Claims(
+    READ_ANY_SESSIONS,
+    READ_ORG_SESSIONS,
+    READ_EST_SESSIONS,
+    READ_OWN_SESSIONS,
+  )
   @ApiOperation({ summary: 'Get all active sessions' })
   @ApiResponse({ status: 200, type: [SessionDto] })
   async findAllActive(): Promise<SessionDto[]> {
@@ -65,6 +99,13 @@ export class SessionController {
    * @returns The session
    */
   @Get(':token')
+  @UseGuards(AuthGuard)
+  @Claims(
+    READ_ANY_SESSIONS,
+    READ_ORG_SESSIONS,
+    READ_EST_SESSIONS,
+    READ_OWN_SESSIONS,
+  )
   @ApiOperation({ summary: 'Get a session by token' })
   @ApiParam({ name: 'token', type: String })
   @ApiResponse({ status: 200, type: SessionDto })
@@ -79,6 +120,13 @@ export class SessionController {
    * @param token - The JWT token
    */
   @Delete(':token')
+  @UseGuards(AuthGuard)
+  @Claims(
+    DELETE_ANY_SESSIONS,
+    DELETE_ORG_SESSIONS,
+    DELETE_EST_SESSIONS,
+    DELETE_OWN_SESSIONS,
+  )
   @ApiOperation({ summary: 'Delete a session by token' })
   @ApiParam({ name: 'token', type: String })
   @ApiResponse({ status: 200, description: 'Session deleted' })
@@ -93,6 +141,13 @@ export class SessionController {
    * @returns Number of deleted sessions
    */
   @Delete('expired')
+  @UseGuards(AuthGuard)
+  @Claims(
+    DELETE_ANY_SESSIONS,
+    DELETE_ORG_SESSIONS,
+    DELETE_EST_SESSIONS,
+    DELETE_OWN_SESSIONS,
+  )
   @ApiOperation({ summary: 'Delete all expired sessions' })
   @ApiResponse({
     status: 200,

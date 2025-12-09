@@ -84,8 +84,8 @@ describe('JwtService', () => {
   };
 
   const mockRoles = [
-    { id: 1, name: 'user' },
-    { id: 2, name: 'admin' },
+    { id: 1, name: 'user', claims: [] },
+    { id: 2, name: 'admin', claims: [] },
   ];
 
   const mockUserAccount: UserAccount = {

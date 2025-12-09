@@ -28,13 +28,6 @@ export interface Action {
   establishmentId?: string; // For Invite action: establishment to create user account in
 }
 
-export interface ActionPage {
-  data: Action[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
 export interface ActionQueryParams {
   type?: number; // Bit mask of ActionType values
   createdAt?: Date;

@@ -39,6 +39,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -114,27 +119,27 @@ jobs:
         if: steps.check_version.outputs.exists != 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: yarn install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Build package
         if: steps.check_version.outputs.exists != 'true'
-        run: yarn build
+        run: pnpm build
 
       - name: Check code formatting
         if: steps.check_version.outputs.exists != 'true'
-        run: yarn format:check
+        run: pnpm format:check
 
       - name: Run linter
         if: steps.check_version.outputs.exists != 'true'
-        run: yarn lint:check
+        run: pnpm lint:check
 
       - name: Type check
         if: steps.check_version.outputs.exists != 'true'
-        run: yarn type-check
+        run: pnpm type-check
 
       - name: Run tests
         if: steps.check_version.outputs.exists != 'true'
-        run: yarn test
+        run: pnpm test
 
       - name: Update version in all package.json files
         if: steps.check_version.outputs.exists != 'true'
@@ -165,7 +170,7 @@ jobs:
       - name: Commit and push version update
         if: steps.check_version.outputs.exists != 'true'
         run: |
-          git add package.json packages/*/package.json yarn.lock 2>/dev/null || git add package.json packages/*/package.json
+          git add package.json packages/*/package.json pnpm-lock.yaml 2>/dev/null || git add package.json packages/*/package.json pnpm-lock.yaml
           git commit -m "chore: bump version to ${{ steps.version.outputs.version }}" || echo "No changes to commit"
           git push origin main
 

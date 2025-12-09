@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiOperation,
@@ -16,27 +17,60 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { UserService, SessionService, UserServiceToken } from '../services';
-import { UserQueryParams } from '@devlab-io/nest-auth-types';
+import {
+  UserQueryParams,
+  USERS,
+  CREATE_ANY_USERS,
+  READ_OWN_USERS,
+  READ_EST_USERS,
+  READ_ORG_USERS,
+  READ_ANY_USERS,
+  UPDATE_OWN_USERS,
+  DELETE_OWN_USERS,
+  UPDATE_ANY_USERS,
+  UPDATE_ORG_USERS,
+  UPDATE_EST_USERS,
+  ENABLE_OWN_USERS,
+  ENABLE_EST_USERS,
+  ENABLE_ORG_USERS,
+  ENABLE_ANY_USERS,
+  DISABLE_OWN_USERS,
+  DISABLE_EST_USERS,
+  DISABLE_ORG_USERS,
+  DISABLE_ANY_USERS,
+  DELETE_EST_USERS,
+  DELETE_ORG_USERS,
+  DELETE_ANY_USERS,
+  READ_OWN_SESSIONS,
+  READ_EST_SESSIONS,
+  READ_ORG_SESSIONS,
+  READ_ANY_SESSIONS,
+  DELETE_OWN_SESSIONS,
+  DELETE_EST_SESSIONS,
+  DELETE_ORG_SESSIONS,
+  DELETE_ANY_SESSIONS,
+} from '@devlab-io/nest-auth-types';
+import { Claims, CurrentUser } from '../decorators';
 import {
   CreateUserRequestDto,
   PatchUserRequestDto,
   UpdateUserRequestDto,
   UserDto,
-  UserPageDto,
+  PageDto,
   SessionDto,
   DeleteSessionsResponseDto,
 } from '../dtos';
-import { CurrentUser } from '../decorators';
 import { UserEntity } from '../entities';
+import { AuthGuard } from '../guards';
+import { UserService, SessionService, UserServiceToken } from '../services';
 
 /**
  * User controller
  * Mutable actions of this controller bypass authentication and required action token validations.
  * Use it with caution.
  */
-@ApiTags('users')
-@Controller('users')
+@ApiTags(USERS)
+@Controller(USERS)
 export class UserController {
   /**
    * Constructor
@@ -57,6 +91,8 @@ export class UserController {
    * @returns The created user
    */
   @Post()
+  @UseGuards(AuthGuard)
+  @Claims(CREATE_ANY_USERS)
   @ApiOperation({ summary: 'Create a new user' })
   @ApiResponse({
     status: 201,
@@ -74,11 +110,13 @@ export class UserController {
    * Search for users with pagination and filters
    *
    * @param query - The query parameters
-   * @param page - The page number
-   * @param limit - The number of users per page
-   * @returns The users page
+   * @param page - The page number (default: 1)
+   * @param size - The number of users per page (default: 10)
+   * @returns A page of users
    */
   @Get()
+  @UseGuards(AuthGuard)
+  @Claims(READ_ANY_USERS, READ_ORG_USERS, READ_EST_USERS, READ_OWN_USERS)
   @ApiOperation({ summary: 'Search for users with pagination and filters' })
   @ApiQuery({
     name: 'page',
@@ -87,7 +125,7 @@ export class UserController {
     description: 'Page number (default: 1)',
   })
   @ApiQuery({
-    name: 'limit',
+    name: 'size',
     required: false,
     type: Number,
     description: 'Number of users per page (default: 10)',
@@ -95,14 +133,14 @@ export class UserController {
   @ApiResponse({
     status: 200,
     description: 'Users page with pagination',
-    type: UserPageDto,
+    type: PageDto,
   })
   async search(
     @Query() query: UserQueryParams,
     @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
-  ): Promise<UserPageDto> {
-    return await this.userService.search(query, page, limit);
+    @Query('size') size: number = 10,
+  ): Promise<PageDto<UserDto>> {
+    return await this.userService.search(query, page, size);
   }
 
   /**
@@ -112,6 +150,8 @@ export class UserController {
    * @returns The user
    */
   @Get('by-id')
+  @UseGuards(AuthGuard)
+  @Claims(READ_ANY_USERS, READ_ORG_USERS, READ_EST_USERS, READ_OWN_USERS)
   @ApiOperation({ summary: 'Find a user by ID' })
   @ApiQuery({ name: 'id', type: String, description: 'User ID' })
   @ApiResponse({ status: 200, type: UserDto })
@@ -126,6 +166,8 @@ export class UserController {
    * @returns The user
    */
   @Get('by-email')
+  @UseGuards(AuthGuard)
+  @Claims(READ_ANY_USERS, READ_ORG_USERS, READ_EST_USERS, READ_OWN_USERS)
   @ApiOperation({ summary: 'Find a user by email' })
   @ApiQuery({ name: 'email', type: String, description: 'User email' })
   @ApiResponse({ status: 200, type: UserDto })
@@ -140,6 +182,8 @@ export class UserController {
    * @returns The user profile
    */
   @Get('me')
+  @UseGuards(AuthGuard)
+  @Claims(READ_OWN_USERS)
   @ApiOperation({ summary: 'Get the current authenticated user profile' })
   @ApiResponse({ status: 200, type: UserDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -155,6 +199,8 @@ export class UserController {
    * @returns The updated user
    */
   @Post('me')
+  @UseGuards(AuthGuard)
+  @Claims(UPDATE_OWN_USERS)
   @ApiOperation({ summary: 'Update the current authenticated user profile' })
   @ApiResponse({ status: 200, type: UserDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -171,6 +217,8 @@ export class UserController {
    * @param user - The current authenticated user
    */
   @Delete('me')
+  @UseGuards(AuthGuard)
+  @Claims(DELETE_OWN_USERS)
   @ApiOperation({ summary: 'Delete the current authenticated user account' })
   @ApiResponse({
     status: 200,
@@ -188,6 +236,8 @@ export class UserController {
    * @returns The user
    */
   @Get(':id')
+  @UseGuards(AuthGuard)
+  @Claims(READ_ANY_USERS, READ_ORG_USERS, READ_EST_USERS, READ_OWN_USERS)
   @ApiOperation({ summary: 'Get a user by ID' })
   @ApiParam({ name: 'id', type: String, description: 'User ID' })
   @ApiResponse({ status: 200, type: UserDto })
@@ -203,6 +253,8 @@ export class UserController {
    * @returns True if the user exists, false otherwise
    */
   @Get(':id/exists')
+  @UseGuards(AuthGuard)
+  @Claims(READ_ANY_USERS, READ_ORG_USERS, READ_EST_USERS, READ_OWN_USERS)
   @ApiOperation({ summary: 'Check if a user exists by ID' })
   @ApiParam({ name: 'id', type: String, description: 'User ID' })
   @ApiResponse({ status: 200, type: Boolean })
@@ -218,6 +270,13 @@ export class UserController {
    * @returns The patched user
    */
   @Patch(':id')
+  @UseGuards(AuthGuard)
+  @Claims(
+    UPDATE_ANY_USERS,
+    UPDATE_ORG_USERS,
+    UPDATE_EST_USERS,
+    UPDATE_OWN_USERS,
+  )
   @ApiOperation({ summary: 'Partially update a user' })
   @ApiParam({ name: 'id', type: String, description: 'User ID' })
   @ApiResponse({ status: 200, type: UserDto })
@@ -237,6 +296,13 @@ export class UserController {
    * @returns The updated user
    */
   @Post(':id')
+  @UseGuards(AuthGuard)
+  @Claims(
+    UPDATE_ANY_USERS,
+    UPDATE_ORG_USERS,
+    UPDATE_EST_USERS,
+    UPDATE_OWN_USERS,
+  )
   @ApiOperation({ summary: 'Update a user (full update)' })
   @ApiParam({ name: 'id', type: String, description: 'User ID' })
   @ApiResponse({ status: 200, type: UserDto })
@@ -255,6 +321,13 @@ export class UserController {
    * @returns The enabled user
    */
   @Patch(':id/enable')
+  @UseGuards(AuthGuard)
+  @Claims(
+    ENABLE_ANY_USERS,
+    ENABLE_ORG_USERS,
+    ENABLE_EST_USERS,
+    ENABLE_OWN_USERS,
+  )
   @ApiOperation({ summary: 'Enable a user account' })
   @ApiParam({ name: 'id', type: String, description: 'User ID' })
   @ApiResponse({ status: 200, type: UserDto })
@@ -270,6 +343,13 @@ export class UserController {
    * @returns The disabled user
    */
   @Patch(':id/disable')
+  @UseGuards(AuthGuard)
+  @Claims(
+    DISABLE_ANY_USERS,
+    DISABLE_ORG_USERS,
+    DISABLE_EST_USERS,
+    DISABLE_OWN_USERS,
+  )
   @ApiOperation({ summary: 'Disable a user account' })
   @ApiParam({ name: 'id', type: String, description: 'User ID' })
   @ApiResponse({ status: 200, type: UserDto })
@@ -285,6 +365,13 @@ export class UserController {
    * @returns The deleted user
    */
   @Delete(':id')
+  @UseGuards(AuthGuard)
+  @Claims(
+    DELETE_ANY_USERS,
+    DELETE_ORG_USERS,
+    DELETE_EST_USERS,
+    DELETE_OWN_USERS,
+  )
   @ApiOperation({ summary: 'Delete a user' })
   @ApiParam({ name: 'id', type: String, description: 'User ID' })
   @ApiResponse({ status: 200, description: 'User deleted successfully' })
@@ -300,6 +387,13 @@ export class UserController {
    * @returns Array of sessions
    */
   @Get(':id/sessions')
+  @UseGuards(AuthGuard)
+  @Claims(
+    READ_ANY_SESSIONS,
+    READ_ORG_SESSIONS,
+    READ_EST_SESSIONS,
+    READ_OWN_SESSIONS,
+  )
   @ApiOperation({ summary: 'Get all sessions for a user' })
   @ApiParam({ name: 'id', type: String, description: 'User ID' })
   @ApiResponse({ status: 200, type: [SessionDto] })
@@ -315,6 +409,13 @@ export class UserController {
    * @returns Array of active sessions
    */
   @Get(':id/sessions/active')
+  @UseGuards(AuthGuard)
+  @Claims(
+    READ_ANY_SESSIONS,
+    READ_ORG_SESSIONS,
+    READ_EST_SESSIONS,
+    READ_OWN_SESSIONS,
+  )
   @ApiOperation({ summary: 'Get all active sessions for a user' })
   @ApiParam({ name: 'id', type: String, description: 'User ID' })
   @ApiResponse({ status: 200, type: [SessionDto] })
@@ -330,6 +431,13 @@ export class UserController {
    * @returns Number of deleted sessions
    */
   @Delete(':id/sessions')
+  @UseGuards(AuthGuard)
+  @Claims(
+    DELETE_ANY_SESSIONS,
+    DELETE_ORG_SESSIONS,
+    DELETE_EST_SESSIONS,
+    DELETE_OWN_SESSIONS,
+  )
   @ApiOperation({ summary: 'Delete all sessions for a user' })
   @ApiParam({ name: 'id', type: String, description: 'User ID' })
   @ApiResponse({

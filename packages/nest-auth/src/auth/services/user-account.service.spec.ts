@@ -7,6 +7,7 @@ import { UserServiceToken } from './user.service';
 import { OrganisationServiceToken } from './organisation.service';
 import { EstablishmentServiceToken } from './establishment.service';
 import { RoleService } from './role.service';
+import { ScopeService } from './scope.service';
 import {
   UserAccountEntity,
   UserEntity,
@@ -44,7 +45,11 @@ describe('UserAccountService', () => {
   };
 
   const mockRoleService = {
-    getAllByNames: jest.fn(),
+    getByNames: jest.fn(),
+  };
+
+  const mockScopeService = {
+    getScopeFromRequest: jest.fn().mockReturnValue(null),
   };
 
   const mockDataSource = {
@@ -115,6 +120,10 @@ describe('UserAccountService', () => {
           useValue: mockRoleService,
         },
         {
+          provide: ScopeService,
+          useValue: mockScopeService,
+        },
+        {
           provide: DataSource,
           useValue: mockDataSource,
         },
@@ -144,7 +153,7 @@ describe('UserAccountService', () => {
       mockUserService.getById.mockResolvedValue(mockUser);
       mockOrganisationService.getById.mockResolvedValue(mockOrganisation);
       mockEstablishmentService.getById.mockResolvedValue(mockEstablishment);
-      mockRoleService.getAllByNames.mockResolvedValue(mockRoles);
+      mockRoleService.getByNames.mockResolvedValue(mockRoles);
 
       const mockQueryBuilder = {
         leftJoinAndSelect: jest.fn().mockReturnThis(),
@@ -162,7 +171,7 @@ describe('UserAccountService', () => {
       expect(mockUserService.getById).toHaveBeenCalledWith('user-id');
       expect(mockOrganisationService.getById).toHaveBeenCalledWith('org-id');
       expect(mockEstablishmentService.getById).toHaveBeenCalledWith('est-id');
-      expect(mockRoleService.getAllByNames).toHaveBeenCalledWith([
+      expect(mockRoleService.getByNames).toHaveBeenCalledWith([
         'user',
         'admin',
       ]);
@@ -252,21 +261,32 @@ describe('UserAccountService', () => {
         roles: mockRoles,
       } as UserAccountEntity;
 
-      mockRepository.findOne.mockResolvedValue(userAccount);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(userAccount),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       const result = await service.getById(id);
 
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { id },
-        relations: ['user', 'organisation', 'establishment', 'roles'],
-      });
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'userAccount',
+      );
       expect(result).toEqual(userAccount);
     });
 
     it('should throw NotFoundException if user account not found', async () => {
       const id = 'non-existent-id';
 
-      mockRepository.findOne.mockResolvedValue(null);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       await expect(service.getById(id)).rejects.toThrow(NotFoundException);
       await expect(service.getById(id)).rejects.toThrow(
@@ -286,14 +306,19 @@ describe('UserAccountService', () => {
         roles: mockRoles,
       } as UserAccountEntity;
 
-      mockRepository.findOne.mockResolvedValue(userAccount);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(userAccount),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       const result = await service.findById(id);
 
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { id },
-        relations: ['user', 'organisation', 'establishment', 'roles'],
-      });
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'userAccount',
+      );
       expect(result).toEqual(userAccount);
     });
   });
@@ -379,7 +404,7 @@ describe('UserAccountService', () => {
         'user.id = :userId',
         { userId: 'user-id' },
       );
-      expect(result.data).toEqual(accounts);
+      expect(result.contents).toEqual(accounts);
       expect(result.total).toBe(1);
     });
   });
@@ -406,13 +431,19 @@ describe('UserAccountService', () => {
         roles: updatedRoles,
       } as UserAccountEntity;
 
-      mockRepository.findOne.mockResolvedValue(existingUserAccount);
-      mockRoleService.getAllByNames.mockResolvedValue(updatedRoles);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(existingUserAccount),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+      mockRoleService.getByNames.mockResolvedValue(updatedRoles);
       mockRepository.save.mockResolvedValue(updatedUserAccount);
 
       const result = await service.update(id, request);
 
-      expect(mockRoleService.getAllByNames).toHaveBeenCalledWith(['user']);
+      expect(mockRoleService.getByNames).toHaveBeenCalledWith(['user']);
       expect(mockRepository.save).toHaveBeenCalledWith(updatedUserAccount);
       expect(result.roles).toEqual(updatedRoles);
     });
@@ -451,7 +482,13 @@ describe('UserAccountService', () => {
         enabled: true,
       } as UserAccountEntity;
 
-      mockRepository.findOne.mockResolvedValue(existingUserAccount);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(existingUserAccount),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
       mockOrganisationService.getById.mockResolvedValue(newOrganisation);
       mockEstablishmentService.getById.mockResolvedValue(newEstablishment);
       mockRepository.save.mockResolvedValue({
@@ -478,22 +515,33 @@ describe('UserAccountService', () => {
         roles: mockRoles,
       } as UserAccountEntity;
 
-      mockRepository.findOne.mockResolvedValue(userAccount);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(userAccount),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
       mockRepository.remove.mockResolvedValue(userAccount);
 
       await service.delete(id);
 
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { id },
-        relations: ['user', 'organisation', 'establishment', 'roles'],
-      });
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'userAccount',
+      );
       expect(mockRepository.remove).toHaveBeenCalledWith(userAccount);
     });
 
     it('should throw NotFoundException if user account not found', async () => {
       const id = 'non-existent-id';
 
-      mockRepository.findOne.mockResolvedValue(null);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       await expect(service.delete(id)).rejects.toThrow(NotFoundException);
       expect(mockRepository.remove).not.toHaveBeenCalled();

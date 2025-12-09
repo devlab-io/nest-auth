@@ -586,10 +586,11 @@ describe('AuthService', () => {
 
       userService.findByEmail.mockResolvedValue(mockUser);
       userAccountService.search.mockResolvedValue({
-        data: [],
+        contents: [],
         total: 0,
         page: 1,
-        limit: 1,
+        pages: 1,
+        size: 1,
       });
 
       await expect(service.signIn(request)).rejects.toThrow(
@@ -605,10 +606,11 @@ describe('AuthService', () => {
 
       userService.findByEmail.mockResolvedValue(mockUser);
       userAccountService.search.mockResolvedValue({
-        data: [mockUserAccount],
+        contents: [mockUserAccount],
         total: 1,
         page: 1,
-        limit: 1,
+        pages: 1,
+        size: 1,
       });
       jwtService.authenticate.mockResolvedValue(mockJwtToken);
 

@@ -80,13 +80,6 @@ export interface UserQueryParams {
   actions?: number; // bit masks or single ActionType values
 }
 
-export interface UserPage {
-  data: User[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
 export interface GenerateUsernameRequest {
   email: string;
   username?: string;

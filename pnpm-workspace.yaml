@@ -1,0 +1,11 @@
+packages:
+  - packages/*
+  - demo/*
+
+ignoredBuiltDependencies:
+  - '@nestjs/core'
+  - '@scarf/scarf'
+  - bcrypt
+
+onlyBuiltDependencies:
+  - unrs-resolver

@@ -4,12 +4,11 @@ import {
   UserAccount,
   CreateUserAccountRequest,
   UpdateUserAccountRequest,
-  UserAccountPage,
+  Organisation,
+  Establishment,
+  User,
+  Role,
 } from '@devlab-io/nest-auth-types';
-import { OrganisationDto } from './organisation.dtos';
-import { EstablishmentDto } from './establishment.dtos';
-import { UserDto } from './user.dtos';
-import { RoleDto } from './role.dtos';
 
 export class UserAccountDto implements UserAccount {
   @ApiProperty({
@@ -19,28 +18,26 @@ export class UserAccountDto implements UserAccount {
   id: string;
 
   @ApiPropertyOptional({
-    type: OrganisationDto,
     description: 'Organisation this user account belongs to',
   })
-  organisation?: OrganisationDto;
+  organisation?: Organisation;
 
   @ApiPropertyOptional({
-    type: EstablishmentDto,
     description: 'Establishment this user account belongs to',
   })
-  establishment?: EstablishmentDto;
+  establishment?: Establishment;
 
   @ApiProperty({
-    type: UserDto,
     description: 'User associated with this account',
   })
-  user: UserDto;
+  user: User;
 
   @ApiProperty({
     description: 'Roles assigned to this user account',
-    type: [RoleDto],
+    type: 'array',
+    items: { type: 'object' },
   })
-  roles: RoleDto[];
+  roles: Role[];
 
   @ApiProperty({
     example: '2024-02-20T10:00:00.000Z',
@@ -120,30 +117,4 @@ export class UpdateUserAccountRequestDto implements UpdateUserAccountRequest {
   @IsArray()
   @IsString({ each: true })
   roles?: string[];
-}
-
-export class UserAccountPageDto implements UserAccountPage {
-  @ApiProperty({
-    description: 'List of user accounts',
-    type: [UserAccountDto],
-  })
-  data: UserAccountDto[];
-
-  @ApiProperty({
-    example: 100,
-    description: 'Total number of user accounts',
-  })
-  total: number;
-
-  @ApiProperty({
-    example: 1,
-    description: 'Current page number',
-  })
-  page: number;
-
-  @ApiProperty({
-    example: 10,
-    description: 'Number of user accounts per page',
-  })
-  limit: number;
 }

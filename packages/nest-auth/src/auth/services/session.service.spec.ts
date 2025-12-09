@@ -4,6 +4,7 @@ import { NotFoundException } from '@nestjs/common';
 import { SessionService } from './session.service';
 import { SessionEntity } from '../entities';
 import { JwtConfig, JwtConfigToken } from '../config/jwt.config';
+import { ScopeService } from './scope.service';
 
 describe('SessionService', () => {
   let service: SessionService;
@@ -24,6 +25,10 @@ describe('SessionService', () => {
     },
   };
 
+  const mockScopeService = {
+    getScopeFromRequest: jest.fn().mockReturnValue(null),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -35,6 +40,10 @@ describe('SessionService', () => {
         {
           provide: JwtConfigToken,
           useValue: mockJwtConfig,
+        },
+        {
+          provide: ScopeService,
+          useValue: mockScopeService,
         },
       ],
     }).compile();
@@ -90,25 +99,32 @@ describe('SessionService', () => {
         userAccount: {},
       };
 
-      mockRepository.findOne.mockResolvedValue(mockSession);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(mockSession),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       const result = await service.findByToken(token);
 
-      expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { token },
-        relations: [
-          'userAccount',
-          'userAccount.user',
-          'userAccount.organisation',
-          'userAccount.establishment',
-          'userAccount.roles',
-        ],
-      });
+      expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith('session');
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
+        'session.token = :token',
+        { token },
+      );
       expect(result).toEqual(mockSession);
     });
 
     it('should return null if session not found', async () => {
-      mockRepository.findOne.mockResolvedValue(null);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      };
+      mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       const result = await service.findByToken('non-existent-token');
 
@@ -337,10 +353,9 @@ describe('SessionService', () => {
       const result = await service.deleteAllByUserId(userId);
 
       expect(mockQueryBuilder.leftJoinAndSelect).toHaveBeenCalled();
-      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
-        'userAccount.user.id = :userId',
-        { userId },
-      );
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith('user.id = :userId', {
+        userId,
+      });
       expect(mockRepository.remove).toHaveBeenCalledWith(mockSessions);
       expect(result).toBe(3);
     });

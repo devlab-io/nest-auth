@@ -22,7 +22,7 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo || true"
   },
   "dependencies": {
-    "@devlab-io/nest-auth-types": "*",
+    "@devlab-io/nest-auth-types": "workspace:*",
     "zod": "^3.25.76"
   },
   "devDependencies": {

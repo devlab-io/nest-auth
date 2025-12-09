@@ -4,6 +4,8 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { DefaultUserService } from './user.service';
 import { CredentialService } from './credential.service';
 import { ActionService } from './action.service';
+import { ScopeService } from './scope.service';
+import { JwtService } from './jwt.service';
 import { UserEntity, UserAccountEntity } from '../entities';
 import { DataSource } from 'typeorm';
 import {
@@ -44,6 +46,12 @@ describe('UserService', () => {
   const mockActionService = {
     create: jest.fn(),
   };
+
+  const mockScopeService = {
+    getScopeFromRequest: jest.fn().mockReturnValue(null),
+  };
+
+  const mockJwtService = {};
 
   const mockUserConfig: UserConfig = {
     user: {
@@ -101,6 +109,14 @@ describe('UserService', () => {
         {
           provide: ActionService,
           useValue: mockActionService,
+        },
+        {
+          provide: ScopeService,
+          useValue: mockScopeService,
+        },
+        {
+          provide: JwtService,
+          useValue: mockJwtService,
         },
         {
           provide: UserConfigToken,
@@ -287,22 +303,33 @@ describe('UserService', () => {
         phone: '9876543210',
       } as UserEntity;
 
-      mockUserRepository.findOne.mockResolvedValue(existingUser);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(existingUser),
+      };
+      mockUserRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
       mockUserRepository.save.mockResolvedValue(updatedUser);
 
       const result = await service.patch(userId, request);
 
-      expect(mockUserRepository.findOne).toHaveBeenCalledWith({
-        where: { id: userId },
-        relations: ['credentials', 'actions', 'accounts', 'accounts.roles'],
-      });
+      expect(mockUserRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'user',
+      );
       expect(result.firstName).toBe('Jane');
       expect(result.lastName).toBe('SMITH');
       expect(result.phone).toBe('9876543210');
     });
 
     it('should throw NotFoundException if user not found', async () => {
-      mockUserRepository.findOne.mockResolvedValue(null);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      };
+      mockUserRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       await expect(
         service.patch('nonexistent-id', { firstName: 'John' }),
@@ -344,7 +371,13 @@ describe('UserService', () => {
         acceptedPrivacyPolicy: true,
       } as UserEntity;
 
-      mockUserRepository.findOne.mockResolvedValue(existingUser);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(existingUser),
+      };
+      mockUserRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
       mockUserRepository.exists.mockResolvedValue(false);
       mockUserRepository.save.mockResolvedValue(updatedUser);
       mockCredentialService.setPasswordCredential.mockResolvedValue(undefined);
@@ -362,7 +395,13 @@ describe('UserService', () => {
     });
 
     it('should throw NotFoundException if user not found', async () => {
-      mockUserRepository.findOne.mockResolvedValue(null);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      };
+      mockUserRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       await expect(
         service.update('nonexistent-id', { email: 'new@example.com' }),
@@ -401,10 +440,10 @@ describe('UserService', () => {
 
       const result = await service.search({}, 1, 10);
 
-      expect(result.data).toEqual(users);
+      expect(result.contents).toEqual(users);
       expect(result.total).toBe(2);
       expect(result.page).toBe(1);
-      expect(result.limit).toBe(10);
+      expect(result.size).toBe(10);
     });
 
     it('should filter by email', async () => {
@@ -459,32 +498,53 @@ describe('UserService', () => {
     it('should return user by email', async () => {
       const user = createMockUser();
 
-      mockUserRepository.findOne.mockResolvedValue(user);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(user),
+      };
+      mockUserRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       const result = await service.findByEmail('test@example.com');
 
-      expect(mockUserRepository.findOne).toHaveBeenCalledWith({
-        where: { email: 'test@example.com' },
-        relations: ['credentials', 'actions', 'accounts', 'accounts.roles'],
-      });
+      expect(mockUserRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'user',
+      );
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
+        'user.email = :email',
+        { email: 'test@example.com' },
+      );
       expect(result).toEqual(user);
     });
 
     it('should normalize email to lowercase', async () => {
       const user = createMockUser();
 
-      mockUserRepository.findOne.mockResolvedValue(user);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(user),
+      };
+      mockUserRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       await service.findByEmail('TEST@EXAMPLE.COM');
 
-      expect(mockUserRepository.findOne).toHaveBeenCalledWith({
-        where: { email: 'test@example.com' },
-        relations: ['credentials', 'actions', 'accounts', 'accounts.roles'],
-      });
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
+        'user.email = :email',
+        { email: 'test@example.com' },
+      );
     });
 
     it('should return null if user not found', async () => {
-      mockUserRepository.findOne.mockResolvedValue(null);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      };
+      mockUserRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       const result = await service.findByEmail('nonexistent@example.com');
 
@@ -496,19 +556,30 @@ describe('UserService', () => {
     it('should return user by id', async () => {
       const user = createMockUser();
 
-      mockUserRepository.findOne.mockResolvedValue(user);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(user),
+      };
+      mockUserRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       const result = await service.findById('user-id');
 
-      expect(mockUserRepository.findOne).toHaveBeenCalledWith({
-        where: { id: 'user-id' },
-        relations: ['credentials', 'actions', 'accounts', 'accounts.roles'],
-      });
+      expect(mockUserRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'user',
+      );
       expect(result).toEqual(user);
     });
 
     it('should return null if user not found', async () => {
-      mockUserRepository.findOne.mockResolvedValue(null);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      };
+      mockUserRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       const result = await service.findById('nonexistent-id');
 
@@ -520,7 +591,13 @@ describe('UserService', () => {
     it('should return user by id', async () => {
       const user = createMockUser();
 
-      mockUserRepository.findOne.mockResolvedValue(user);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(user),
+      };
+      mockUserRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       const result = await service.getById('user-id');
 
@@ -528,7 +605,13 @@ describe('UserService', () => {
     });
 
     it('should throw NotFoundException if user not found', async () => {
-      mockUserRepository.findOne.mockResolvedValue(null);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      };
+      mockUserRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       await expect(service.getById('nonexistent-id')).rejects.toThrow(
         NotFoundException,
@@ -575,7 +658,13 @@ describe('UserService', () => {
       const user = createMockUser({ enabled: false });
       const enabledUser = createMockUser({ enabled: true });
 
-      mockUserRepository.findOne.mockResolvedValue(user);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(user),
+      };
+      mockUserRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
       mockUserRepository.save.mockResolvedValue(enabledUser);
 
       const result = await service.enable('user-id');
@@ -587,7 +676,13 @@ describe('UserService', () => {
     });
 
     it('should throw NotFoundException if user not found', async () => {
-      mockUserRepository.findOne.mockResolvedValue(null);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      };
+      mockUserRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       await expect(service.enable('nonexistent-id')).rejects.toThrow(
         NotFoundException,
@@ -611,6 +706,15 @@ describe('UserService', () => {
           user: { id: 'user-id' },
         },
       ] as UserAccountEntity[];
+
+      // Mock for getById call before transaction
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(user),
+      };
+      mockUserRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       const mockManager = {
         findOne: jest.fn(),
@@ -647,15 +751,14 @@ describe('UserService', () => {
     });
 
     it('should throw NotFoundException if user not found', async () => {
-      const mockManager = {
-        findOne: jest.fn(),
+      // Mock for getById - returns null
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
       };
-
-      mockDataSource.transaction.mockImplementation(async (callback) => {
-        return callback(mockManager);
-      });
-
-      mockManager.findOne.mockResolvedValue(null);
+      mockUserRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       await expect(service.disable('nonexistent-id')).rejects.toThrow(
         NotFoundException,
@@ -667,7 +770,13 @@ describe('UserService', () => {
     it('should delete a user', async () => {
       const user = createMockUser();
 
-      mockUserRepository.findOne.mockResolvedValue(user);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(user),
+      };
+      mockUserRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
       mockUserRepository.remove.mockResolvedValue(user);
 
       await service.delete('user-id');
@@ -676,7 +785,13 @@ describe('UserService', () => {
     });
 
     it('should throw NotFoundException if user not found', async () => {
-      mockUserRepository.findOne.mockResolvedValue(null);
+      const mockQueryBuilder = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(null),
+      };
+      mockUserRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
 
       await expect(service.delete('nonexistent-id')).rejects.toThrow(
         NotFoundException,

@@ -5,28 +5,31 @@
   "description": "NestJS Authentication Module - Monorepo",
   "author": "DevLab",
   "license": "UNLICENSED",
-  "workspaces": [
-    "packages/*"
-  ],
   "scripts": {
-    "build": "yarn build:types && yarn build:auth && yarn build:client",
-    "build:types": "yarn workspace @devlab-io/nest-auth-types build",
-    "build:auth": "yarn workspace @devlab-io/nest-auth build",
-    "build:client": "yarn workspace @devlab-io/nest-auth-client build",
+    "build": "pnpm clean:dist && pnpm build:types && pnpm build:auth && pnpm build:client",
+    "build:types": "pnpm --filter @devlab-io/nest-auth-types build",
+    "build:auth": "pnpm --filter @devlab-io/nest-auth build",
+    "build:client": "pnpm --filter @devlab-io/nest-auth-client build",
+    "clean:dist": "rimraf --glob \"packages/*/dist\" \"packages/*/*.tsbuildinfo\"",
     "format": "prettier --write \"**/*.{ts,js,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,js,json,md}\"",
-    "lint": "yarn workspaces run lint",
-    "lint:check": "yarn workspaces run lint:check",
-    "test": "yarn workspaces run test",
-    "type-check": "yarn workspaces run type-check",
-    "clean": "yarn workspaces run clean && rm -rf dist || true"
+    "lint": "pnpm -r run lint",
+    "lint:check": "pnpm -r run lint:check",
+    "test": "pnpm -r run test",
+    "type-check": "pnpm -r run type-check",
+    "clean": "pnpm -r run clean && rm -rf dist || true",
+    "dev:backend": "pnpm --filter @devlab-io/demo-auth-backend start:dev",
+    "dev:frontend": "pnpm --filter @devlab-io/demo-auth-frontend dev",
+    "dev": "concurrently \"pnpm dev:backend\" \"pnpm dev:frontend\""
   },
   "devDependencies": {
+    "concurrently": "^8.2.2",
     "prettier": "^3.4.2",
+    "rimraf": "^5.0.5",
     "typescript": "^5.7.2"
   },
   "engines": {
     "node": ">=18.0.0",
-    "yarn": ">=1.22.0"
+    "pnpm": ">=8.0.0"
   }
 }

@@ -5,7 +5,7 @@ import {
   PatchUserRequest,
   UpdateUserRequest,
   UserQueryParams,
-  UserPage,
+  Page,
   Session,
 } from '@devlab-io/nest-auth-types';
 
@@ -28,16 +28,21 @@ export class UserService extends BaseService {
   /**
    * Search for users with pagination and filters
    * GET /users
+   *
+   * @param query - The query parameters
+   * @param page - The page number (default: 1)
+   * @param size - The number of users per page (default: 10)
+   * @returns A page of users
    */
   public async search(
     query?: UserQueryParams,
     page: number = 1,
-    limit: number = 10,
-  ): Promise<UserPage> {
+    size: number = 10,
+  ): Promise<Page<User>> {
     this.ensureInitialized();
-    return this.request<UserPage>('/users', {
+    return this.request<Page<User>>('/users', {
       method: 'GET',
-      params: { ...query, page, limit },
+      params: { ...query, page, size },
     });
   }
 

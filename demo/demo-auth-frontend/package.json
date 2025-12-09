@@ -1,0 +1,28 @@
+{
+  "name": "@devlab-io/demo-auth-frontend",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@devlab-io/nest-auth-client": "workspace:*",
+    "@devlab-io/nest-auth-types": "workspace:*",
+    "next": "^15.1.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.17",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "^15.1.0",
+    "tailwindcss": "^4.1.17",
+    "typescript": "^5"
+  }
+}

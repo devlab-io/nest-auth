@@ -1,4 +1,4 @@
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, Repository, SelectQueryBuilder } from 'typeorm';
 import {
   Injectable,
   NotFoundException,
@@ -16,11 +16,15 @@ import {
   OrganisationService,
   OrganisationServiceToken,
 } from './organisation.service';
+import { ScopeService } from './scope.service';
 import {
   CreateEstablishmentRequest,
   UpdateEstablishmentRequest,
   EstablishmentQueryParams,
-  EstablishmentPage,
+  Establishment,
+  Page,
+  AuthScope,
+  ClaimScope,
 } from '@devlab-io/nest-auth-types';
 
 /**
@@ -35,6 +39,7 @@ export interface EstablishmentService {
   create(request: CreateEstablishmentRequest): Promise<EstablishmentEntity>;
   getById(id: string): Promise<EstablishmentEntity>;
   findById(id: string): Promise<EstablishmentEntity | null>;
+  findByName(name: string): Promise<EstablishmentEntity | null>;
   findByNameAndOrganisation(
     name: string,
     organisationId: string,
@@ -43,8 +48,8 @@ export interface EstablishmentService {
   search(
     params: EstablishmentQueryParams,
     page?: number,
-    limit?: number,
-  ): Promise<EstablishmentPage>;
+    size?: number,
+  ): Promise<Page<Establishment>>;
   update(
     id: string,
     request: UpdateEstablishmentRequest,
@@ -85,6 +90,7 @@ export class DefaultEstablishmentService implements EstablishmentService {
    * @param dataSource - The data source for transactions
    * @param establishmentRepository - The establishment repository
    * @param organisationService - The organisation service
+   * @param scopeService - The scope service
    */
   public constructor(
     private readonly dataSource: DataSource,
@@ -92,6 +98,7 @@ export class DefaultEstablishmentService implements EstablishmentService {
     private readonly establishmentRepository: Repository<EstablishmentEntity>,
     @Inject(OrganisationServiceToken)
     private readonly organisationService: OrganisationService,
+    private readonly scopeService: ScopeService,
   ) {}
 
   /**
@@ -142,11 +149,60 @@ export class DefaultEstablishmentService implements EstablishmentService {
   }
 
   /**
+   * Apply scope filters to a query builder for establishments.
+   * Filters based on establishmentId or organisationId of the connected account.
+   * This ensures cross-resource access respects establishment/organisation boundaries.
+   *
+   * @param queryBuilder - The query builder
+   */
+  private applyScopeFilters(
+    queryBuilder: SelectQueryBuilder<EstablishmentEntity>,
+  ): void {
+    const authScope: AuthScope | null = this.scopeService.getScopeFromRequest();
+
+    // No scope = no filtering (e.g., unauthenticated or internal call)
+    if (!authScope) {
+      return;
+    }
+
+    // ANY scope = no constraints
+    if (authScope.scope === ClaimScope.ANY) {
+      return;
+    }
+
+    // If ESTABLISHMENT scope with establishmentId, filter by it
+    if (authScope.establishmentId) {
+      queryBuilder.andWhere('establishment.id = :establishmentId', {
+        establishmentId: authScope.establishmentId,
+      });
+      return;
+    }
+
+    // If organisationId is defined (ORGANISATION scope), filter by it
+    if (authScope.organisationId) {
+      queryBuilder.andWhere('organisation.id = :organisationId', {
+        organisationId: authScope.organisationId,
+      });
+      return;
+    }
+
+    // If scope is ORGANISATION/ESTABLISHMENT/OWN but no ids, deny all (safety fallback)
+    if (
+      authScope.scope === ClaimScope.ORGANISATION ||
+      authScope.scope === ClaimScope.ESTABLISHMENT ||
+      authScope.scope === ClaimScope.OWN
+    ) {
+      queryBuilder.andWhere('1 = 0'); // No results
+      return;
+    }
+  }
+
+  /**
    * Get an establishment by ID
    *
    * @param id - The ID of the establishment
    * @returns The establishment
-   * @throws NotFoundException if the establishment is not found
+   * @throws NotFoundException if the establishment is not found or out of scope
    */
   public async getById(id: string): Promise<EstablishmentEntity> {
     const establishment = await this.findById(id);
@@ -160,47 +216,82 @@ export class DefaultEstablishmentService implements EstablishmentService {
 
   /**
    * Find an establishment by ID
+   * Applies scope filters to ensure establishments outside the current scope are not found.
    *
    * @param id - The ID of the establishment
-   * @returns The establishment or null if not found
+   * @returns The establishment or null if not found or out of scope
    */
   public async findById(id: string): Promise<EstablishmentEntity | null> {
-    return await this.establishmentRepository.findOne({
-      where: { id },
-      relations: ['organisation', 'accounts'],
-    });
+    const queryBuilder = this.establishmentRepository
+      .createQueryBuilder('establishment')
+      .leftJoinAndSelect('establishment.organisation', 'organisation')
+      .leftJoinAndSelect('establishment.accounts', 'accounts')
+      .where('establishment.id = :id', { id });
+
+    this.applyScopeFilters(queryBuilder);
+
+    return await queryBuilder.getOne();
+  }
+
+  /**
+   * Find an establishment by name
+   * Applies scope filters to ensure establishments outside the current scope are not found.
+   *
+   * @param name - The name of the establishment
+   * @returns The establishment or null if not found or out of scope
+   */
+  public async findByName(name: string): Promise<EstablishmentEntity | null> {
+    const queryBuilder = this.establishmentRepository
+      .createQueryBuilder('establishment')
+      .leftJoinAndSelect('establishment.organisation', 'organisation')
+      .leftJoinAndSelect('establishment.accounts', 'accounts')
+      .where('establishment.name = :name', { name });
+
+    this.applyScopeFilters(queryBuilder);
+
+    return await queryBuilder.getOne();
   }
 
   /**
    * Find an establishment by name and organisation
+   * Applies scope filters to ensure establishments outside the current scope are not found.
    *
    * @param name - The name of the establishment
    * @param organisationId - The ID of the organisation
-   * @returns The establishment or null if not found
+   * @returns The establishment or null if not found or out of scope
    */
   public async findByNameAndOrganisation(
     name: string,
     organisationId: string,
   ): Promise<EstablishmentEntity | null> {
-    return await this.establishmentRepository.findOne({
-      where: {
-        name,
-        organisation: { id: organisationId },
-      },
-      relations: ['organisation', 'accounts'],
-    });
+    const queryBuilder = this.establishmentRepository
+      .createQueryBuilder('establishment')
+      .leftJoinAndSelect('establishment.organisation', 'organisation')
+      .leftJoinAndSelect('establishment.accounts', 'accounts')
+      .where('establishment.name = :name', { name })
+      .andWhere('organisation.id = :organisationId', { organisationId });
+
+    this.applyScopeFilters(queryBuilder);
+
+    return await queryBuilder.getOne();
   }
 
   /**
    * Check if an establishment exists by ID
+   * Applies scope filters to ensure establishments outside the current scope are not found.
    *
    * @param id - The ID of the establishment
-   * @returns True if the establishment exists, false otherwise
+   * @returns True if the establishment exists within scope, false otherwise
    */
   public async exists(id: string): Promise<boolean> {
-    const count = await this.establishmentRepository.count({
-      where: { id },
-    });
+    const queryBuilder = this.establishmentRepository
+      .createQueryBuilder('establishment')
+      .leftJoin('establishment.organisation', 'organisation')
+      .where('establishment.id = :id', { id });
+
+    this.applyScopeFilters(queryBuilder);
+
+    const count = await queryBuilder.getCount();
     return count > 0;
   }
 
@@ -209,15 +300,15 @@ export class DefaultEstablishmentService implements EstablishmentService {
    *
    * @param params - The query parameters
    * @param page - The page number (default: 1)
-   * @param limit - The number of establishments per page (default: 10)
-   * @returns The establishments page
+   * @param size - The number of establishments per page (default: 10)
+   * @returns A page of establishments
    */
   public async search(
     params: EstablishmentQueryParams,
     page: number = 1,
-    limit: number = 10,
-  ): Promise<EstablishmentPage> {
-    const skip = (page - 1) * limit;
+    size: number = 10,
+  ): Promise<Page<Establishment>> {
+    const skip = (page - 1) * size;
     const queryBuilder = this.establishmentRepository
       .createQueryBuilder('establishment')
       .leftJoinAndSelect('establishment.organisation', 'organisation')
@@ -238,22 +329,28 @@ export class DefaultEstablishmentService implements EstablishmentService {
       });
     }
 
+    // Apply scope filters
+    this.applyScopeFilters(queryBuilder);
+
     // Apply pagination and ordering
     queryBuilder
       .distinct(true)
       .skip(skip)
-      .take(limit)
+      .take(size)
       .orderBy('establishment.name', 'ASC');
 
     // Execute query
-    const [data, total]: [EstablishmentEntity[], number] =
+    const [contents, total]: [EstablishmentEntity[], number] =
       await queryBuilder.getManyAndCount();
 
+    const pages = Math.ceil(total / size);
+
     return {
-      data,
+      contents,
       total,
       page,
-      limit,
+      pages,
+      size,
     };
   }
 

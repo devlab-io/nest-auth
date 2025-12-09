@@ -4,7 +4,7 @@ import {
   CreateEstablishmentRequest,
   UpdateEstablishmentRequest,
   EstablishmentQueryParams,
-  EstablishmentPage,
+  Page,
 } from '@devlab-io/nest-auth-types';
 
 /**
@@ -28,16 +28,21 @@ export class EstablishmentService extends BaseService {
   /**
    * Search for establishments with pagination and filters
    * GET /establishments
+   *
+   * @param query - The query parameters
+   * @param page - The page number (default: 1)
+   * @param size - The number of establishments per page (default: 10)
+   * @returns A page of establishments
    */
   public async search(
     query?: EstablishmentQueryParams,
     page: number = 1,
-    limit: number = 10,
-  ): Promise<EstablishmentPage> {
+    size: number = 10,
+  ): Promise<Page<Establishment>> {
     this.ensureInitialized();
-    return this.request<EstablishmentPage>('/establishments', {
+    return this.request<Page<Establishment>>('/establishments', {
       method: 'GET',
-      params: { ...query, page, limit },
+      params: { ...query, page, size },
     });
   }
 

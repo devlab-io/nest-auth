@@ -12,7 +12,7 @@ import {
   UserConfigToken,
   UserConfig,
 } from './config';
-import { JwtAuthGuard, FrontendUrlGuard } from './guards';
+import { AuthGuard, FrontendUrlGuard } from './guards';
 import {
   ActionService,
   AuthService,
@@ -31,6 +31,8 @@ import {
   EstablishmentServiceToken,
   UserAccountService,
   CredentialService,
+  ClaimService,
+  ScopeService,
 } from './services';
 import {
   AuthController,
@@ -44,6 +46,7 @@ import {
 import {
   UserEntity,
   RoleEntity,
+  ClaimEntity,
   ActionEntity,
   SessionEntity,
   OrganisationEntity,
@@ -101,6 +104,7 @@ export class AuthModule {
         getRepositoryToken(UserEntityClass),
         CredentialService,
         ActionService,
+        ScopeService,
       ],
       useFactory: (
         userConfig: UserConfig,
@@ -108,6 +112,7 @@ export class AuthModule {
         userRepository: Repository<UserEntity>,
         credentialService: CredentialService,
         actionService: ActionService,
+        scopeService: ScopeService,
       ): UserService => {
         return new DefaultUserService(
           userConfig,
@@ -115,20 +120,27 @@ export class AuthModule {
           userRepository,
           credentialService,
           actionService,
+          scopeService,
         );
       },
     };
 
     const organisationServiceProvider: Provider<OrganisationService> = {
       provide: OrganisationServiceToken,
-      inject: [DataSource, getRepositoryToken(OrganisationEntityClass)],
+      inject: [
+        DataSource,
+        getRepositoryToken(OrganisationEntityClass),
+        ScopeService,
+      ],
       useFactory: (
         dataSource: DataSource,
         organisationRepository: Repository<OrganisationEntity>,
+        scopeService: ScopeService,
       ): OrganisationService => {
         return new DefaultOrganisationService(
           dataSource,
           organisationRepository,
+          scopeService,
         );
       },
     };
@@ -137,18 +149,21 @@ export class AuthModule {
       provide: EstablishmentServiceToken,
       inject: [
         DataSource,
-        getRepositoryToken(EstablishmentEntityClass), // ✅ Utilise la classe d'entité configurée
+        getRepositoryToken(EstablishmentEntityClass),
         OrganisationServiceToken,
+        ScopeService,
       ],
       useFactory: (
         dataSource: DataSource,
         establishmentRepository: Repository<EstablishmentEntity>,
         organisationService: OrganisationService,
+        scopeService: ScopeService,
       ): EstablishmentService => {
         return new DefaultEstablishmentService(
           dataSource,
           establishmentRepository,
           organisationService,
+          scopeService,
         );
       },
     };
@@ -161,6 +176,7 @@ export class AuthModule {
           OrganisationEntityClass,
           EstablishmentEntityClass,
           RoleEntity,
+          ClaimEntity,
           ActionEntity,
           SessionEntity,
           CredentialEntity,
@@ -191,12 +207,14 @@ export class AuthModule {
         establishmentServiceProvider,
         ActionService,
         RoleService,
+        ClaimService,
         JwtService,
         SessionService,
         NotificationService,
         UserAccountService,
         CredentialService,
-        JwtAuthGuard,
+        ScopeService,
+        AuthGuard,
         FrontendUrlGuard,
       ],
       exports: [
@@ -214,12 +232,14 @@ export class AuthModule {
         establishmentServiceProvider,
         ActionService,
         RoleService,
+        ClaimService,
         JwtService,
         SessionService,
         NotificationService,
         UserAccountService,
         CredentialService,
-        JwtAuthGuard,
+        ScopeService,
+        AuthGuard,
         FrontendUrlGuard,
       ],
     };
