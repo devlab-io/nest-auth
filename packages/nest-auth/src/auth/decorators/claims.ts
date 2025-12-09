@@ -31,9 +31,9 @@ export function Claims(...claims: ClaimLike[]) {
   }
 
   // Verify that all claims have the same action and resource
-  const firstClaim = parsedClaims[0];
+  const firstClaim: Claim = parsedClaims[0];
   for (let i = 1; i < parsedClaims.length; i++) {
-    const claim = parsedClaims[i];
+    const claim: Claim = parsedClaims[i];
     if (claim.action !== firstClaim.action) {
       throw new BadRequestException(
         `All claims must have the same action. Found ${firstClaim.action} and ${claim.action}`,
