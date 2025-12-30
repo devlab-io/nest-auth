@@ -452,6 +452,7 @@ export class AuthService {
     // The application should call sendEmailValidation separately after sign-up if needed
     // For now, we'll skip sending the email validation automatically
     // await this.sendEmailValidation(user.id, frontendUrl);
+    // TODO: Fix this
 
     // Log
     this.logger.debug(`User with email ${user.email} signed up`);

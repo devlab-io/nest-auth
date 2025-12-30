@@ -44,7 +44,12 @@ services:
       - "1100:1100"   # POP3
     environment:
       INBUCKET_LOGLEVEL: info
+    volumes:
+      - inbucket_config:/config
+      - inbucket_storage:/storage
 
 volumes:
   postgres_data:
+  inbucket_config:
+  inbucket_storage:
 
