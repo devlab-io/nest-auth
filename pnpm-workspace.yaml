@@ -8,4 +8,5 @@ ignoredBuiltDependencies:
   - bcrypt
 
 onlyBuiltDependencies:
+  - sqlite3
   - unrs-resolver
