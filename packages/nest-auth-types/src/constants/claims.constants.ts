@@ -8,6 +8,7 @@ import {
   ROLES,
   SESSIONS,
   USERS,
+  CLAIMS,
 } from './resources.constants';
 // ADMIN
 export const ADMIN: Claim = claim(ClaimAction.ADMIN, ClaimScope.ADMIN, ANY);
@@ -171,6 +172,13 @@ export const DELETE_ANY_ROLES: Claim = claim(
   ClaimAction.DELETE,
   ClaimScope.ANY,
   ROLES,
+);
+
+// CLAIMS
+export const READ_ANY_CLAIMS: Claim = claim(
+  ClaimAction.READ,
+  ClaimScope.ANY,
+  CLAIMS,
 );
 
 // SESSIONS

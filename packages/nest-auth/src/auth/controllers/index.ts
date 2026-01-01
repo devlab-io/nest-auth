@@ -5,3 +5,4 @@ export { OrganisationController } from './organisation.controller';
 export { EstablishmentController } from './establishment.controller';
 export { UserAccountController } from './user-account.controller';
 export { RoleController } from './role.controller';
+export { ClaimController } from './claim.controller';
