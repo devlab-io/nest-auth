@@ -1,5 +1,9 @@
 import { BaseService } from './base.service';
-import { Role, CreateRoleRequest, UpdateRoleRequest } from '@devlab-io/nest-auth-types';
+import {
+  Role,
+  CreateRoleRequest,
+  UpdateRoleRequest,
+} from '@devlab-io/nest-auth-types';
 
 /**
  * Service for interacting with the Role API routes

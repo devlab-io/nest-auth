@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { AuthClient } from '@devlab-io/nest-auth-client';
 import { Claim, ClaimsUtils } from '@devlab-io/nest-auth-types';
 
@@ -25,6 +25,14 @@ export default function ClaimSelector({
   const [selectedClaimsMap, setSelectedClaimsMap] = useState<SelectedClaimsMap>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+
+  const hasClaim = useCallback((resource: string, scope: string, action: string): boolean => {
+    const resourceMap = claimsMap.get(resource);
+    if (!resourceMap) return false;
+    const scopeMap = resourceMap.get(scope);
+    if (!scopeMap) return false;
+    return scopeMap.has(action);
+  }, [claimsMap]);
 
   useEffect(() => {
     loadClaims();
@@ -68,7 +76,7 @@ export default function ClaimSelector({
       });
       onSelectionChange(claims);
     }
-  }, [selectedClaimsMap, claimsMap, onSelectionChange]);
+  }, [selectedClaimsMap, claimsMap, onSelectionChange, hasClaim]);
 
   const loadClaims = async () => {
     setIsLoading(true);
@@ -131,14 +139,6 @@ export default function ClaimSelector({
 
   const getActions = (): string[] => {
     return ['read', 'create', 'update', 'enable', 'disable', 'delete', 'admin'];
-  };
-
-  const hasClaim = (resource: string, scope: string, action: string): boolean => {
-    const resourceMap = claimsMap.get(resource);
-    if (!resourceMap) return false;
-    const scopeMap = resourceMap.get(scope);
-    if (!scopeMap) return false;
-    return scopeMap.has(action);
   };
 
   const isSelected = (resource: string, scope: string, action: string): boolean => {

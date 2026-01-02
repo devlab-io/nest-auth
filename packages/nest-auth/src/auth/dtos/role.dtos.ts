@@ -3,12 +3,10 @@ import {
   IsString,
   IsOptional,
   IsArray,
-  ValidateNested,
   MinLength,
   ValidateBy,
   ValidationOptions,
 } from 'class-validator';
-import { Type } from 'class-transformer';
 import {
   Role,
   CreateRoleRequest,
@@ -98,7 +96,8 @@ export class CreateRoleRequestDto implements CreateRoleRequest {
   description?: string;
 
   @ApiProperty({
-    description: 'Claims assigned to this role (can be strings in format "action:scope:resource" or Claim objects)',
+    description:
+      'Claims assigned to this role (can be strings in format "action:scope:resource" or Claim objects)',
     oneOf: [
       { type: 'string' },
       { type: 'object', $ref: '#/components/schemas/ClaimDto' },
@@ -128,7 +127,8 @@ export class UpdateRoleRequestDto implements UpdateRoleRequest {
   description?: string;
 
   @ApiPropertyOptional({
-    description: 'Claims assigned to this role (can be strings in format "action:scope:resource" or Claim objects)',
+    description:
+      'Claims assigned to this role (can be strings in format "action:scope:resource" or Claim objects)',
     oneOf: [
       { type: 'string' },
       { type: 'object', $ref: '#/components/schemas/ClaimDto' },

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '../../../providers/AuthProvider';
 import { AuthClient } from '@devlab-io/nest-auth-client';
@@ -31,13 +31,7 @@ export default function RoleDetailPage() {
     }
   }, [authLoading, isAuthenticated, router]);
 
-  useEffect(() => {
-    if (isAuthenticated && roleName) {
-      loadRole();
-    }
-  }, [isAuthenticated, roleName]);
-
-  const loadRole = async () => {
+  const loadRole = useCallback(async () => {
     try {
       const loadedRole = await AuthClient.roles.getByName(roleName);
       setRole(loadedRole);
@@ -49,7 +43,13 @@ export default function RoleDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [roleName]);
+
+  useEffect(() => {
+    if (isAuthenticated && roleName) {
+      loadRole();
+    }
+  }, [isAuthenticated, roleName, loadRole]);
 
   const handleEdit = () => {
     setIsEditing(true);
