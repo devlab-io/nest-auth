@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import { AuthProvider } from './providers/AuthProvider';
-import { Navigation } from './components/Navigation';
+import { AuthProvider } from '../providers/AuthProvider';
+import { Navigation } from '../components/Navigation';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -17,9 +17,9 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <AuthProvider>
-          <div className="app-container">
-            <Navigation />
-            <main className="main-content">{children}</main>
+          <div className="flex min-h-screen">
+            <Navigation/>
+            <main className="flex-1 p-8 bg-[var(--color-bg-primary)]">{children}</main>
           </div>
         </AuthProvider>
       </body>

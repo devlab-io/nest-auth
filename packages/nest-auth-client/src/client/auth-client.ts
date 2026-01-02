@@ -2,6 +2,7 @@ import { UserAccount } from '@devlab-io/nest-auth-types';
 import { AuthState, AuthStateConfig } from '../state/auth.state';
 import {
   AuthService,
+  ClaimService,
   EstablishmentService,
   OrganisationService,
   RoleService,
@@ -31,6 +32,13 @@ export class AuthClient {
    */
   public static get auth(): AuthService {
     return new AuthService();
+  }
+
+  /**
+   * Get the claim service
+   */
+  public static get claims(): ClaimService {
+    return new ClaimService();
   }
 
   /**
