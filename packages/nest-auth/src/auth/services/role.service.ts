@@ -27,6 +27,9 @@ export class RoleService {
    * @returns The created role with claims
    */
   async create(request: CreateRoleRequest): Promise<RoleEntity> {
+    // Normalize the name to lowercase
+    request.name = request.name.toLowerCase();
+
     // Look for the role with the same name
     const exists: boolean = await this.exists(request.name);
     if (exists) {

@@ -13,7 +13,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U nest-auth -d nest-auth-db"]
       interval: 10s
@@ -45,11 +45,13 @@ services:
     environment:
       INBUCKET_LOGLEVEL: info
     volumes:
-      - inbucket_config:/config
-      - inbucket_storage:/storage
+      - inbucket-config:/config
+      - inbucket-data:/data
+      - inbucket-storage:/storage
 
 volumes:
-  postgres_data:
-  inbucket_config:
-  inbucket_storage:
+  postgres-data:
+  inbucket-config:
+  inbucket-data:
+  inbucket-storage:
 
