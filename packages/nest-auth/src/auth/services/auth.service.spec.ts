@@ -39,6 +39,8 @@ import {
   JwtToken,
 } from '@devlab-io/nest-auth-types';
 
+const FRONTEND_URL: string = 'https://example.com';
+
 describe('AuthService', () => {
   let service: AuthService;
   let userService: jest.Mocked<UserService>;
@@ -463,7 +465,6 @@ describe('AuthService', () => {
         lastName: 'Doe',
         acceptedTerms: true,
         acceptedPrivacyPolicy: true,
-        enabled: true,
       };
 
       actionService.validate.mockResolvedValue(mockActionToken);
@@ -521,10 +522,9 @@ describe('AuthService', () => {
         lastName: 'Doe',
         acceptedTerms: false,
         acceptedPrivacyPolicy: true,
-        enabled: true,
       };
 
-      await expect(service.signUp(request)).rejects.toThrow(
+      await expect(service.signUp(request, FRONTEND_URL)).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -537,10 +537,9 @@ describe('AuthService', () => {
         lastName: 'Doe',
         acceptedTerms: true,
         acceptedPrivacyPolicy: false,
-        enabled: true,
       };
 
-      await expect(service.signUp(request)).rejects.toThrow(
+      await expect(service.signUp(request, FRONTEND_URL)).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -553,14 +552,31 @@ describe('AuthService', () => {
         lastName: 'Doe',
         acceptedTerms: true,
         acceptedPrivacyPolicy: true,
-        enabled: true,
       };
 
       userService.create.mockResolvedValue(mockUser);
+      userService.getById.mockResolvedValue(mockUser);
+      actionService.create.mockResolvedValue(mockActionToken);
+      notificationService.sendActionTokenEmail.mockResolvedValue(undefined);
 
-      await service.signUp(request);
+      await service.signUp(request, FRONTEND_URL);
 
-      expect(userService.create).toHaveBeenCalledWith(request);
+      expect(userService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: 'test@example.com',
+          enabled: true,
+          emailValidated: false,
+          firstName: 'John',
+          lastName: 'Doe',
+          acceptedTerms: true,
+          acceptedPrivacyPolicy: true,
+          credentials: [{ type: 'password', password: 'password123' }],
+          actions: [],
+        }),
+      );
+      expect(userService.getById).toHaveBeenCalledWith(mockUser.id);
+      expect(actionService.create).toHaveBeenCalled();
+      expect(notificationService.sendActionTokenEmail).toHaveBeenCalled();
     });
   });
 

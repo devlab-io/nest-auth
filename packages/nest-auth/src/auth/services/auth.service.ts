@@ -24,6 +24,7 @@ import {
   Organisation,
   Establishment,
   UserAccount,
+  CreateUserRequest,
 } from '@devlab-io/nest-auth-types';
 import { UserConfig, UserConfigToken } from '../config/user.config';
 import { ActionConfig, ActionConfigToken } from '../config/action.config';
@@ -389,9 +390,19 @@ export class AuthService {
     const password = passwordCredential?.password;
 
     // Create the user (with credentials if provided)
-    const createUserRequest: SignUpRequest = {
-      ...request,
+    const createUserRequest: CreateUserRequest = {
+      email: request.email,
+      emailValidated: false,
+      username: request.username,
+      firstName: request.firstName,
+      lastName: request.lastName,
+      phone: request.phone,
+      profilePicture: request.profilePicture,
+      enabled: true,
+      acceptedTerms: request.acceptedTerms,
+      acceptedPrivacyPolicy: request.acceptedPrivacyPolicy,
       credentials: request.credentials,
+      actions: [],
     };
     const user: UserEntity = await this.userService.create(createUserRequest);
 
@@ -437,22 +448,56 @@ export class AuthService {
    * @returns The created user
    * @throws BadRequestException if a user with the same email or username already exists
    */
-  public async signUp(request: SignUpRequest): Promise<void> {
-    // User must accept the terms and privacy policy
-    if (!request.acceptedTerms || !request.acceptedPrivacyPolicy) {
-      throw new BadRequestException(
-        'User must accept the terms and privacy policy',
-      );
-    }
+  public async signUp(
+    request: SignUpRequest,
+    frontendUrl: string,
+  ): Promise<void> {
+    // Required actions
+    const createUserRequest: CreateUserRequest = {
+      enabled: true,
+      email: request.email,
+      emailValidated: false,
+      username: request.username,
+      firstName: request.firstName,
+      lastName: request.lastName,
+      phone: request.phone,
+      profilePicture: request.profilePicture,
+      acceptedTerms: request.acceptedTerms,
+      acceptedPrivacyPolicy: request.acceptedPrivacyPolicy,
+      credentials: request.credentials,
+      actions: [],
+    };
+
+    // If accepted terms are not accepted, add the accept terms action
+    if (!request.acceptedTerms)
+      createUserRequest.actions!.push({
+        type: ActionType.AcceptTerms,
+        expiresIn: 24,
+      });
+
+    // If accepted privacy policy are not accepted, add the accept privacy policy action
+    if (!request.acceptedPrivacyPolicy)
+      createUserRequest.actions!.push({
+        type: ActionType.AcceptPrivacyPolicy,
+        expiresIn: 24,
+      });
 
     // Create the user
-    const user: UserEntity = await this.userService.create(request);
+    const user: UserEntity = await this.userService.create(createUserRequest);
 
-    // Note: sendEmailValidation requires frontendUrl, but signUp doesn't have access to it
-    // The application should call sendEmailValidation separately after sign-up if needed
-    // For now, we'll skip sending the email validation automatically
-    // await this.sendEmailValidation(user.id, frontendUrl);
-    // TODO: Fix this
+    // TODO : Create the user account
+    // await this.userAccountService.create({
+    //   userId: user.id,
+    //   organisationId: organisationId,
+    //   establishmentId: establishmentId,
+    //   roles: roles,
+    // });
+
+    // Send the action email
+    await this.sendActionToken(
+      { type: ActionType.ValidateEmail, user: user },
+      frontendUrl,
+    );
 
     // Log
     this.logger.debug(`User with email ${user.email} signed up`);

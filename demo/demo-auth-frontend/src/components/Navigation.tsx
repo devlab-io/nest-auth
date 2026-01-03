@@ -1,8 +1,11 @@
 'use client';
 
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../providers/AuthProvider';
+import { AuthClient } from '@devlab-io/nest-auth-client';
+import { UserAccount } from '@devlab-io/nest-auth-types';
 import {
   Lock,
   Home,
@@ -13,16 +16,58 @@ import {
   UserPlus,
   Shield,
   ShieldUser,
+  UserCog,
+  ChevronDown,
 } from 'lucide-react';
 
 export function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
   const { userAccount, isAuthenticated, signOut } = useAuth();
+  const [userAccounts, setUserAccounts] = useState<UserAccount[]>([]);
+  const [isLoadingAccounts, setIsLoadingAccounts] = useState(false);
+  const [showAccountsList, setShowAccountsList] = useState(false);
+
+  const loadUserAccounts = useCallback(async () => {
+    if (!userAccount) return;
+    try {
+      setIsLoadingAccounts(true);
+      const response = await AuthClient.userAccounts.search(
+        { userId: userAccount.user.id },
+        1,
+        100
+      );
+      setUserAccounts(response.contents);
+    } catch (error) {
+      console.error('Failed to load user accounts:', error);
+    } finally {
+      setIsLoadingAccounts(false);
+    }
+  }, [userAccount]);
+
+  useEffect(() => {
+    if (isAuthenticated && userAccount) {
+      loadUserAccounts();
+    }
+  }, [isAuthenticated, userAccount, loadUserAccounts]);
 
   const handleSignOut = async () => {
     await signOut();
     router.push('/auth/signin');
+  };
+
+  const getAccountLabel = (account: UserAccount) => {
+    const parts: string[] = [];
+    if (account.organisation) {
+      parts.push(account.organisation.name);
+    }
+    if (account.establishment) {
+      parts.push(account.establishment.name);
+    }
+    if (parts.length === 0) {
+      return 'No organisation';
+    }
+    return parts.join(' / ');
   };
 
   const navItems = isAuthenticated
@@ -31,6 +76,7 @@ export function Navigation() {
         { href: '/claims', label: 'Claims', icon: Shield },
         { href: '/roles', label: 'Roles', icon: ShieldUser },
         { href: '/users', label: 'Users', icon: Users },
+        { href: '/user-accounts', label: 'User Accounts', icon: UserCog },
         { href: '/organisations', label: 'Organisations', icon: Building2 },
         { href: '/establishments', label: 'Establishments', icon: Store },
       ]
@@ -95,6 +141,63 @@ export function Navigation() {
               </div>
             </div>
           </div>
+
+          {userAccounts.length > 1 && (
+            <div className="mb-4 relative">
+              <button
+                onClick={() => setShowAccountsList(!showAccountsList)}
+                className="w-full flex items-center justify-between px-3 py-2 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-lg text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)] transition-colors"
+              >
+                <span className="text-xs text-[var(--color-text-secondary)] truncate">
+                  {getAccountLabel(userAccount)}
+                </span>
+                <ChevronDown
+                  size={16}
+                  className={`text-[var(--color-text-secondary)] transition-transform ${
+                    showAccountsList ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+              {showAccountsList && (
+                <div className="absolute bottom-full left-0 right-0 mb-2 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-lg shadow-lg max-h-48 overflow-y-auto z-10">
+                  {isLoadingAccounts ? (
+                    <div className="px-3 py-2 text-xs text-[var(--color-text-secondary)]">
+                      Loading...
+                    </div>
+                  ) : (
+                    userAccounts.map((account) => (
+                      <Link
+                        key={account.id}
+                        href={`/user-accounts/${account.id}`}
+                        onClick={() => setShowAccountsList(false)}
+                        className={`block px-3 py-2 text-xs hover:bg-[var(--color-bg-secondary)] transition-colors ${
+                          account.id === userAccount.id
+                            ? 'bg-[rgba(99,102,241,0.1)] text-[var(--color-accent)] font-medium'
+                            : 'text-[var(--color-text-primary)]'
+                        }`}
+                      >
+                        <div className="truncate">{getAccountLabel(account)}</div>
+                        {account.roles && account.roles.length > 0 && (
+                          <div className="text-[var(--color-text-secondary)] mt-1 truncate">
+                            {account.roles.map((r) => r.name).join(', ')}
+                          </div>
+                        )}
+                      </Link>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {userAccounts.length === 1 && (
+            <div className="mb-4 px-3 py-2 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-lg">
+              <div className="text-xs text-[var(--color-text-secondary)] truncate">
+                {getAccountLabel(userAccount)}
+              </div>
+            </div>
+          )}
+
           <button
             onClick={handleSignOut}
             className="w-full px-2.5 py-2.5 bg-transparent border border-[var(--color-border)] rounded-lg text-[var(--color-text-secondary)] text-sm cursor-pointer transition-all hover:bg-[rgba(239,68,68,0.1)] hover:border-[var(--color-error)] hover:text-[var(--color-error)]"

@@ -24,6 +24,7 @@ export interface User {
 export interface CreateUserRequest {
   username?: string;
   email: string;
+  emailValidated: boolean;
   firstName?: string;
   lastName?: string;
   phone?: string;

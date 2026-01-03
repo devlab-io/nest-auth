@@ -93,11 +93,15 @@ export class AuthController {
   }
 
   @Post('sign-up')
+  @UseGuards(FrontendUrlGuard)
   @ApiOperation({ summary: 'Register a new user account' })
   @ApiResponse({ status: 200, description: 'User registered successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
-  async signUp(@Body() signUpRequest: SignUpRequestDto): Promise<void> {
-    return await this.authService.signUp(signUpRequest);
+  async signUp(
+    @Body() signUpRequest: SignUpRequestDto,
+    @FrontendUrl() frontendUrl: string,
+  ): Promise<void> {
+    return await this.authService.signUp(signUpRequest, frontendUrl);
   }
 
   @Post('sign-in')

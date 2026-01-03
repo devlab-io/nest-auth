@@ -10,6 +10,9 @@ import {
   BookOpen,
   Database,
   Mail,
+  Shield,
+  ShieldUser,
+  UserCog,
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -65,6 +68,24 @@ export default function HomePage() {
         <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-6">
           <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl p-6 transition-all hover:border-[var(--color-accent)] hover:-translate-y-0.5">
             <div className="flex items-center gap-2 text-lg font-semibold mb-2">
+              <Shield size={20} />
+              Claims
+            </div>
+            <div className="text-[var(--color-text-secondary)] text-sm">
+              Manage permissions and access control claims
+            </div>
+          </div>
+          <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl p-6 transition-all hover:border-[var(--color-accent)] hover:-translate-y-0.5">
+            <div className="flex items-center gap-2 text-lg font-semibold mb-2">
+              <ShieldUser size={20} />
+              Roles
+            </div>
+            <div className="text-[var(--color-text-secondary)] text-sm">
+              Define and manage user roles with custom permissions
+            </div>
+          </div>
+          <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl p-6 transition-all hover:border-[var(--color-accent)] hover:-translate-y-0.5">
+            <div className="flex items-center gap-2 text-lg font-semibold mb-2">
               <Lock size={20} />
               Authentication
             </div>
@@ -79,6 +100,15 @@ export default function HomePage() {
             </div>
             <div className="text-[var(--color-text-secondary)] text-sm">
               User management with roles and permissions
+            </div>
+          </div>
+          <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl p-6 transition-all hover:border-[var(--color-accent)] hover:-translate-y-0.5">
+            <div className="flex items-center gap-2 text-lg font-semibold mb-2">
+              <UserCog size={20} />
+              User Accounts
+            </div>
+            <div className="text-[var(--color-text-secondary)] text-sm">
+              Manage user accounts with organisations and establishments
             </div>
           </div>
           <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl p-6 transition-all hover:border-[var(--color-accent)] hover:-translate-y-0.5">

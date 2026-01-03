@@ -131,13 +131,14 @@ describe('UserService', () => {
   describe('create', () => {
     it('should create a new user with generated username and credentials', async () => {
       const request: CreateUserRequest = {
+        enabled: true,
         email: 'test@example.com',
+        emailValidated: false,
         credentials: [{ type: 'password', password: 'password123' }],
         firstName: 'John',
         lastName: 'Doe',
         acceptedTerms: true,
         acceptedPrivacyPolicy: true,
-        enabled: true,
       };
 
       const generatedUsername = 'johndoe#123456';
@@ -171,6 +172,7 @@ describe('UserService', () => {
     it('should create user with provided username', async () => {
       const request: CreateUserRequest = {
         email: 'test@example.com',
+        emailValidated: false,
         credentials: [{ type: 'password', password: 'password123' }],
         username: 'johndoe',
         acceptedTerms: true,
@@ -200,6 +202,7 @@ describe('UserService', () => {
     it('should normalize email to lowercase', async () => {
       const request: CreateUserRequest = {
         email: 'TEST@EXAMPLE.COM',
+        emailValidated: false,
         credentials: [{ type: 'password', password: 'password123' }],
         acceptedTerms: true,
         acceptedPrivacyPolicy: true,
@@ -227,6 +230,7 @@ describe('UserService', () => {
     it('should capitalize firstName and uppercase lastName', async () => {
       const request: CreateUserRequest = {
         email: 'test@example.com',
+        emailValidated: false,
         credentials: [{ type: 'password', password: 'password123' }],
         firstName: 'john',
         lastName: 'doe',
@@ -259,6 +263,7 @@ describe('UserService', () => {
     it('should throw BadRequestException if unable to generate unique username', async () => {
       const request: CreateUserRequest = {
         email: 'test@example.com',
+        emailValidated: false,
         credentials: [{ type: 'password', password: 'password123' }],
         acceptedTerms: true,
         acceptedPrivacyPolicy: true,

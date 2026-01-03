@@ -31,7 +31,6 @@ export const signUpRequestSchema = z.object({
   firstName: z.string().optional(),
   lastName: z.string().optional(),
   phone: z.string().optional(),
-  enabled: z.boolean(),
   profilePicture: z.string().optional(),
   acceptedTerms: z.boolean(),
   acceptedPrivacyPolicy: z.boolean(),
@@ -41,15 +40,6 @@ export const signUpRequestSchema = z.object({
         type: z.enum(['password', 'google']),
         password: z.string().optional(),
         googleId: z.string().optional(),
-      }),
-    )
-    .optional(),
-  actions: z
-    .array(
-      z.object({
-        type: z.number(),
-        expiresIn: z.number().optional(),
-        roles: z.array(z.string()).optional(),
       }),
     )
     .optional(),

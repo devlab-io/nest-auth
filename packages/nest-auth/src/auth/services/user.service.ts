@@ -184,7 +184,7 @@ export class DefaultUserService implements UserService {
     // Create new user (without credentials)
     let user: UserEntity = this.userRepository.create({
       email: request.email.toLowerCase(),
-      emailValidated: false,
+      emailValidated: request.emailValidated,
       username: username,
       firstName: request.firstName ? capitalize(request.firstName) : undefined,
       lastName: request.lastName?.toUpperCase(),
@@ -192,7 +192,7 @@ export class DefaultUserService implements UserService {
       profilePicture: request.profilePicture,
       acceptedTerms: request.acceptedTerms,
       acceptedPrivacyPolicy: request.acceptedPrivacyPolicy,
-      enabled: true,
+      enabled: request.enabled,
     });
 
     // Save the user first

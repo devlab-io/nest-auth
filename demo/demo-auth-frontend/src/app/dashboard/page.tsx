@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
 import { AuthClient } from '@devlab-io/nest-auth-client';
-import { Users, Building2, Store, Shield, ShieldUser } from 'lucide-react';
+import { Users, Building2, Store, Shield, ShieldUser, UserCog } from 'lucide-react';
 import DashboardCard from '../../components/DashboardCard';
 
 export default function DashboardPage() {
@@ -12,6 +12,7 @@ export default function DashboardPage() {
   const { userAccount, isAuthenticated, isLoading: authLoading } = useAuth();
   const [stats, setStats] = useState({
     users: 0,
+    userAccounts: 0,
     organisations: 0,
     establishments: 0,
     claims: 0,
@@ -33,8 +34,9 @@ export default function DashboardPage() {
 
   const loadStats = async () => {
     try {
-      const [usersRes, orgsRes, estsRes, claimsRes, rolesRes] = await Promise.allSettled([
+      const [usersRes, userAccountsRes, orgsRes, estsRes, claimsRes, rolesRes] = await Promise.allSettled([
         AuthClient.users.search({}, 1, 1),
+        AuthClient.userAccounts.search({}, 1, 1),
         AuthClient.organisations.search({}, 1, 1),
         AuthClient.establishments.search({}, 1, 1),
         AuthClient.claims.getAll(),
@@ -43,6 +45,7 @@ export default function DashboardPage() {
 
       setStats({
         users: usersRes.status === 'fulfilled' ? usersRes.value.total : 0,
+        userAccounts: userAccountsRes.status === 'fulfilled' ? userAccountsRes.value.total : 0,
         organisations: orgsRes.status === 'fulfilled' ? orgsRes.value.total : 0,
         establishments:
           estsRes.status === 'fulfilled' ? estsRes.value.total : 0,
@@ -92,6 +95,14 @@ export default function DashboardPage() {
           value={stats.users}
           label="Users"
           href="/users"
+          isLoading={isLoading}
+        />
+
+        <DashboardCard
+          icon={UserCog}
+          value={stats.userAccounts}
+          label="User Accounts"
+          href="/user-accounts"
           isLoading={isLoading}
         />
 
