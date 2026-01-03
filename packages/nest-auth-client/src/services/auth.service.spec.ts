@@ -165,7 +165,6 @@ describe('AuthService', () => {
     it('should sign up successfully', async () => {
       const request: SignUpRequest = {
         email: 'test@example.com',
-        enabled: true,
         acceptedTerms: true,
         acceptedPrivacyPolicy: true,
         credentials: [
@@ -268,7 +267,6 @@ describe('AuthService', () => {
       const request: AcceptInvitationRequest = {
         token: 'invitation-token',
         email: 'test@example.com',
-        enabled: true,
         acceptedTerms: true,
         acceptedPrivacyPolicy: true,
         credentials: [
