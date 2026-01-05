@@ -20,35 +20,32 @@ export const UserConfigToken: symbol = Symbol('UserConfig');
  * - If undefined, uses the default value
  */
 function booleanEnv(defaultValue: boolean = false) {
-  return z.preprocess(
-    (val) => {
-      // If undefined, return undefined (default will be applied)
-      if (val === undefined || val === null || val === '') {
-        return undefined;
+  return z.preprocess((val) => {
+    // If undefined, return undefined (default will be applied)
+    if (val === undefined || val === null || val === '') {
+      return undefined;
+    }
+    // If already a boolean, return as is
+    if (typeof val === 'boolean') {
+      return val;
+    }
+    // If number, convert
+    if (typeof val === 'number') {
+      return val === 1 ? true : val === 0 ? false : defaultValue;
+    }
+    // If string, parse it
+    if (typeof val === 'string') {
+      const lower = val.toLowerCase().trim();
+      if (lower === 'true' || lower === 'yes' || lower === '1') {
+        return true;
       }
-      // If already a boolean, return as is
-      if (typeof val === 'boolean') {
-        return val;
-      }
-      // If number, convert
-      if (typeof val === 'number') {
-        return val === 1 ? true : val === 0 ? false : defaultValue;
-      }
-      // If string, parse it
-      if (typeof val === 'string') {
-        const lower = val.toLowerCase().trim();
-        if (lower === 'true' || lower === 'yes' || lower === '1') {
-          return true;
-        }
-        if (lower === 'false' || lower === 'no' || lower === '0') {
-          return false;
-        }
-        return defaultValue;
+      if (lower === 'false' || lower === 'no' || lower === '0') {
+        return false;
       }
       return defaultValue;
-    },
-    z.boolean().default(defaultValue),
-  );
+    }
+    return defaultValue;
+  }, z.boolean().default(defaultValue));
 }
 
 const userConfigSchema = z.object({

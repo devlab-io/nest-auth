@@ -39,10 +39,7 @@ export const dataSourceOptions: DataSourceOptions = {
     SessionEntity,
     UserEntity,
   ],
-  migrations: [
-    CreateAuthSchema1700000000000,
-    CreateDefaultRoles1700000000001,
-  ],
+  migrations: [CreateAuthSchema1700000000000, CreateDefaultRoles1700000000001],
   logging: ['error', 'warn', 'migration'],
   synchronize: false,
   migrationsTableName: 'migrations',
