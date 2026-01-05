@@ -67,6 +67,14 @@ export class AuthService extends BaseService {
   }
 
   /**
+   * Get available roles for sign up
+   * GET /auth/sign-up-role
+   */
+  public async getSignUpRoles(): Promise<string[]> {
+    return await this.request<string[]>('/auth/sign-up-role');
+  }
+
+  /**
    * Register a new user account
    * POST /auth/sign-up
    */

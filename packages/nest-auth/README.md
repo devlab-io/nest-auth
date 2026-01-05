@@ -84,6 +84,11 @@ AUTH_USER_CAN_SIGN_UP=true
 
 # Rôles par défaut assignés lors de l'inscription (séparés par des virgules)
 AUTH_USER_DEFAULT_ROLES=user
+
+# Rôles disponibles pour la sélection lors de l'inscription (séparés par des virgules)
+# Les utilisateurs peuvent choisir un ou plusieurs de ces rôles lors de l'inscription
+# Les rôles par défaut sont toujours assignés en plus des rôles sélectionnés
+AUTH_USER_SIGN_UP_ROLES=user,premium,beta
 ```
 
 #### Configuration Google OAuth
@@ -644,6 +649,15 @@ Récupère le compte utilisateur actuellement authentifié.
 - **Authentification** : Requise (JWT)
 - **Réponse** : `UserAccountDto` ou `null`
 
+#### `GET /auth/sign-up-role`
+
+Récupère la liste des rôles disponibles pour l'inscription.
+
+- **Réponse** : `string[]` (tableau de noms de rôles)
+  ```typescript
+  ['user', 'premium', 'beta'];
+  ```
+
 #### `POST /auth/sign-up`
 
 Inscription d'un nouvel utilisateur.
@@ -652,13 +666,24 @@ Inscription d'un nouvel utilisateur.
   ```typescript
   {
     email: string;
-    password: string;
     username?: string;
     firstName?: string;
     lastName?: string;
+    phone?: string;
+    profilePicture?: string;
+    acceptedTerms: boolean;
+    acceptedPrivacyPolicy: boolean;
+    credentials?: Array<{
+      type: 'password' | 'google';
+      password?: string;
+      googleId?: string;
+    }>;
+    roles?: string[]; // Rôles sélectionnés (doivent être dans AUTH_USER_SIGN_UP_ROLES)
   }
   ```
 - **Réponse** : `void`
+
+**Note** : Les rôles par défaut (`AUTH_USER_DEFAULT_ROLES`) sont toujours assignés en plus des rôles sélectionnés par l'utilisateur. Les rôles sélectionnés doivent être présents dans la liste des rôles autorisés (`AUTH_USER_SIGN_UP_ROLES`).
 
 #### `POST /auth/sign-in`
 

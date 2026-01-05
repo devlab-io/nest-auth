@@ -153,6 +153,16 @@ export class SignUpRequestDto implements SignUpRequest {
   })
   @IsBoolean({ message: 'acceptedPrivacyPolicy must be a boolean' })
   acceptedPrivacyPolicy: boolean;
+
+  @ApiPropertyOptional({
+    example: ['user', 'admin'],
+    description: 'Array of role names to assign to the user',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray({ message: 'roles must be an array' })
+  @IsString({ each: true, message: 'Each role must be a string' })
+  roles?: string[];
 }
 
 export class SignInRequestDto implements SignInRequest {

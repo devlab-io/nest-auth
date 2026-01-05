@@ -55,6 +55,7 @@ describe('AuthService', () => {
     user: {
       canSignUp: true,
       defaultRoles: ['user'],
+      signUpRoles: ['user', 'premium'],
     },
   };
 

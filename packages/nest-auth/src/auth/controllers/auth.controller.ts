@@ -53,6 +53,17 @@ export class AuthController {
     return await this.authService.getAccount();
   }
 
+  @Get('sign-up-role')
+  @ApiOperation({ summary: 'Get available roles for sign up' })
+  @ApiResponse({
+    status: 200,
+    description: 'Available roles for sign up',
+    type: [String],
+  })
+  async getSignUpRoles(): Promise<string[]> {
+    return await this.authService.getSignUpRoles();
+  }
+
   @Post('invite')
   @UseGuards(AuthGuard, FrontendUrlGuard)
   @Claims(

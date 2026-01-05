@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AuthClient } from '@devlab-io/nest-auth-client';
@@ -22,9 +22,27 @@ export default function SignUpPage() {
     acceptedTerms: false,
     acceptedPrivacyPolicy: false,
   });
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingRoles, setIsLoadingRoles] = useState(true);
+
+  // Load available roles on mount
+  useEffect(() => {
+    const loadRoles = async () => {
+      try {
+        const roles = await AuthClient.auth.getSignUpRoles();
+        setAvailableRoles(roles);
+      } catch (err: any) {
+        console.error('Failed to load roles:', err);
+      } finally {
+        setIsLoadingRoles(false);
+      }
+    };
+    loadRoles();
+  }, []);
 
   // Redirect if already authenticated
   if (isAuthenticated) {
@@ -38,6 +56,14 @@ export default function SignUpPage() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
+  };
+
+  const toggleRole = (roleName: string) => {
+    setSelectedRoles((prev) =>
+      prev.includes(roleName)
+        ? prev.filter((r) => r !== roleName)
+        : [...prev, roleName]
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -69,6 +95,7 @@ export default function SignUpPage() {
         ...(formData.password && {
           credentials: [{ type: 'password', password: formData.password }],
         }),
+        ...(selectedRoles.length > 0 && { roles: selectedRoles }),
       });
       router.push('/auth/signup/done');
     } catch (err: any) {
@@ -241,6 +268,35 @@ export default function SignUpPage() {
             onChange={handleChange}
           />
         </div>
+
+        {!isLoadingRoles && availableRoles.length > 0 && (
+          <div className="mb-5">
+            <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]">
+              Roles
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {availableRoles.map((role) => (
+                <button
+                  key={role}
+                  type="button"
+                  onClick={() => toggleRole(role)}
+                  className={`px-4 py-2 text-sm rounded-lg border transition-all ${
+                    selectedRoles.includes(role)
+                      ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)]'
+                      : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] border-[var(--color-border)] hover:border-[var(--color-accent)]'
+                  }`}
+                >
+                  {role}
+                </button>
+              ))}
+            </div>
+            {selectedRoles.length > 0 && (
+              <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
+                Selected: {selectedRoles.join(', ')}
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="mb-4">
           <label className="flex items-center gap-2 cursor-pointer text-sm text-[var(--color-text-secondary)]">

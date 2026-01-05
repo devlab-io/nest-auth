@@ -67,6 +67,15 @@ export class AuthService {
   }
 
   /**
+   * Get available roles for sign up
+   *
+   * @returns Array of role names available for sign up
+   */
+  public async getSignUpRoles(): Promise<string[]> {
+    return this.userConfig.user.signUpRoles;
+  }
+
+  /**
    * Get the maximum expiration time for a set of actions
    *
    * @param actions - Bit mask of actions
@@ -447,11 +456,43 @@ export class AuthService {
    * @param request - The sign up request containing the users information.
    * @returns The created user
    * @throws BadRequestException if a user with the same email or username already exists
+   * @throws BadRequestException if invalid roles are provided
    */
   public async signUp(
     request: SignUpRequest,
     frontendUrl: string,
   ): Promise<void> {
+    // Validate that terms are accepted
+    if (!request.acceptedTerms) {
+      throw new BadRequestException('Terms of service must be accepted');
+    }
+
+    // Validate that privacy policy is accepted
+    if (!request.acceptedPrivacyPolicy) {
+      throw new BadRequestException('Privacy policy must be accepted');
+    }
+
+    // Validate roles if provided
+    if (request.roles && request.roles.length > 0) {
+      const allowedRoles: string[] = this.userConfig.user.signUpRoles;
+      const invalidRoles: string[] = request.roles.filter(
+        (role: string) => !allowedRoles.includes(role),
+      );
+      if (invalidRoles.length > 0) {
+        throw new BadRequestException(
+          `Invalid roles: ${invalidRoles.join(', ')}. Allowed roles: ${allowedRoles.join(', ')}`,
+        );
+      }
+    }
+
+    // Determine roles to assign (combine provided roles with default roles, removing duplicates)
+    const providedRoles: string[] =
+      request.roles && request.roles.length > 0 ? request.roles : [];
+    const defaultRoles: string[] = this.userConfig.user.defaultRoles || [];
+    const rolesToAssign: string[] = Array.from(
+      new Set([...defaultRoles, ...providedRoles]),
+    );
+
     // Required actions
     const createUserRequest: CreateUserRequest = {
       enabled: true,
@@ -485,13 +526,13 @@ export class AuthService {
     // Create the user
     const user: UserEntity = await this.userService.create(createUserRequest);
 
-    // TODO : Create the user account
-    // await this.userAccountService.create({
-    //   userId: user.id,
-    //   organisationId: organisationId,
-    //   establishmentId: establishmentId,
-    //   roles: roles,
-    // });
+    // Create the user account with roles
+    if (rolesToAssign.length > 0) {
+      await this.userAccountService.create({
+        userId: user.id,
+        roles: rolesToAssign,
+      });
+    }
 
     // Send the action email
     await this.sendActionToken(

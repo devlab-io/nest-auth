@@ -43,6 +43,7 @@ export interface SignUpRequest {
     password?: string;
     googleId?: string;
   }>;
+  roles?: string[];
 }
 
 export interface InviteRequest {

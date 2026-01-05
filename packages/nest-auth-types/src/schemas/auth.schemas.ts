@@ -43,6 +43,7 @@ export const signUpRequestSchema = z.object({
       }),
     )
     .optional(),
+  roles: z.array(z.string()).optional(),
 }) satisfies z.ZodType<SignUpRequest>;
 
 /**

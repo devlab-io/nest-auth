@@ -11,6 +11,20 @@
 
 Monorepo contenant les packages NestJS Authentication.
 
+## A Faire
+
+Gérer un client mobile :
+- Remote Mobile App Attestation (RMAA) with Runtime Self-Protection (RASP)
+- Deeplink to redirect to a mobile app
+
+Redesign Organisation / Establishment system:
+- maybe the notion of groups is enough ?
+- roles define for a wall group
+
+Composite roles:
+- roles with children and mostyly a parent with inherited permission
+
+
 ## Introduction
 
 Ce monorepo fournit une solution complète d'authentification pour les applications NestJS. Il est composé de trois packages complémentaires qui travaillent ensemble pour offrir une authentification robuste, sécurisée et facile à intégrer.
