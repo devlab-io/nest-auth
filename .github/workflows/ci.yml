@@ -55,7 +55,19 @@ jobs:
           pnpm install --force
           # Verify the package is accessible
           echo "Verifying package accessibility..."
-          test -f node_modules/@devlab-io/nest-auth-types/dist/index.d.ts || (echo "Error: Package types not accessible in node_modules" && exit 1)
+          # Check if package can be resolved via pnpm (workspace packages may be linked differently)
+          if pnpm why @devlab-io/nest-auth-types > /dev/null 2>&1; then
+            echo "✓ Package is accessible via workspace"
+          else
+            echo "Error: Package not accessible via workspace"
+            exit 1
+          fi
+          # Also verify the dist files exist in the workspace package
+          if [ ! -f packages/nest-auth-types/dist/index.d.ts ]; then
+            echo "Error: Package types not found in workspace package"
+            exit 1
+          fi
+          echo "✓ Package types verified"
           # Build nest-auth-client (will use the built types from workspace)
           echo "Building nest-auth-client..."
           pnpm --filter @devlab-io/nest-auth-client build
