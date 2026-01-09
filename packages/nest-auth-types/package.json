@@ -1,6 +1,6 @@
 {
   "name": "@devlab-io/nest-auth-types",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "description": "TypeScript types for NestJS Authentication Module",
   "author": "DevLab",
   "license": "UNLICENSED",
