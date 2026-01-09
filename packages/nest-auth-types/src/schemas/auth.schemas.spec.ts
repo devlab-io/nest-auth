@@ -61,7 +61,6 @@ describe('Auth Schemas', () => {
     it('should validate a valid sign-up request', () => {
       const validRequest: SignUpRequest = {
         email: 'test@example.com',
-        enabled: true,
         acceptedTerms: true,
         acceptedPrivacyPolicy: true,
         credentials: [
@@ -86,7 +85,6 @@ describe('Auth Schemas', () => {
         firstName: 'John',
         lastName: 'Doe',
         phone: '+1234567890',
-        enabled: true,
         acceptedTerms: true,
         acceptedPrivacyPolicy: true,
         profilePicture: 'https://example.com/pic.jpg',
@@ -94,13 +92,6 @@ describe('Auth Schemas', () => {
           {
             type: 'password',
             password: 'password123',
-          },
-        ],
-        actions: [
-          {
-            type: 1,
-            expiresIn: 24,
-            roles: ['role1', 'role2'],
           },
         ],
       };
@@ -185,7 +176,6 @@ describe('Auth Schemas', () => {
       const validRequest: AcceptInvitationRequest = {
         token: 'invitation-token',
         email: 'test@example.com',
-        enabled: true,
         acceptedTerms: true,
         acceptedPrivacyPolicy: true,
         credentials: [

@@ -1,4 +1,7 @@
 import { DynamicModule, Global, Module, Provider } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { ClassSerializerInterceptor } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { getRepositoryToken, TypeOrmModule } from '@nestjs/typeorm';
 import {
   provideAuthConfig,
@@ -42,6 +45,7 @@ import {
   EstablishmentController,
   UserAccountController,
   RoleController,
+  ClaimController,
 } from './controllers';
 import {
   UserEntity,
@@ -191,6 +195,7 @@ export class AuthModule {
         EstablishmentController,
         UserAccountController,
         RoleController,
+        ClaimController,
       ],
       providers: [
         actionConfigProvider,
@@ -216,6 +221,13 @@ export class AuthModule {
         ScopeService,
         AuthGuard,
         FrontendUrlGuard,
+        {
+          provide: APP_INTERCEPTOR,
+          inject: [Reflector],
+          useFactory: (reflector: Reflector) => {
+            return new ClassSerializerInterceptor(reflector);
+          },
+        },
       ],
       exports: [
         actionConfigProvider,

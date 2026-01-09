@@ -27,6 +27,7 @@ import {
   SESSIONS,
   USER_ACCOUNTS,
   USERS,
+  CLAIMS,
 } from '@devlab-io/nest-auth-types';
 import { createClaimsForResource } from '../utils/claims.utils';
 
@@ -884,6 +885,14 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
       ],
       [ClaimScope.ANY],
       ROLES,
+    );
+
+    // CLAIMS
+    await createClaimsForResource(
+      queryRunner,
+      [ClaimAction.READ],
+      [ClaimScope.ANY],
+      CLAIMS,
     );
 
     // SESSIONS

@@ -84,6 +84,11 @@ AUTH_USER_CAN_SIGN_UP=true
 
 # Rôles par défaut assignés lors de l'inscription (séparés par des virgules)
 AUTH_USER_DEFAULT_ROLES=user
+
+# Rôles disponibles pour la sélection lors de l'inscription (séparés par des virgules)
+# Les utilisateurs peuvent choisir un ou plusieurs de ces rôles lors de l'inscription
+# Les rôles par défaut sont toujours assignés en plus des rôles sélectionnés
+AUTH_USER_SIGN_UP_ROLES=user,premium,beta
 ```
 
 #### Configuration Google OAuth
@@ -244,6 +249,8 @@ L'email est toujours inclus dans les paramètres d'URL pour permettre à la page
 
 #### Configuration des Tenants (Organisations/Établissements)
 
+La configuration des tenants permet d'initialiser automatiquement des organisations et établissements lors de l'exécution de la migration de base de données. Cette fonctionnalité est utile pour pré-configurer la structure multi-tenant de votre application sans modifier le code.
+
 ```env
 # Organisations à créer lors de la migration (séparées par des virgules)
 AUTH_TENANTS_ORGANISATIONS=Organisation1,Organisation2
@@ -251,6 +258,23 @@ AUTH_TENANTS_ORGANISATIONS=Organisation1,Organisation2
 # Établissements à créer lors de la migration (format: Organisation:Établissement, séparés par des virgules)
 AUTH_TENANTS_ESTABLISHMENTS=Organisation1:Établissement1,Organisation1:Établissement2,Organisation2:Établissement1
 ```
+
+**Fonctionnement :**
+
+- **Organisations** : Liste de noms d'organisations séparés par des virgules. Chaque organisation sera créée si elle n'existe pas déjà.
+- **Établissements** : Liste d'établissements au format `Organisation:Établissement`, séparés par des virgules. Chaque établissement sera créé et associé à son organisation parente. L'organisation doit exister (soit créée via `AUTH_TENANTS_ORGANISATIONS`, soit déjà présente en base).
+
+**Exemple :**
+
+Avec la configuration ci-dessus, la migration créera :
+
+- 2 organisations : "Acme Corp" et "Global Inc"
+- 3 établissements :
+  - "Paris Office" (rattaché à "Acme Corp")
+  - "London Office" (rattaché à "Acme Corp")
+  - "NYC Office" (rattaché à "Global Inc")
+
+**Note :** Cette configuration est optionnelle. Si les variables ne sont pas définies, aucune organisation ni établissement ne sera créé automatiquement (sauf l'organisation "Devlab" par défaut).
 
 ### Extension des Entités et Services
 
@@ -625,6 +649,15 @@ Récupère le compte utilisateur actuellement authentifié.
 - **Authentification** : Requise (JWT)
 - **Réponse** : `UserAccountDto` ou `null`
 
+#### `GET /auth/sign-up-role`
+
+Récupère la liste des rôles disponibles pour l'inscription.
+
+- **Réponse** : `string[]` (tableau de noms de rôles)
+  ```typescript
+  ['user', 'premium', 'beta'];
+  ```
+
 #### `POST /auth/sign-up`
 
 Inscription d'un nouvel utilisateur.
@@ -633,13 +666,24 @@ Inscription d'un nouvel utilisateur.
   ```typescript
   {
     email: string;
-    password: string;
     username?: string;
     firstName?: string;
     lastName?: string;
+    phone?: string;
+    profilePicture?: string;
+    acceptedTerms: boolean;
+    acceptedPrivacyPolicy: boolean;
+    credentials?: Array<{
+      type: 'password' | 'google';
+      password?: string;
+      googleId?: string;
+    }>;
+    roles?: string[]; // Rôles sélectionnés (doivent être dans AUTH_USER_SIGN_UP_ROLES)
   }
   ```
 - **Réponse** : `void`
+
+**Note** : Les rôles par défaut (`AUTH_USER_DEFAULT_ROLES`) sont toujours assignés en plus des rôles sélectionnés par l'utilisateur. Les rôles sélectionnés doivent être présents dans la liste des rôles autorisés (`AUTH_USER_SIGN_UP_ROLES`).
 
 #### `POST /auth/sign-in`
 

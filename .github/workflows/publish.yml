@@ -207,6 +207,12 @@ jobs:
           echo "✓ Created archives for all packages"
           ls -lh release/
 
+      - name: Fix workspace dependencies before publishing
+        if: steps.check_version.outputs.exists != 'true'
+        run: |
+          echo "🔧 Fixing workspace:* dependencies..."
+          node .github/scripts/fix-workspace-deps.js
+
       - name: Publish all packages to GitHub Packages
         if: steps.check_version.outputs.exists != 'true'
         env:
@@ -242,6 +248,16 @@ jobs:
           cd ../..
           
           echo "✓ All packages published successfully"
+
+      - name: Restore workspace dependencies after publishing
+        if: steps.check_version.outputs.exists != 'true'
+        run: |
+          echo "🔧 Restoring workspace:* dependencies..."
+          node .github/scripts/restore-workspace-deps.js
+          # Commit the restoration to keep the monorepo working
+          git add packages/*/package.json
+          git commit -m "chore: restore workspace dependencies after publishing" || echo "No changes to commit"
+          git push origin main || echo "Nothing to push"
 
       - name: Create GitHub Release with all archives
         if: steps.check_version.outputs.exists != 'true'

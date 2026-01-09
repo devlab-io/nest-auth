@@ -24,6 +24,7 @@ import {
   Organisation,
   Establishment,
   UserAccount,
+  CreateUserRequest,
 } from '@devlab-io/nest-auth-types';
 import { UserConfig, UserConfigToken } from '../config/user.config';
 import { ActionConfig, ActionConfigToken } from '../config/action.config';
@@ -63,6 +64,15 @@ export class AuthService {
 
   public async getAccount(): Promise<UserAccountDto | null> {
     return await this.jwtService.getAuthenticatedUserAccount();
+  }
+
+  /**
+   * Get available roles for sign up
+   *
+   * @returns Array of role names available for sign up
+   */
+  public async getSignUpRoles(): Promise<string[]> {
+    return this.userConfig.user.signUpRoles;
   }
 
   /**
@@ -389,9 +399,19 @@ export class AuthService {
     const password = passwordCredential?.password;
 
     // Create the user (with credentials if provided)
-    const createUserRequest: SignUpRequest = {
-      ...request,
+    const createUserRequest: CreateUserRequest = {
+      email: request.email,
+      emailValidated: false,
+      username: request.username,
+      firstName: request.firstName,
+      lastName: request.lastName,
+      phone: request.phone,
+      profilePicture: request.profilePicture,
+      enabled: true,
+      acceptedTerms: request.acceptedTerms,
+      acceptedPrivacyPolicy: request.acceptedPrivacyPolicy,
       credentials: request.credentials,
+      actions: [],
     };
     const user: UserEntity = await this.userService.create(createUserRequest);
 
@@ -436,22 +456,89 @@ export class AuthService {
    * @param request - The sign up request containing the users information.
    * @returns The created user
    * @throws BadRequestException if a user with the same email or username already exists
+   * @throws BadRequestException if invalid roles are provided
    */
-  public async signUp(request: SignUpRequest): Promise<void> {
-    // User must accept the terms and privacy policy
-    if (!request.acceptedTerms || !request.acceptedPrivacyPolicy) {
-      throw new BadRequestException(
-        'User must accept the terms and privacy policy',
-      );
+  public async signUp(
+    request: SignUpRequest,
+    frontendUrl: string,
+  ): Promise<void> {
+    // Validate that terms are accepted
+    if (!request.acceptedTerms) {
+      throw new BadRequestException('Terms of service must be accepted');
     }
 
-    // Create the user
-    const user: UserEntity = await this.userService.create(request);
+    // Validate that privacy policy is accepted
+    if (!request.acceptedPrivacyPolicy) {
+      throw new BadRequestException('Privacy policy must be accepted');
+    }
 
-    // Note: sendEmailValidation requires frontendUrl, but signUp doesn't have access to it
-    // The application should call sendEmailValidation separately after sign-up if needed
-    // For now, we'll skip sending the email validation automatically
-    // await this.sendEmailValidation(user.id, frontendUrl);
+    // Validate roles if provided
+    if (request.roles && request.roles.length > 0) {
+      const allowedRoles: string[] = this.userConfig.user.signUpRoles;
+      const invalidRoles: string[] = request.roles.filter(
+        (role: string) => !allowedRoles.includes(role),
+      );
+      if (invalidRoles.length > 0) {
+        throw new BadRequestException(
+          `Invalid roles: ${invalidRoles.join(', ')}. Allowed roles: ${allowedRoles.join(', ')}`,
+        );
+      }
+    }
+
+    // Determine roles to assign (combine provided roles with default roles, removing duplicates)
+    const providedRoles: string[] =
+      request.roles && request.roles.length > 0 ? request.roles : [];
+    const defaultRoles: string[] = this.userConfig.user.defaultRoles || [];
+    const rolesToAssign: string[] = Array.from(
+      new Set([...defaultRoles, ...providedRoles]),
+    );
+
+    // Required actions
+    const createUserRequest: CreateUserRequest = {
+      enabled: true,
+      email: request.email,
+      emailValidated: false,
+      username: request.username,
+      firstName: request.firstName,
+      lastName: request.lastName,
+      phone: request.phone,
+      profilePicture: request.profilePicture,
+      acceptedTerms: request.acceptedTerms,
+      acceptedPrivacyPolicy: request.acceptedPrivacyPolicy,
+      credentials: request.credentials,
+      actions: [],
+    };
+
+    // If accepted terms are not accepted, add the accept terms action
+    if (!request.acceptedTerms)
+      createUserRequest.actions!.push({
+        type: ActionType.AcceptTerms,
+        expiresIn: 24,
+      });
+
+    // If accepted privacy policy are not accepted, add the accept privacy policy action
+    if (!request.acceptedPrivacyPolicy)
+      createUserRequest.actions!.push({
+        type: ActionType.AcceptPrivacyPolicy,
+        expiresIn: 24,
+      });
+
+    // Create the user
+    const user: UserEntity = await this.userService.create(createUserRequest);
+
+    // Create the user account with roles
+    if (rolesToAssign.length > 0) {
+      await this.userAccountService.create({
+        userId: user.id,
+        roles: rolesToAssign,
+      });
+    }
+
+    // Send the action email
+    await this.sendActionToken(
+      { type: ActionType.ValidateEmail, user: user },
+      frontendUrl,
+    );
 
     // Log
     this.logger.debug(`User with email ${user.email} signed up`);

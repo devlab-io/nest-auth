@@ -1,6 +1,6 @@
 {
   "name": "nest-auth-monorepo",
-  "version": "0.0.14",
+  "version": "0.0.17",
   "private": true,
   "description": "NestJS Authentication Module - Monorepo",
   "author": "DevLab",
@@ -24,9 +24,9 @@
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
-    "prettier": "^3.4.2",
+    "prettier": "^3.7.4",
     "rimraf": "^5.0.5",
-    "typescript": "^5.7.2"
+    "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">=18.0.0",

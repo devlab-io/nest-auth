@@ -129,6 +129,13 @@ export class CreateUserRequestDto implements CreateUserRequest {
   @IsEmail({}, { message: 'Email must be a valid email address' })
   email: string;
 
+  @ApiProperty({
+    example: true,
+    description: 'Indicates if the user email is validated',
+  })
+  @IsBoolean({ message: 'emailValidated must be a boolean' })
+  emailValidated: boolean;
+
   @ApiPropertyOptional({
     example: 'John',
     description: 'First name of the user',

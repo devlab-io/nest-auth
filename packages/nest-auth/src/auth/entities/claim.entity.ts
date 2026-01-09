@@ -1,4 +1,5 @@
 import { Entity, ManyToMany, PrimaryColumn } from 'typeorm';
+import { Exclude, Expose } from 'class-transformer';
 import {
   Claim,
   ClaimAction,
@@ -34,16 +35,20 @@ import { RoleEntity } from './role.entity';
 @Entity({ name: 'claims' })
 export class ClaimEntity implements Claim {
   @PrimaryColumn({ name: 'claim', type: 'text' })
+  @Exclude()
   claim: string;
 
+  @Expose()
   get action(): ClaimAction {
     return ClaimsUtils.parse(this.claim).action;
   }
 
+  @Expose()
   get scope(): ClaimScope {
     return ClaimsUtils.parse(this.claim).scope;
   }
 
+  @Expose()
   get resource(): string {
     return ClaimsUtils.parse(this.claim).resource;
   }

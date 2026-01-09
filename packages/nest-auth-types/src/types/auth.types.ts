@@ -1,4 +1,3 @@
-import { CreateUserRequest } from './user.types';
 import { UserAccount } from './user-account.types';
 import { User } from './user.types';
 
@@ -30,8 +29,22 @@ export interface AuthResponse {
   user: User; // For backward compatibility
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface SignUpRequest extends CreateUserRequest {}
+export interface SignUpRequest {
+  username?: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  profilePicture?: string;
+  acceptedTerms: boolean;
+  acceptedPrivacyPolicy: boolean;
+  credentials?: Array<{
+    type: 'password' | 'google';
+    password?: string;
+    googleId?: string;
+  }>;
+  roles?: string[];
+}
 
 export interface InviteRequest {
   email: string;

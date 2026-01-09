@@ -53,6 +53,17 @@ export class AuthController {
     return await this.authService.getAccount();
   }
 
+  @Get('sign-up-role')
+  @ApiOperation({ summary: 'Get available roles for sign up' })
+  @ApiResponse({
+    status: 200,
+    description: 'Available roles for sign up',
+    type: [String],
+  })
+  async getSignUpRoles(): Promise<string[]> {
+    return await this.authService.getSignUpRoles();
+  }
+
   @Post('invite')
   @UseGuards(AuthGuard, FrontendUrlGuard)
   @Claims(
@@ -93,11 +104,15 @@ export class AuthController {
   }
 
   @Post('sign-up')
+  @UseGuards(FrontendUrlGuard)
   @ApiOperation({ summary: 'Register a new user account' })
   @ApiResponse({ status: 200, description: 'User registered successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
-  async signUp(@Body() signUpRequest: SignUpRequestDto): Promise<void> {
-    return await this.authService.signUp(signUpRequest);
+  async signUp(
+    @Body() signUpRequest: SignUpRequestDto,
+    @FrontendUrl() frontendUrl: string,
+  ): Promise<void> {
+    return await this.authService.signUp(signUpRequest, frontendUrl);
   }
 
   @Post('sign-in')

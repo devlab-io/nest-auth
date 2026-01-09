@@ -132,13 +132,6 @@ export class SignUpRequestDto implements SignUpRequest {
     googleId?: string;
   }>;
 
-  @ApiProperty({
-    example: true,
-    description: 'Indicates if the user account is enabled',
-  })
-  @IsBoolean({ message: 'enabled must be a boolean' })
-  enabled: boolean;
-
   @ApiPropertyOptional({
     example: 'https://example.com/profile.jpg',
     description: "URL of the user's profile picture",
@@ -162,17 +155,14 @@ export class SignUpRequestDto implements SignUpRequest {
   acceptedPrivacyPolicy: boolean;
 
   @ApiPropertyOptional({
-    example: [{ type: 1, expiresIn: 24, roles: ['user'] }],
-    description: 'Actions to create for the user',
-    type: Array,
+    example: ['user', 'admin'],
+    description: 'Array of role names to assign to the user',
+    type: [String],
   })
   @IsOptional()
-  @IsArray({ message: 'actions must be an array' })
-  actions?: Array<{
-    type: number;
-    expiresIn?: number;
-    roles?: string[];
-  }>;
+  @IsArray({ message: 'roles must be an array' })
+  @IsString({ each: true, message: 'Each role must be a string' })
+  roles?: string[];
 }
 
 export class SignInRequestDto implements SignInRequest {

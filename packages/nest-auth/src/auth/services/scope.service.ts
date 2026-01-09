@@ -1,4 +1,6 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
+import { Injectable, ForbiddenException, Inject, Scope } from '@nestjs/common';
+import { REQUEST } from '@nestjs/core';
+import { Request } from 'express';
 import { AsyncLocalStorage } from 'async_hooks';
 import {
   AuthScope,
@@ -12,12 +14,13 @@ import {
  * Determines the most permissive scope for a given action/resource
  * and provides constraints to apply to queries based on the connected account.
  *
- * Uses AsyncLocalStorage for request-scoped storage without requiring
- * the service itself to be request-scoped.
+ * Uses AsyncLocalStorage for request-scoped storage and also stores in request object as fallback.
  */
-@Injectable()
+@Injectable({ scope: Scope.REQUEST })
 export class ScopeService {
   private static readonly storage = new AsyncLocalStorage<AuthScope>();
+
+  public constructor(@Inject(REQUEST) private readonly request: Request) {}
 
   /**
    * Run a callback within a scope context
@@ -137,12 +140,13 @@ export class ScopeService {
    * @param userAccount - The connected user account
    * @param action - The action
    * @param resource - The resource
+   * @returns The calculated auth scope or null
    */
   public calculateAndStoreScope(
     userAccount: UserAccount,
     action: ClaimAction,
     resource: string,
-  ): void {
+  ): AuthScope | null {
     const mostPermissiveScope: ClaimScope | null = this.getMostPermissiveScope(
       userAccount,
       action,
@@ -150,7 +154,7 @@ export class ScopeService {
     );
 
     if (!mostPermissiveScope) {
-      return;
+      return null;
     }
 
     const authScope: AuthScope = this.getAuthScope(
@@ -162,14 +166,29 @@ export class ScopeService {
 
     // Store in AsyncLocalStorage
     ScopeService.storage.enterWith(authScope);
+
+    return authScope;
   }
 
   /**
    * Get scope constraints from current context
+   * Tries AsyncLocalStorage first, then falls back to request object
    *
    * @returns The scope constraints or null
    */
   public getScopeFromRequest(): AuthScope | null {
-    return ScopeService.storage.getStore() ?? null;
+    // Try AsyncLocalStorage first
+    const scopeFromStorage = ScopeService.storage.getStore();
+    if (scopeFromStorage) {
+      return scopeFromStorage;
+    }
+
+    // Fallback to request object (stored by AuthGuard)
+    const scopeFromRequest = (this.request as any).authScope;
+    if (scopeFromRequest) {
+      return scopeFromRequest;
+    }
+
+    return null;
   }
 }

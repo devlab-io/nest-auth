@@ -3,16 +3,54 @@ import {
   IsString,
   IsOptional,
   IsArray,
-  ValidateNested,
   MinLength,
+  ValidateBy,
+  ValidationOptions,
 } from 'class-validator';
-import { Type } from 'class-transformer';
 import {
   Role,
   CreateRoleRequest,
   UpdateRoleRequest,
+  ClaimsUtils,
 } from '@devlab-io/nest-auth-types';
 import { ClaimDto } from './claim.dtos';
+
+/**
+ * Custom validator for ClaimLike (string or ClaimDto)
+ */
+function IsClaimLike(validationOptions?: ValidationOptions) {
+  return ValidateBy(
+    {
+      name: 'isClaimLike',
+      validator: {
+        validate: (value: any): boolean => {
+          // Accept strings
+          if (typeof value === 'string') {
+            try {
+              // Validate that it's a valid claim string format
+              ClaimsUtils.parse(value);
+              return true;
+            } catch {
+              return false;
+            }
+          }
+          // Accept objects that match ClaimDto structure
+          if (typeof value === 'object' && value !== null) {
+            return (
+              typeof value.action === 'string' &&
+              typeof value.scope === 'string' &&
+              typeof value.resource === 'string'
+            );
+          }
+          return false;
+        },
+        defaultMessage: () =>
+          'Each claim must be either a string in format "action:scope:resource" or a Claim object',
+      },
+    },
+    validationOptions,
+  );
+}
 
 export class RoleDto implements Role {
   @ApiProperty({
@@ -58,13 +96,16 @@ export class CreateRoleRequestDto implements CreateRoleRequest {
   description?: string;
 
   @ApiProperty({
-    description: 'Claims assigned to this role',
-    type: [ClaimDto],
+    description:
+      'Claims assigned to this role (can be strings in format "action:scope:resource" or Claim objects)',
+    oneOf: [
+      { type: 'string' },
+      { type: 'object', $ref: '#/components/schemas/ClaimDto' },
+    ],
   })
   @IsArray({ message: 'claims must be an array' })
-  @ValidateNested({ each: true })
-  @Type(() => ClaimDto)
-  claims: ClaimDto[];
+  @IsClaimLike({ each: true })
+  claims: (string | ClaimDto)[];
 }
 
 export class UpdateRoleRequestDto implements UpdateRoleRequest {
@@ -86,12 +127,15 @@ export class UpdateRoleRequestDto implements UpdateRoleRequest {
   description?: string;
 
   @ApiPropertyOptional({
-    description: 'Claims assigned to this role',
-    type: [ClaimDto],
+    description:
+      'Claims assigned to this role (can be strings in format "action:scope:resource" or Claim objects)',
+    oneOf: [
+      { type: 'string' },
+      { type: 'object', $ref: '#/components/schemas/ClaimDto' },
+    ],
   })
   @IsOptional()
   @IsArray({ message: 'claims must be an array' })
-  @ValidateNested({ each: true })
-  @Type(() => ClaimDto)
-  claims?: ClaimDto[];
+  @IsClaimLike({ each: true })
+  claims?: (string | ClaimDto)[];
 }

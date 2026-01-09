@@ -98,11 +98,16 @@ export class AuthGuard implements CanActivate {
 
     // All required claims have the same action and resource (verified by @Claims decorator)
     // Calculate and store scope constraints for this action/resource
-    await this.scopeService.calculateAndStoreScope(
+    const authScope = this.scopeService.calculateAndStoreScope(
       userAccount,
       requiredClaims[0].action,
       requiredClaims[0].resource,
     );
+
+    // Also store in request object as fallback (AsyncLocalStorage may not work in all contexts)
+    if (authScope) {
+      (request as any).authScope = authScope;
+    }
 
     return true;
   }
