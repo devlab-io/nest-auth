@@ -17,7 +17,7 @@
   "dependencies": {
     "@devlab-io/nest-auth": "workspace:*",
     "@devlab-io/nest-auth-types": "workspace:*",
-    "@devlab-io/nest-mailer": "^0.0.1",
+    "@devlab-io/nest-mailer": "^0.0.3",
     "@nestjs/common": "^11.1.8",
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.1.8",
