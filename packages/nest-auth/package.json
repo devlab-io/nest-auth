@@ -40,6 +40,7 @@
     "bcryptjs": "^3.0.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
+    "dotenv": "^16.4.5",
     "jsonwebtoken": "^9.0.2",
     "typeorm": "^0.3.27",
     "zod": "^3.25.76"
