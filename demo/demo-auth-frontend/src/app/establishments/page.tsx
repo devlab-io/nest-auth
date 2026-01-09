@@ -154,8 +154,12 @@ export default function EstablishmentsPage() {
           <tbody>
             {establishments.map((est) => (
               <tr key={est.id} className="hover:bg-[rgba(99,102,241,0.05)]">
-                <td className="px-4 py-4 text-left border-b border-[var(--color-border)]">{est.name}</td>
-                <td className="px-4 py-4 text-left border-b border-[var(--color-border)]">{est.organisation?.name || 'N/A'}</td>
+                <td className="px-4 py-4 text-left border-b border-[var(--color-border)]">
+                  {est.name}
+                </td>
+                <td className="px-4 py-4 text-left border-b border-[var(--color-border)]">
+                  {est.organisation?.name || 'N/A'}
+                </td>
                 <td className="px-4 py-4 text-left border-b border-[var(--color-border)]">
                   <span
                     className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-full ${
@@ -167,7 +171,9 @@ export default function EstablishmentsPage() {
                     {est.enabled ? 'Yes' : 'No'}
                   </span>
                 </td>
-                <td className="px-4 py-4 text-left border-b border-[var(--color-border)]">{new Date(est.createdAt).toLocaleDateString()}</td>
+                <td className="px-4 py-4 text-left border-b border-[var(--color-border)]">
+                  {new Date(est.createdAt).toLocaleDateString()}
+                </td>
               </tr>
             ))}
           </tbody>

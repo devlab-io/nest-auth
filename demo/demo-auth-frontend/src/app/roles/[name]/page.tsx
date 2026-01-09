@@ -5,7 +5,16 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '../../../providers/AuthProvider';
 import { AuthClient } from '@devlab-io/nest-auth-client';
 import { Role, Claim } from '@devlab-io/nest-auth-types';
-import { UserCog, Check, X, ArrowLeft, Edit2, Save, X as XIcon, Trash2 } from 'lucide-react';
+import {
+  UserCog,
+  Check,
+  X,
+  ArrowLeft,
+  Edit2,
+  Save,
+  X as XIcon,
+  Trash2,
+} from 'lucide-react';
 import Link from 'next/link';
 import ClaimSelector from '../../../components/ClaimSelector';
 
@@ -19,7 +28,7 @@ export default function RoleDetailPage() {
   const [error, setError] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Edit mode states
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
@@ -73,13 +82,16 @@ export default function RoleDetailPage() {
     try {
       const updatedRole = await AuthClient.roles.update(roleName, {
         name: editName !== roleName ? editName : undefined,
-        description: editDescription !== (role?.description || '') ? editDescription : undefined,
+        description:
+          editDescription !== (role?.description || '')
+            ? editDescription
+            : undefined,
         claims: selectedClaims,
       });
 
       setRole(updatedRole);
       setIsEditing(false);
-      
+
       // If name changed, redirect to new URL
       if (editName !== roleName) {
         router.push(`/roles/${encodeURIComponent(editName)}`);
@@ -92,7 +104,11 @@ export default function RoleDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm(`Are you sure you want to delete the role "${roleName}"? This action cannot be undone.`)) {
+    if (
+      !confirm(
+        `Are you sure you want to delete the role "${roleName}"? This action cannot be undone.`,
+      )
+    ) {
       return;
     }
 
@@ -106,17 +122,29 @@ export default function RoleDetailPage() {
   };
 
   // View mode: display claims
-  const claimsByResource = (role?.claims || []).reduce((acc, claim) => {
-    if (!acc[claim.resource]) {
-      acc[claim.resource] = [];
-    }
-    acc[claim.resource].push(claim);
-    return acc;
-  }, {} as Record<string, Claim[]>);
+  const claimsByResource = (role?.claims || []).reduce(
+    (acc, claim) => {
+      if (!acc[claim.resource]) {
+        acc[claim.resource] = [];
+      }
+      acc[claim.resource].push(claim);
+      return acc;
+    },
+    {} as Record<string, Claim[]>,
+  );
 
-  const allResources = Object.keys(claimsByResource).length > 0
-    ? Object.keys(claimsByResource)
-    : ['users', 'organisations', 'establishments', 'roles', 'claims', 'sessions', 'user-accounts'];
+  const allResources =
+    Object.keys(claimsByResource).length > 0
+      ? Object.keys(claimsByResource)
+      : [
+          'users',
+          'organisations',
+          'establishments',
+          'roles',
+          'claims',
+          'sessions',
+          'user-accounts',
+        ];
 
   const getActions = (): string[] => {
     return ['read', 'create', 'update', 'enable', 'disable', 'delete', 'admin'];
@@ -125,30 +153,39 @@ export default function RoleDetailPage() {
   const getScopesView = (resourceClaims: Claim[]): string[] => {
     const scopes = new Set(resourceClaims.map((c) => c.scope));
     const scopeOrder = ['admin', 'any', 'organisation', 'establishment', 'own'];
-    return ['admin', ...scopeOrder.filter((s) => scopes.has(s as any) && s !== 'admin')];
+    return [
+      'admin',
+      ...scopeOrder.filter((s) => scopes.has(s as any) && s !== 'admin'),
+    ];
   };
 
-  const hasClaimView = (resource: string, scope: string, action: string): boolean => {
+  const hasClaimView = (
+    resource: string,
+    scope: string,
+    action: string,
+  ): boolean => {
     const claims = role?.claims || [];
-    
+
     if (scope === 'admin') {
       return true;
     }
-    
+
     const hasAdminAction = claims.some(
-      (c) => c.resource === resource && c.scope === scope && c.action === 'admin'
+      (c) =>
+        c.resource === resource && c.scope === scope && c.action === 'admin',
     );
-    
+
     if (hasAdminAction && action !== 'admin') {
       return true;
     }
-    
+
     if (action === 'admin') {
       return hasAdminAction;
     }
-    
+
     return claims.some(
-      (c) => c.resource === resource && c.scope === scope && c.action === action
+      (c) =>
+        c.resource === resource && c.scope === scope && c.action === action,
     );
   };
 
@@ -195,7 +232,9 @@ export default function RoleDetailPage() {
           )}
         </div>
         {role?.description && !isEditing && (
-          <p className="text-[var(--color-text-secondary)] mt-2">{role.description}</p>
+          <p className="text-[var(--color-text-secondary)] mt-2">
+            {role.description}
+          </p>
         )}
       </div>
 
@@ -222,7 +261,10 @@ export default function RoleDetailPage() {
             <h2 className="text-xl font-semibold mb-4">Role Information</h2>
             <div className="space-y-4">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium mb-2">
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium mb-2"
+                >
                   Name <span className="text-[var(--color-error)]">*</span>
                 </label>
                 <input
@@ -236,7 +278,10 @@ export default function RoleDetailPage() {
                 />
               </div>
               <div>
-                <label htmlFor="description" className="block text-sm font-medium mb-2">
+                <label
+                  htmlFor="description"
+                  className="block text-sm font-medium mb-2"
+                >
                   Description
                 </label>
                 <textarea
@@ -284,9 +329,14 @@ export default function RoleDetailPage() {
             const actions = getActions();
 
             return (
-              <div key={resource} className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl overflow-hidden">
+              <div
+                key={resource}
+                className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl overflow-hidden"
+              >
                 <div className="px-6 py-4 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
-                  <h2 className="text-xl font-semibold capitalize">{resource}</h2>
+                  <h2 className="text-xl font-semibold capitalize">
+                    {resource}
+                  </h2>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
@@ -307,21 +357,34 @@ export default function RoleDetailPage() {
                     </thead>
                     <tbody>
                       {scopes.map((scope) => (
-                        <tr key={scope} className="hover:bg-[rgba(99,102,241,0.05)]">
+                        <tr
+                          key={scope}
+                          className="hover:bg-[rgba(99,102,241,0.05)]"
+                        >
                           <td className="px-4 py-3 text-left border-b border-[var(--color-border)] font-medium capitalize sticky left-0 bg-[var(--color-bg-card)] z-10">
                             {scope}
                           </td>
                           {actions.map((action: string) => {
-                            const hasClaimValue = hasClaimView(resource, scope, action);
+                            const hasClaimValue = hasClaimView(
+                              resource,
+                              scope,
+                              action,
+                            );
                             return (
                               <td
                                 key={`${scope}-${action}`}
                                 className="px-4 py-3 text-center border-b border-[var(--color-border)]"
                               >
                                 {hasClaimValue ? (
-                                  <Check size={20} className="mx-auto text-[var(--color-success)]" />
+                                  <Check
+                                    size={20}
+                                    className="mx-auto text-[var(--color-success)]"
+                                  />
                                 ) : (
-                                  <X size={20} className="mx-auto text-[var(--color-text-secondary)] opacity-50" />
+                                  <X
+                                    size={20}
+                                    className="mx-auto text-[var(--color-text-secondary)] opacity-50"
+                                  />
                                 )}
                               </td>
                             );

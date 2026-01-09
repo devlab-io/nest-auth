@@ -144,7 +144,9 @@ export default function HomePage() {
             <BookOpen size={24} />
             <div>
               <div className="text-lg font-semibold mb-1">Swagger API</div>
-              <div className="text-[var(--color-text-secondary)] text-sm">API Documentation</div>
+              <div className="text-[var(--color-text-secondary)] text-sm">
+                API Documentation
+              </div>
             </div>
           </a>
           <a
@@ -156,7 +158,9 @@ export default function HomePage() {
             <Database size={24} />
             <div>
               <div className="text-lg font-semibold mb-1">Adminer (DB)</div>
-              <div className="text-[var(--color-text-secondary)] text-sm">Database Management</div>
+              <div className="text-[var(--color-text-secondary)] text-sm">
+                Database Management
+              </div>
             </div>
           </a>
           <a
@@ -168,7 +172,9 @@ export default function HomePage() {
             <Mail size={24} />
             <div>
               <div className="text-lg font-semibold mb-1">Inbucket (Mail)</div>
-              <div className="text-[var(--color-text-secondary)] text-sm">Email Testing</div>
+              <div className="text-[var(--color-text-secondary)] text-sm">
+                Email Testing
+              </div>
             </div>
           </a>
         </div>

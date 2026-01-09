@@ -44,7 +44,9 @@ export default function SignUpDonePage() {
               Verify Your Email Address
             </h2>
             <p className="text-sm text-[var(--color-text-secondary)] mb-4">
-              We&apos;ve sent a verification email to your inbox. Please check your email and click on the verification link to activate your account.
+              We&apos;ve sent a verification email to your inbox. Please check
+              your email and click on the verification link to activate your
+              account.
             </p>
             <p className="text-xs text-[var(--color-text-secondary)]">
               If you don&apos;t see the email, please check your spam folder.

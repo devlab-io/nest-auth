@@ -25,7 +25,8 @@ export default function UserAccountDetailPage() {
 
   const loadUserAccount = useCallback(async () => {
     try {
-      const loadedUserAccount = await AuthClient.userAccounts.getById(userAccountId);
+      const loadedUserAccount =
+        await AuthClient.userAccounts.getById(userAccountId);
       setUserAccount(loadedUserAccount);
     } catch (err: any) {
       setError(err.message || 'Failed to load user account');
@@ -90,7 +91,9 @@ export default function UserAccountDetailPage() {
                 <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
                   ID
                 </label>
-                <p className="text-[var(--color-text-primary)]">{userAccount.id}</p>
+                <p className="text-[var(--color-text-primary)]">
+                  {userAccount.id}
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
@@ -127,13 +130,17 @@ export default function UserAccountDetailPage() {
                 <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
                   Email
                 </label>
-                <p className="text-[var(--color-text-primary)]">{userAccount.user.email}</p>
+                <p className="text-[var(--color-text-primary)]">
+                  {userAccount.user.email}
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
                   Username
                 </label>
-                <p className="text-[var(--color-text-primary)]">{userAccount.user.username}</p>
+                <p className="text-[var(--color-text-primary)]">
+                  {userAccount.user.username}
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
@@ -167,7 +174,9 @@ export default function UserAccountDetailPage() {
                   <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
                     Name
                   </label>
-                  <p className="text-[var(--color-text-primary)]">{userAccount.organisation.name}</p>
+                  <p className="text-[var(--color-text-primary)]">
+                    {userAccount.organisation.name}
+                  </p>
                 </div>
               </div>
             </div>
@@ -192,14 +201,18 @@ export default function UserAccountDetailPage() {
                   <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
                     Name
                   </label>
-                  <p className="text-[var(--color-text-primary)]">{userAccount.establishment.name}</p>
+                  <p className="text-[var(--color-text-primary)]">
+                    {userAccount.establishment.name}
+                  </p>
                 </div>
               </div>
             </div>
           )}
 
           <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl p-6">
-            <h2 className="text-xl font-semibold mb-4">Roles ({userAccount.roles.length})</h2>
+            <h2 className="text-xl font-semibold mb-4">
+              Roles ({userAccount.roles.length})
+            </h2>
             {userAccount.roles && userAccount.roles.length > 0 ? (
               <div className="space-y-2">
                 {userAccount.roles.map((role) => (
@@ -224,7 +237,9 @@ export default function UserAccountDetailPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-[var(--color-text-secondary)]">No roles assigned</p>
+              <p className="text-[var(--color-text-secondary)]">
+                No roles assigned
+              </p>
             )}
           </div>
 

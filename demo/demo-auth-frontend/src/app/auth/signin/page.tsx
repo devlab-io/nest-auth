@@ -39,7 +39,9 @@ export default function SignInPage() {
       <h1 className="text-3xl font-semibold mb-2 bg-gradient-to-br from-[var(--color-text-primary)] to-[var(--color-accent)] bg-clip-text text-transparent">
         Welcome back
       </h1>
-      <p className="text-[var(--color-text-secondary)] mb-8">Sign in to your account</p>
+      <p className="text-[var(--color-text-secondary)] mb-8">
+        Sign in to your account
+      </p>
 
       {error && (
         <div className="bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] text-[var(--color-error)] px-4 py-3 rounded-lg mb-4 text-sm">
@@ -49,7 +51,10 @@ export default function SignInPage() {
 
       <form onSubmit={handleSubmit}>
         <div className="mb-5">
-          <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]" htmlFor="email">
+          <label
+            className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]"
+            htmlFor="email"
+          >
             Email
           </label>
           <input
@@ -64,7 +69,10 @@ export default function SignInPage() {
         </div>
 
         <div className="mb-5">
-          <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]" htmlFor="password">
+          <label
+            className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]"
+            htmlFor="password"
+          >
             Password
           </label>
           <input
@@ -88,18 +96,29 @@ export default function SignInPage() {
       </form>
 
       <div className="mt-6">
-        <h3 className="mb-4 text-sm font-semibold text-[var(--color-text-secondary)]">Default Admin Account</h3>
+        <h3 className="mb-4 text-sm font-semibold text-[var(--color-text-secondary)]">
+          Default Admin Account
+        </h3>
         <p className="mb-2 text-sm text-[var(--color-text-secondary)]">
-          Email: <code className="bg-[var(--color-bg-card)] px-2 py-1 rounded font-mono text-[var(--color-text-primary)] text-xs">admin@demo.com</code>
+          Email:{' '}
+          <code className="bg-[var(--color-bg-card)] px-2 py-1 rounded font-mono text-[var(--color-text-primary)] text-xs">
+            admin@demo.com
+          </code>
         </p>
         <p className="mb-0 text-sm text-[var(--color-text-secondary)]">
-          Password: <code className="bg-[var(--color-bg-card)] px-2 py-1 rounded font-mono text-[var(--color-text-primary)] text-xs">ChangeMe1234*</code>
+          Password:{' '}
+          <code className="bg-[var(--color-bg-card)] px-2 py-1 rounded font-mono text-[var(--color-text-primary)] text-xs">
+            ChangeMe1234*
+          </code>
         </p>
       </div>
 
       <p className="mt-6 text-center text-[var(--color-text-secondary)]">
         Don&apos;t have an account?{' '}
-        <Link href="/auth/signup" className="text-[var(--color-accent)] no-underline transition-colors hover:text-[var(--color-accent-hover)] hover:underline">
+        <Link
+          href="/auth/signup"
+          className="text-[var(--color-accent)] no-underline transition-colors hover:text-[var(--color-accent-hover)] hover:underline"
+        >
           Sign up
         </Link>
       </p>

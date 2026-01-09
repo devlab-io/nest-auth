@@ -35,7 +35,7 @@ export function Navigation() {
       const response = await AuthClient.userAccounts.search(
         { userId: userAccount.user.id },
         1,
-        100
+        100,
       );
       setUserAccounts(response.contents);
     } catch (error) {
@@ -92,7 +92,7 @@ export function Navigation() {
           href="/"
           className="flex items-center gap-3 no-underline text-[var(--color-text-primary)]"
         >
-          <Lock size={24}/>
+          <Lock size={24} />
           <span className="text-xl font-bold bg-gradient-to-br from-[var(--color-accent)] to-[#8b5cf6] bg-clip-text text-transparent">
             Demo Auth
           </span>
@@ -176,7 +176,9 @@ export function Navigation() {
                             : 'text-[var(--color-text-primary)]'
                         }`}
                       >
-                        <div className="truncate">{getAccountLabel(account)}</div>
+                        <div className="truncate">
+                          {getAccountLabel(account)}
+                        </div>
                         {account.roles && account.roles.length > 0 && (
                           <div className="text-[var(--color-text-secondary)] mt-1 truncate">
                             {account.roles.map((r) => r.name).join(', ')}

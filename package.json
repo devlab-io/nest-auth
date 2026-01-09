@@ -6,21 +6,13 @@
   "author": "DevLab",
   "license": "UNLICENSED",
   "scripts": {
-    "build": "pnpm clean:dist && pnpm build:types && pnpm build:auth && pnpm build:client",
-    "build:types": "pnpm --filter @devlab-io/nest-auth-types build",
-    "build:auth": "pnpm --filter @devlab-io/nest-auth build",
-    "build:client": "pnpm --filter @devlab-io/nest-auth-client build",
-    "clean:dist": "rimraf --glob \"packages/*/dist\" \"packages/*/*.tsbuildinfo\"",
-    "format": "prettier --write \"**/*.{ts,js,json,md}\"",
-    "format:check": "prettier --check \"**/*.{ts,js,json,md}\"",
+    "build": "pnpm -r run build",
+    "type-check": "pnpm -r run type-check",
+    "format": "pnpm run -r format",
+    "format:check": "pnpm run -r format:check",
     "lint": "pnpm -r run lint",
     "lint:check": "pnpm -r run lint:check",
-    "test": "pnpm -r run test",
-    "type-check": "pnpm -r run type-check",
-    "clean": "pnpm -r run clean && rm -rf dist || true",
-    "dev:backend": "pnpm --filter @devlab-io/demo-auth-backend start:dev",
-    "dev:frontend": "pnpm --filter @devlab-io/demo-auth-frontend dev",
-    "dev": "concurrently \"pnpm dev:backend\" \"pnpm dev:frontend\""
+    "test": "pnpm -r run test"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.51.0",

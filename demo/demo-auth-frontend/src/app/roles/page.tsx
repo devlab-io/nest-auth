@@ -39,7 +39,11 @@ export default function RolesPage() {
 
   const handleDelete = async (e: React.MouseEvent, roleName: string) => {
     e.stopPropagation(); // Prevent row click
-    if (!confirm(`Are you sure you want to delete the role "${roleName}"? This action cannot be undone.`)) {
+    if (
+      !confirm(
+        `Are you sure you want to delete the role "${roleName}"? This action cannot be undone.`,
+      )
+    ) {
       return;
     }
 
@@ -65,7 +69,9 @@ export default function RolesPage() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold mb-2">Roles</h1>
-          <p className="text-[var(--color-text-secondary)]">Manage roles in your system</p>
+          <p className="text-[var(--color-text-secondary)]">
+            Manage roles in your system
+          </p>
         </div>
         <button
           onClick={() => router.push('/roles/new')}

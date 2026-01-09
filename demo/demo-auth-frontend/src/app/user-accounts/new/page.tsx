@@ -4,7 +4,13 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../providers/AuthProvider';
 import { AuthClient } from '@devlab-io/nest-auth-client';
-import { CreateUserAccountRequest, User, Organisation, Establishment, Role } from '@devlab-io/nest-auth-types';
+import {
+  CreateUserAccountRequest,
+  User,
+  Organisation,
+  Establishment,
+  Role,
+} from '@devlab-io/nest-auth-types';
 import { UserCog, ArrowLeft, Save } from 'lucide-react';
 import Link from 'next/link';
 
@@ -70,7 +76,11 @@ export default function CreateUserAccountPage() {
 
   const loadEstablishments = async (orgId: string) => {
     try {
-      const response = await AuthClient.establishments.search({ organisationId: orgId }, 1, 100);
+      const response = await AuthClient.establishments.search(
+        { organisationId: orgId },
+        1,
+        100,
+      );
       setEstablishments(response.contents);
     } catch (err: any) {
       console.error('Failed to load establishments:', err);
@@ -90,7 +100,8 @@ export default function CreateUserAccountPage() {
         ...(selectedRoles.length > 0 && { roles: selectedRoles }),
       };
 
-      const newUserAccount = await AuthClient.userAccounts.create(createRequest);
+      const newUserAccount =
+        await AuthClient.userAccounts.create(createRequest);
       router.push(`/user-accounts/${newUserAccount.id}`);
     } catch (err: any) {
       setError(err.message || 'Failed to create user account');
@@ -103,7 +114,7 @@ export default function CreateUserAccountPage() {
     setSelectedRoles((prev) =>
       prev.includes(roleName)
         ? prev.filter((r) => r !== roleName)
-        : [...prev, roleName]
+        : [...prev, roleName],
     );
   };
 
@@ -141,11 +152,16 @@ export default function CreateUserAccountPage() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl p-6">
-          <h2 className="text-xl font-semibold mb-4">User Account Information</h2>
-          
+          <h2 className="text-xl font-semibold mb-4">
+            User Account Information
+          </h2>
+
           <div className="space-y-4">
             <div>
-              <label htmlFor="userId" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
+              <label
+                htmlFor="userId"
+                className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1"
+              >
                 User <span className="text-[var(--color-error)]">*</span>
               </label>
               {isLoadingOptions ? (
@@ -171,7 +187,10 @@ export default function CreateUserAccountPage() {
             </div>
 
             <div>
-              <label htmlFor="organisationId" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
+              <label
+                htmlFor="organisationId"
+                className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1"
+              >
                 Organisation
               </label>
               {isLoadingOptions ? (
@@ -196,7 +215,10 @@ export default function CreateUserAccountPage() {
             </div>
 
             <div>
-              <label htmlFor="establishmentId" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
+              <label
+                htmlFor="establishmentId"
+                className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1"
+              >
                 Establishment
               </label>
               {!organisationId ? (
@@ -232,9 +254,13 @@ export default function CreateUserAccountPage() {
             Select the roles to assign to this user account.
           </p>
           {isLoadingOptions ? (
-            <div className="text-[var(--color-text-secondary)]">Loading roles...</div>
+            <div className="text-[var(--color-text-secondary)]">
+              Loading roles...
+            </div>
           ) : roles.length === 0 ? (
-            <div className="text-[var(--color-text-secondary)]">No roles available</div>
+            <div className="text-[var(--color-text-secondary)]">
+              No roles available
+            </div>
           ) : (
             <div className="space-y-2">
               {roles.map((role) => (
@@ -249,9 +275,13 @@ export default function CreateUserAccountPage() {
                     className="w-4 h-4 text-[var(--color-accent)] bg-[var(--color-bg-secondary)] border-[var(--color-border)] rounded focus:ring-[var(--color-accent)] focus:ring-2"
                   />
                   <div className="flex-1">
-                    <div className="font-medium text-[var(--color-text-primary)]">{role.name}</div>
+                    <div className="font-medium text-[var(--color-text-primary)]">
+                      {role.name}
+                    </div>
                     {role.description && (
-                      <div className="text-sm text-[var(--color-text-secondary)]">{role.description}</div>
+                      <div className="text-sm text-[var(--color-text-secondary)]">
+                        {role.description}
+                      </div>
                     )}
                   </div>
                 </label>

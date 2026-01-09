@@ -62,7 +62,7 @@ export default function SignUpPage() {
     setSelectedRoles((prev) =>
       prev.includes(roleName)
         ? prev.filter((r) => r !== roleName)
-        : [...prev, roleName]
+        : [...prev, roleName],
     );
   };
 
@@ -91,7 +91,9 @@ export default function SignUpPage() {
         ...(formData.firstName && { firstName: formData.firstName }),
         ...(formData.lastName && { lastName: formData.lastName }),
         ...(formData.phone && { phone: formData.phone }),
-        ...(formData.profilePicture && { profilePicture: formData.profilePicture }),
+        ...(formData.profilePicture && {
+          profilePicture: formData.profilePicture,
+        }),
         ...(formData.password && {
           credentials: [{ type: 'password', password: formData.password }],
         }),
@@ -109,7 +111,9 @@ export default function SignUpPage() {
       <h1 className="text-3xl font-semibold mb-2 bg-gradient-to-br from-[var(--color-text-primary)] to-[var(--color-accent)] bg-clip-text text-transparent">
         Create account
       </h1>
-      <p className="text-[var(--color-text-secondary)] mb-8">Get started with Demo Auth</p>
+      <p className="text-[var(--color-text-secondary)] mb-8">
+        Get started with Demo Auth
+      </p>
 
       {error && (
         <div className="bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] text-[var(--color-error)] px-4 py-3 rounded-lg mb-4 text-sm">
@@ -119,7 +123,10 @@ export default function SignUpPage() {
 
       <form onSubmit={handleSubmit}>
         <div className="mb-5">
-          <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]" htmlFor="email">
+          <label
+            className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]"
+            htmlFor="email"
+          >
             Email
           </label>
           <input
@@ -135,7 +142,10 @@ export default function SignUpPage() {
         </div>
 
         <div className="mb-5">
-          <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]" htmlFor="username">
+          <label
+            className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]"
+            htmlFor="username"
+          >
             Username
           </label>
           <input
@@ -152,7 +162,10 @@ export default function SignUpPage() {
 
         <div className="grid grid-cols-2 gap-4 mb-5">
           <div>
-            <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]" htmlFor="firstName">
+            <label
+              className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]"
+              htmlFor="firstName"
+            >
               First Name
             </label>
             <input
@@ -166,7 +179,10 @@ export default function SignUpPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]" htmlFor="lastName">
+            <label
+              className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]"
+              htmlFor="lastName"
+            >
               Last Name
             </label>
             <input
@@ -182,7 +198,10 @@ export default function SignUpPage() {
         </div>
 
         <div className="mb-5">
-          <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]" htmlFor="phone">
+          <label
+            className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]"
+            htmlFor="phone"
+          >
             Phone
           </label>
           <input
@@ -197,7 +216,10 @@ export default function SignUpPage() {
         </div>
 
         <div className="mb-5">
-          <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]" htmlFor="password">
+          <label
+            className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]"
+            htmlFor="password"
+          >
             Password
           </label>
           <div className="relative">
@@ -223,7 +245,10 @@ export default function SignUpPage() {
         </div>
 
         <div className="mb-5">
-          <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]" htmlFor="confirmPassword">
+          <label
+            className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]"
+            htmlFor="confirmPassword"
+          >
             Confirm Password
           </label>
           <div className="relative">
@@ -232,7 +257,9 @@ export default function SignUpPage() {
               name="confirmPassword"
               type={showPassword ? 'text' : 'password'}
               className={`w-full px-4 py-3.5 pr-10 text-base bg-[var(--color-bg-secondary)] border rounded-lg text-[var(--color-text-primary)] transition-all placeholder:text-[var(--color-text-secondary)] focus:outline-none focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)] autofill:bg-[var(--color-bg-secondary)] ${
-                formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword
+                formData.password &&
+                formData.confirmPassword &&
+                formData.password !== formData.confirmPassword
                   ? 'border-[rgba(239,68,68,0.5)] focus:border-[var(--color-error)]'
                   : 'border-[var(--color-border)] focus:border-[var(--color-accent)]'
               }`}
@@ -249,13 +276,20 @@ export default function SignUpPage() {
               {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
             </button>
           </div>
-          {formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword && (
-            <p className="mt-1 text-xs text-[var(--color-error)]">Passwords do not match</p>
-          )}
+          {formData.password &&
+            formData.confirmPassword &&
+            formData.password !== formData.confirmPassword && (
+              <p className="mt-1 text-xs text-[var(--color-error)]">
+                Passwords do not match
+              </p>
+            )}
         </div>
 
         <div className="mb-5">
-          <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]" htmlFor="profilePicture">
+          <label
+            className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]"
+            htmlFor="profilePicture"
+          >
             Profile Picture URL
           </label>
           <input
@@ -335,7 +369,10 @@ export default function SignUpPage() {
 
       <p className="mt-6 text-center text-[var(--color-text-secondary)]">
         Already have an account?{' '}
-        <Link href="/auth/signin" className="text-[var(--color-accent)] no-underline transition-colors hover:text-[var(--color-accent-hover)] hover:underline">
+        <Link
+          href="/auth/signin"
+          className="text-[var(--color-accent)] no-underline transition-colors hover:text-[var(--color-accent-hover)] hover:underline"
+        >
           Sign in
         </Link>
       </p>

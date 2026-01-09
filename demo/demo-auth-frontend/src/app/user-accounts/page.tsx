@@ -50,7 +50,9 @@ export default function UserAccountsPage() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold mb-2">User Accounts</h1>
-          <p className="text-[var(--color-text-secondary)]">Manage user accounts in your system</p>
+          <p className="text-[var(--color-text-secondary)]">
+            Manage user accounts in your system
+          </p>
         </div>
         <button
           onClick={() => router.push('/user-accounts/new')}
@@ -112,7 +114,9 @@ export default function UserAccountsPage() {
                 <td className="px-4 py-4 text-left border-b border-[var(--color-border)]">
                   <div>
                     <div className="font-medium">{account.user.email}</div>
-                    <div className="text-sm text-[var(--color-text-secondary)]">{account.user.username}</div>
+                    <div className="text-sm text-[var(--color-text-secondary)]">
+                      {account.user.username}
+                    </div>
                   </div>
                 </td>
                 <td className="px-4 py-4 text-left border-b border-[var(--color-border)]">

@@ -50,7 +50,9 @@ export default function UsersPage() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold mb-2">Users</h1>
-          <p className="text-[var(--color-text-secondary)]">Manage users in your system</p>
+          <p className="text-[var(--color-text-secondary)]">
+            Manage users in your system
+          </p>
         </div>
         <button
           onClick={() => router.push('/users/new')}
@@ -106,8 +108,12 @@ export default function UsersPage() {
                 className="hover:bg-[rgba(99,102,241,0.05)] cursor-pointer"
                 onClick={() => router.push(`/users/${user.id}`)}
               >
-                <td className="px-4 py-4 text-left border-b border-[var(--color-border)]">{user.email}</td>
-                <td className="px-4 py-4 text-left border-b border-[var(--color-border)]">{user.username}</td>
+                <td className="px-4 py-4 text-left border-b border-[var(--color-border)]">
+                  {user.email}
+                </td>
+                <td className="px-4 py-4 text-left border-b border-[var(--color-border)]">
+                  {user.username}
+                </td>
                 <td className="px-4 py-4 text-left border-b border-[var(--color-border)]">
                   <span
                     className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-full ${
@@ -130,7 +136,9 @@ export default function UsersPage() {
                     {user.enabled ? 'Yes' : 'No'}
                   </span>
                 </td>
-                <td className="px-4 py-4 text-left border-b border-[var(--color-border)]">{new Date(user.createdAt).toLocaleDateString()}</td>
+                <td className="px-4 py-4 text-left border-b border-[var(--color-border)]">
+                  {new Date(user.createdAt).toLocaleDateString()}
+                </td>
               </tr>
             ))}
           </tbody>

@@ -22,17 +22,22 @@ export default function ClaimSelector({
   error,
 }: ClaimSelectorProps) {
   const [claimsMap, setClaimsMap] = useState<ClaimsMap>(new Map());
-  const [selectedClaimsMap, setSelectedClaimsMap] = useState<SelectedClaimsMap>(new Map());
+  const [selectedClaimsMap, setSelectedClaimsMap] = useState<SelectedClaimsMap>(
+    new Map(),
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
 
-  const hasClaim = useCallback((resource: string, scope: string, action: string): boolean => {
-    const resourceMap = claimsMap.get(resource);
-    if (!resourceMap) return false;
-    const scopeMap = resourceMap.get(scope);
-    if (!scopeMap) return false;
-    return scopeMap.has(action);
-  }, [claimsMap]);
+  const hasClaim = useCallback(
+    (resource: string, scope: string, action: string): boolean => {
+      const resourceMap = claimsMap.get(resource);
+      if (!resourceMap) return false;
+      const scopeMap = resourceMap.get(scope);
+      if (!scopeMap) return false;
+      return scopeMap.has(action);
+    },
+    [claimsMap],
+  );
 
   useEffect(() => {
     loadClaims();
@@ -48,7 +53,10 @@ export default function ClaimSelector({
           newSelectedClaimsMap.get(resource)!.set(scope, new Map());
           scopeMap.forEach((_, action) => {
             const exists = initialClaims.some(
-              (c) => c.resource === resource && c.scope === scope && c.action === action
+              (c) =>
+                c.resource === resource &&
+                c.scope === scope &&
+                c.action === action,
             );
             newSelectedClaimsMap.get(resource)!.get(scope)!.set(action, exists);
           });
@@ -83,30 +91,30 @@ export default function ClaimSelector({
     setLoadError('');
     try {
       const claims = await AuthClient.claims.getAll();
-      
+
       // Build claims map: resource -> scope -> action -> Claim
       const newClaimsMap: ClaimsMap = new Map();
-      
+
       (claims as any[]).forEach((claim: any) => {
         const resource = claim.resource as string;
         const scope = claim.scope as string;
         const action = claim.action as string;
-        
+
         if (!newClaimsMap.has(resource)) {
           newClaimsMap.set(resource, new Map());
         }
         const resourceMap = newClaimsMap.get(resource)!;
-        
+
         if (!resourceMap.has(scope)) {
           resourceMap.set(scope, new Map());
         }
         const scopeMap = resourceMap.get(scope)!;
-        
+
         scopeMap.set(action, claim as Claim);
       });
-      
+
       setClaimsMap(newClaimsMap);
-      
+
       // Initialize selected claims map
       const newSelectedClaimsMap: SelectedClaimsMap = new Map();
       newClaimsMap.forEach((resourceMap, resource) => {
@@ -118,7 +126,7 @@ export default function ClaimSelector({
           });
         });
       });
-      
+
       setSelectedClaimsMap(newSelectedClaimsMap);
     } catch (err: any) {
       setLoadError(err.message || 'Failed to load claims');
@@ -141,7 +149,11 @@ export default function ClaimSelector({
     return ['read', 'create', 'update', 'enable', 'disable', 'delete', 'admin'];
   };
 
-  const isSelected = (resource: string, scope: string, action: string): boolean => {
+  const isSelected = (
+    resource: string,
+    scope: string,
+    action: string,
+  ): boolean => {
     const resourceMap = selectedClaimsMap.get(resource);
     if (!resourceMap) return false;
     const scopeMap = resourceMap.get(scope);
@@ -153,73 +165,74 @@ export default function ClaimSelector({
     if (resource === 'admin') {
       return false;
     }
-    
+
     const actions = getActions();
     const resourceMap = claimsMap.get(resource);
     if (!resourceMap) return false;
     const scopeMap = resourceMap.get(scope);
     if (!scopeMap) return false;
-    
+
     const availableActions = actions.filter((action) => scopeMap.has(action));
     if (availableActions.length === 0) return false;
-    
-    return availableActions.every((action) => isSelected(resource, scope, action));
+
+    return availableActions.every((action) =>
+      isSelected(resource, scope, action),
+    );
   };
 
   const toggleRowAdmin = (resource: string, scope: string) => {
     if (resource === 'admin') {
       return;
     }
-    
+
     const newSelectedClaimsMap = new Map(selectedClaimsMap);
-    
+
     if (!newSelectedClaimsMap.has(resource)) {
       newSelectedClaimsMap.set(resource, new Map());
     }
     const resourceMap = newSelectedClaimsMap.get(resource)!;
-    
+
     if (!resourceMap.has(scope)) {
       resourceMap.set(scope, new Map());
     }
     const scopeMap = resourceMap.get(scope)!;
-    
+
     const actions = getActions();
     const claimsResourceMap = claimsMap.get(resource);
     if (!claimsResourceMap) return;
     const claimsScopeMap = claimsResourceMap.get(scope);
     if (!claimsScopeMap) return;
-    
+
     const isAllSelected = isRowAdminSelected(resource, scope);
     const newValue = !isAllSelected;
-    
+
     actions.forEach((action) => {
       if (claimsScopeMap.has(action)) {
         scopeMap.set(action, newValue);
       }
     });
-    
+
     setSelectedClaimsMap(newSelectedClaimsMap);
   };
 
   const toggleClaim = (resource: string, scope: string, action: string) => {
     const newSelectedClaimsMap = new Map(selectedClaimsMap);
-    
+
     if (!newSelectedClaimsMap.has(resource)) {
       newSelectedClaimsMap.set(resource, new Map());
     }
     const resourceMap = newSelectedClaimsMap.get(resource)!;
-    
+
     if (!resourceMap.has(scope)) {
       resourceMap.set(scope, new Map());
     }
     const scopeMap = resourceMap.get(scope)!;
-    
+
     const currentValue = scopeMap.get(action) || false;
     scopeMap.set(action, !currentValue);
-    
+
     setSelectedClaimsMap(newSelectedClaimsMap);
   };
-
 
   const displayError = error || loadError;
 
@@ -227,7 +240,8 @@ export default function ClaimSelector({
     <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl p-6">
       <h2 className="text-xl font-semibold mb-4">Claims</h2>
       <p className="text-sm text-[var(--color-text-secondary)] mb-6">
-        Select the claims to assign to this role. Check the boxes to grant permissions.
+        Select the claims to assign to this role. Check the boxes to grant
+        permissions.
       </p>
 
       {displayError && (
@@ -247,9 +261,14 @@ export default function ClaimSelector({
             const actions = getActions();
 
             return (
-              <div key={resource} className="border border-[var(--color-border)] rounded-xl overflow-hidden">
+              <div
+                key={resource}
+                className="border border-[var(--color-border)] rounded-xl overflow-hidden"
+              >
                 <div className="px-6 py-4 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
-                  <h3 className="text-lg font-semibold capitalize">{resource}</h3>
+                  <h3 className="text-lg font-semibold capitalize">
+                    {resource}
+                  </h3>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
@@ -275,13 +294,24 @@ export default function ClaimSelector({
                     </thead>
                     <tbody>
                       {scopes.map((scope) => (
-                        <tr key={scope} className="hover:bg-[rgba(99,102,241,0.05)]">
+                        <tr
+                          key={scope}
+                          className="hover:bg-[rgba(99,102,241,0.05)]"
+                        >
                           <td className="px-4 py-3 text-left border-b border-[var(--color-border)] font-medium capitalize sticky left-0 bg-[var(--color-bg-card)] z-10">
                             {scope}
                           </td>
                           {actions.map((action) => {
-                            const claimExists = hasClaim(resource, scope, action);
-                            const isSelectedValue = isSelected(resource, scope, action);
+                            const claimExists = hasClaim(
+                              resource,
+                              scope,
+                              action,
+                            );
+                            const isSelectedValue = isSelected(
+                              resource,
+                              scope,
+                              action,
+                            );
 
                             return (
                               <td
@@ -292,11 +322,15 @@ export default function ClaimSelector({
                                   <input
                                     type="checkbox"
                                     checked={isSelectedValue}
-                                    onChange={() => toggleClaim(resource, scope, action)}
+                                    onChange={() =>
+                                      toggleClaim(resource, scope, action)
+                                    }
                                     className="w-5 h-5 accent-[var(--color-accent)] cursor-pointer"
                                   />
                                 ) : (
-                                  <span className="text-[var(--color-text-secondary)] opacity-30">-</span>
+                                  <span className="text-[var(--color-text-secondary)] opacity-30">
+                                    -
+                                  </span>
                                 )}
                               </td>
                             );

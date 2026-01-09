@@ -4,7 +4,14 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
 import { AuthClient } from '@devlab-io/nest-auth-client';
-import { Users, Building2, Store, Shield, ShieldUser, UserCog } from 'lucide-react';
+import {
+  Users,
+  Building2,
+  Store,
+  Shield,
+  ShieldUser,
+  UserCog,
+} from 'lucide-react';
 import DashboardCard from '../../components/DashboardCard';
 
 export default function DashboardPage() {
@@ -34,18 +41,22 @@ export default function DashboardPage() {
 
   const loadStats = async () => {
     try {
-      const [usersRes, userAccountsRes, orgsRes, estsRes, claimsRes, rolesRes] = await Promise.allSettled([
-        AuthClient.users.search({}, 1, 1),
-        AuthClient.userAccounts.search({}, 1, 1),
-        AuthClient.organisations.search({}, 1, 1),
-        AuthClient.establishments.search({}, 1, 1),
-        AuthClient.claims.getAll(),
-        AuthClient.roles.getAll(),
-      ]);
+      const [usersRes, userAccountsRes, orgsRes, estsRes, claimsRes, rolesRes] =
+        await Promise.allSettled([
+          AuthClient.users.search({}, 1, 1),
+          AuthClient.userAccounts.search({}, 1, 1),
+          AuthClient.organisations.search({}, 1, 1),
+          AuthClient.establishments.search({}, 1, 1),
+          AuthClient.claims.getAll(),
+          AuthClient.roles.getAll(),
+        ]);
 
       setStats({
         users: usersRes.status === 'fulfilled' ? usersRes.value.total : 0,
-        userAccounts: userAccountsRes.status === 'fulfilled' ? userAccountsRes.value.total : 0,
+        userAccounts:
+          userAccountsRes.status === 'fulfilled'
+            ? userAccountsRes.value.total
+            : 0,
         organisations: orgsRes.status === 'fulfilled' ? orgsRes.value.total : 0,
         establishments:
           estsRes.status === 'fulfilled' ? estsRes.value.total : 0,

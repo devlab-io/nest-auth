@@ -69,7 +69,9 @@ export default function OrganisationsPage() {
     <div>
       <div className="mb-8">
         <h1 className="text-3xl font-semibold mb-2">Organisations</h1>
-        <p className="text-[var(--color-text-secondary)]">Manage organisations in your system</p>
+        <p className="text-[var(--color-text-secondary)]">
+          Manage organisations in your system
+        </p>
       </div>
 
       {error && (
@@ -129,8 +131,12 @@ export default function OrganisationsPage() {
           <tbody>
             {organisations.map((org) => (
               <tr key={org.id} className="hover:bg-[rgba(99,102,241,0.05)]">
-                <td className="px-4 py-4 text-left border-b border-[var(--color-border)]">{org.name}</td>
-                <td className="px-4 py-4 text-left border-b border-[var(--color-border)]">{org.establishments?.length || 0}</td>
+                <td className="px-4 py-4 text-left border-b border-[var(--color-border)]">
+                  {org.name}
+                </td>
+                <td className="px-4 py-4 text-left border-b border-[var(--color-border)]">
+                  {org.establishments?.length || 0}
+                </td>
                 <td className="px-4 py-4 text-left border-b border-[var(--color-border)]">
                   <span
                     className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-full ${
@@ -142,7 +148,9 @@ export default function OrganisationsPage() {
                     {org.enabled ? 'Yes' : 'No'}
                   </span>
                 </td>
-                <td className="px-4 py-4 text-left border-b border-[var(--color-border)]">{new Date(org.createdAt).toLocaleDateString()}</td>
+                <td className="px-4 py-4 text-left border-b border-[var(--color-border)]">
+                  {new Date(org.createdAt).toLocaleDateString()}
+                </td>
               </tr>
             ))}
           </tbody>

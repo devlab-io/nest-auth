@@ -65,7 +65,9 @@ export default function CreateRolePage() {
           <UserCog size={32} className="text-[var(--color-accent)]" />
           <h1 className="text-3xl font-semibold">Create Role</h1>
         </div>
-        <p className="text-[var(--color-text-secondary)]">Create a new role and assign claims</p>
+        <p className="text-[var(--color-text-secondary)]">
+          Create a new role and assign claims
+        </p>
       </div>
 
       {error && (
@@ -93,7 +95,10 @@ export default function CreateRolePage() {
               />
             </div>
             <div>
-              <label htmlFor="description" className="block text-sm font-medium mb-2">
+              <label
+                htmlFor="description"
+                className="block text-sm font-medium mb-2"
+              >
                 Description
               </label>
               <textarea
@@ -108,10 +113,7 @@ export default function CreateRolePage() {
           </div>
         </div>
 
-        <ClaimSelector
-          onSelectionChange={setSelectedClaims}
-          error={error}
-        />
+        <ClaimSelector onSelectionChange={setSelectedClaims} error={error} />
 
         <div className="flex items-center justify-end gap-4">
           <Link

@@ -60,12 +60,15 @@ export default function CreateUserPage() {
         ...(lastName && { lastName }),
         ...(phone && { phone }),
         ...(profilePicture && { profilePicture }),
-        ...(usePassword && password && {
-          credentials: [{
-            type: 'password',
-            password,
-          }],
-        }),
+        ...(usePassword &&
+          password && {
+            credentials: [
+              {
+                type: 'password',
+                password,
+              },
+            ],
+          }),
       };
 
       const newUser = await AuthClient.users.create(createRequest);
@@ -77,7 +80,8 @@ export default function CreateUserPage() {
     }
   };
 
-  const passwordsMatch = !usePassword || !password || password === confirmPassword;
+  const passwordsMatch =
+    !usePassword || !password || password === confirmPassword;
   const isFormValid = email.trim() && (!usePassword || passwordsMatch);
 
   if (authLoading || !isAuthenticated) {
@@ -130,7 +134,10 @@ export default function CreateUserPage() {
             </div>
 
             <div>
-              <label htmlFor="username" className="block text-sm font-medium mb-2">
+              <label
+                htmlFor="username"
+                className="block text-sm font-medium mb-2"
+              >
                 Username
               </label>
               <input
@@ -145,7 +152,10 @@ export default function CreateUserPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="firstName" className="block text-sm font-medium mb-2">
+                <label
+                  htmlFor="firstName"
+                  className="block text-sm font-medium mb-2"
+                >
                   First Name
                 </label>
                 <input
@@ -159,7 +169,10 @@ export default function CreateUserPage() {
               </div>
 
               <div>
-                <label htmlFor="lastName" className="block text-sm font-medium mb-2">
+                <label
+                  htmlFor="lastName"
+                  className="block text-sm font-medium mb-2"
+                >
                   Last Name
                 </label>
                 <input
@@ -188,7 +201,10 @@ export default function CreateUserPage() {
             </div>
 
             <div>
-              <label htmlFor="profilePicture" className="block text-sm font-medium mb-2">
+              <label
+                htmlFor="profilePicture"
+                className="block text-sm font-medium mb-2"
+              >
                 Profile Picture URL
               </label>
               <input
@@ -214,7 +230,10 @@ export default function CreateUserPage() {
                 onChange={(e) => setEnabled(e.target.checked)}
                 className="w-5 h-5 accent-[var(--color-accent)] cursor-pointer"
               />
-              <label htmlFor="enabled" className="text-sm font-medium cursor-pointer">
+              <label
+                htmlFor="enabled"
+                className="text-sm font-medium cursor-pointer"
+              >
                 Account Enabled
               </label>
             </div>
@@ -227,7 +246,10 @@ export default function CreateUserPage() {
                 onChange={(e) => setEmailValidated(e.target.checked)}
                 className="w-5 h-5 accent-[var(--color-accent)] cursor-pointer"
               />
-              <label htmlFor="emailValidated" className="text-sm font-medium cursor-pointer">
+              <label
+                htmlFor="emailValidated"
+                className="text-sm font-medium cursor-pointer"
+              >
                 Email Validated
               </label>
             </div>
@@ -240,7 +262,10 @@ export default function CreateUserPage() {
                 onChange={(e) => setAcceptedTerms(e.target.checked)}
                 className="w-5 h-5 accent-[var(--color-accent)] cursor-pointer"
               />
-              <label htmlFor="acceptedTerms" className="text-sm font-medium cursor-pointer">
+              <label
+                htmlFor="acceptedTerms"
+                className="text-sm font-medium cursor-pointer"
+              >
                 Accepted Terms
               </label>
             </div>
@@ -253,7 +278,10 @@ export default function CreateUserPage() {
                 onChange={(e) => setAcceptedPrivacyPolicy(e.target.checked)}
                 className="w-5 h-5 accent-[var(--color-accent)] cursor-pointer"
               />
-              <label htmlFor="acceptedPrivacyPolicy" className="text-sm font-medium cursor-pointer">
+              <label
+                htmlFor="acceptedPrivacyPolicy"
+                className="text-sm font-medium cursor-pointer"
+              >
                 Accepted Privacy Policy
               </label>
             </div>
@@ -271,7 +299,10 @@ export default function CreateUserPage() {
                 onChange={(e) => setUsePassword(e.target.checked)}
                 className="w-5 h-5 accent-[var(--color-accent)] cursor-pointer"
               />
-              <label htmlFor="usePassword" className="text-sm font-medium cursor-pointer">
+              <label
+                htmlFor="usePassword"
+                className="text-sm font-medium cursor-pointer"
+              >
                 Set Password
               </label>
             </div>
@@ -279,7 +310,10 @@ export default function CreateUserPage() {
             {usePassword && (
               <>
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium mb-2">
+                  <label
+                    htmlFor="password"
+                    className="block text-sm font-medium mb-2"
+                  >
                     Password
                   </label>
                   <div className="relative">
@@ -302,7 +336,10 @@ export default function CreateUserPage() {
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium mb-2">
+                  <label
+                    htmlFor="confirmPassword"
+                    className="block text-sm font-medium mb-2"
+                  >
                     Confirm Password
                   </label>
                   <div className="relative">
@@ -312,7 +349,9 @@ export default function CreateUserPage() {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       className={`w-full px-4 py-2 pr-10 bg-[var(--color-bg-secondary)] border rounded-lg text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] ${
-                        password && confirmPassword && password !== confirmPassword
+                        password &&
+                        confirmPassword &&
+                        password !== confirmPassword
                           ? 'border-[var(--color-error)]'
                           : 'border-[var(--color-border)]'
                       }`}
@@ -327,11 +366,13 @@ export default function CreateUserPage() {
                       {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
                     </button>
                   </div>
-                  {password && confirmPassword && password !== confirmPassword && (
-                    <p className="mt-1 text-sm text-[var(--color-error)]">
-                      Passwords do not match
-                    </p>
-                  )}
+                  {password &&
+                    confirmPassword &&
+                    password !== confirmPassword && (
+                      <p className="mt-1 text-sm text-[var(--color-error)]">
+                        Passwords do not match
+                      </p>
+                    )}
                 </div>
               </>
             )}

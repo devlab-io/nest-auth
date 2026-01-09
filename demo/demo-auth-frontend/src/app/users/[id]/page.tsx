@@ -103,25 +103,33 @@ export default function UserDetailPage() {
                 <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
                   Username
                 </label>
-                <p className="text-[var(--color-text-primary)]">{user.username}</p>
+                <p className="text-[var(--color-text-primary)]">
+                  {user.username}
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
                   First Name
                 </label>
-                <p className="text-[var(--color-text-primary)]">{user.firstName || '-'}</p>
+                <p className="text-[var(--color-text-primary)]">
+                  {user.firstName || '-'}
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
                   Last Name
                 </label>
-                <p className="text-[var(--color-text-primary)]">{user.lastName || '-'}</p>
+                <p className="text-[var(--color-text-primary)]">
+                  {user.lastName || '-'}
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
                   Phone
                 </label>
-                <p className="text-[var(--color-text-primary)]">{user.phone || '-'}</p>
+                <p className="text-[var(--color-text-primary)]">
+                  {user.phone || '-'}
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
@@ -139,7 +147,10 @@ export default function UserDetailPage() {
                   </div>
                 ) : (
                   <div className="w-24 h-24 rounded-full bg-[var(--color-bg-secondary)] border-2 border-[var(--color-border)] flex items-center justify-center">
-                    <Users size={32} className="text-[var(--color-text-secondary)]" />
+                    <Users
+                      size={32}
+                      className="text-[var(--color-text-secondary)]"
+                    />
                   </div>
                 )}
               </div>
@@ -235,9 +246,13 @@ export default function UserDetailPage() {
               <h2 className="text-xl font-semibold mb-4">Credentials</h2>
               <div className="space-y-2">
                 {user.credentials.map((credential, index) => (
-                  <div key={index} className="p-3 bg-[var(--color-bg-secondary)] rounded-lg">
+                  <div
+                    key={index}
+                    className="p-3 bg-[var(--color-bg-secondary)] rounded-lg"
+                  >
                     <p className="text-sm text-[var(--color-text-primary)]">
-                      <span className="font-medium">Type:</span> {credential.type}
+                      <span className="font-medium">Type:</span>{' '}
+                      {credential.type}
                     </p>
                   </div>
                 ))}
@@ -247,26 +262,34 @@ export default function UserDetailPage() {
 
           {user.accounts && user.accounts.length > 0 && (
             <div className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl p-6">
-              <h2 className="text-xl font-semibold mb-4">User Accounts ({user.accounts.length})</h2>
+              <h2 className="text-xl font-semibold mb-4">
+                User Accounts ({user.accounts.length})
+              </h2>
               <div className="space-y-2">
                 {user.accounts.map((account) => (
-                  <div key={account.id} className="p-3 bg-[var(--color-bg-secondary)] rounded-lg">
+                  <div
+                    key={account.id}
+                    className="p-3 bg-[var(--color-bg-secondary)] rounded-lg"
+                  >
                     <p className="text-sm text-[var(--color-text-primary)]">
                       <span className="font-medium">ID:</span> {account.id}
                     </p>
                     {account.organisation && (
                       <p className="text-sm text-[var(--color-text-secondary)]">
-                        <span className="font-medium">Organisation:</span> {account.organisation?.name}
+                        <span className="font-medium">Organisation:</span>{' '}
+                        {account.organisation?.name}
                       </p>
                     )}
                     {account.establishment && (
                       <p className="text-sm text-[var(--color-text-secondary)]">
-                        <span className="font-medium">Establishment:</span> {account.establishment?.name}
+                        <span className="font-medium">Establishment:</span>{' '}
+                        {account.establishment?.name}
                       </p>
                     )}
                     {account.roles && account.roles.length > 0 && (
                       <p className="text-sm text-[var(--color-text-secondary)]">
-                        <span className="font-medium">Roles:</span> {account.roles.map(r => r.name).join(', ')}
+                        <span className="font-medium">Roles:</span>{' '}
+                        {account.roles.map((r) => r.name).join(', ')}
                       </p>
                     )}
                   </div>

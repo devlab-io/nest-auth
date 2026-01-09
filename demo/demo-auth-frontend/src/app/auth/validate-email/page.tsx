@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { AuthClient } from '@devlab-io/nest-auth-client';
 import { useAuth } from '../../../providers/AuthProvider';
 import { Mail, CheckCircle, XCircle } from 'lucide-react';
 
-export default function ValidateEmailPage() {
+function ValidateEmailForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated } = useAuth();
@@ -45,7 +45,10 @@ export default function ValidateEmailPage() {
       setSuccess(true);
       setTimeout(() => router.push('/auth/signin'), 3000);
     } catch (err: any) {
-      setError(err.message || 'Email validation failed. Please check your token and email.');
+      setError(
+        err.message ||
+          'Email validation failed. Please check your token and email.',
+      );
     } finally {
       setIsLoading(false);
     }
@@ -99,7 +102,10 @@ export default function ValidateEmailPage() {
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]" htmlFor="email">
+          <label
+            className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]"
+            htmlFor="email"
+          >
             Email Address
           </label>
           <input
@@ -115,7 +121,10 @@ export default function ValidateEmailPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]" htmlFor="token">
+          <label
+            className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]"
+            htmlFor="token"
+          >
             Verification Token
           </label>
           <input
@@ -129,7 +138,8 @@ export default function ValidateEmailPage() {
             required
           />
           <p className="mt-2 text-xs text-[var(--color-text-secondary)]">
-            Check your email inbox for the verification token. It may be in your spam folder.
+            Check your email inbox for the verification token. It may be in your
+            spam folder.
           </p>
         </div>
 
@@ -157,5 +167,21 @@ export default function ValidateEmailPage() {
         </Link>
       </div>
     </div>
+  );
+}
+
+export default function ValidateEmailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-[500px] mx-auto my-16 p-10 bg-[var(--color-bg-card)] rounded-2xl border border-[var(--color-border)] shadow-[0_4px_24px_rgba(0,0,0,0.3)]">
+          <div className="flex items-center justify-center p-16">
+            <div className="w-10 h-10 border-[3px] border-[var(--color-border)] border-t-[var(--color-accent)] rounded-full animate-spin"></div>
+          </div>
+        </div>
+      }
+    >
+      <ValidateEmailForm />
+    </Suspense>
   );
 }

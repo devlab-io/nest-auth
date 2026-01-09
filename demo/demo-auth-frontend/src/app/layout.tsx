@@ -18,8 +18,10 @@ export default function RootLayout({
       <body>
         <AuthProvider>
           <div className="flex min-h-screen">
-            <Navigation/>
-            <main className="flex-1 p-8 bg-[var(--color-bg-primary)]">{children}</main>
+            <Navigation />
+            <main className="flex-1 p-8 bg-[var(--color-bg-primary)]">
+              {children}
+            </main>
           </div>
         </AuthProvider>
       </body>

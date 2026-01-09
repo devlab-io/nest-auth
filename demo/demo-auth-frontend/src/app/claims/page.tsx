@@ -36,7 +36,7 @@ export default function ClaimsPage() {
     try {
       const baseURL = AuthState.baseURL || 'http://localhost:4001';
       const token = AuthState.token;
-      
+
       const response = await fetch(`${baseURL}/claims`, {
         method: 'GET',
         headers: {
@@ -60,25 +60,40 @@ export default function ClaimsPage() {
   };
 
   // Organize claims by resource
-  const claimsByResource = claims.reduce((acc, claim) => {
-    if (!acc[claim.resource]) {
-      acc[claim.resource] = [];
-    }
-    acc[claim.resource].push(claim);
-    return acc;
-  }, {} as Record<string, Claim[]>);
+  const claimsByResource = claims.reduce(
+    (acc, claim) => {
+      if (!acc[claim.resource]) {
+        acc[claim.resource] = [];
+      }
+      acc[claim.resource].push(claim);
+      return acc;
+    },
+    {} as Record<string, Claim[]>,
+  );
 
   // Get all unique resources (if no claims, we still want to show tables for common resources)
-  const allResources = Object.keys(claimsByResource).length > 0
-    ? Object.keys(claimsByResource)
-    : ['users', 'organisations', 'establishments', 'roles', 'claims', 'sessions', 'user-accounts'];
+  const allResources =
+    Object.keys(claimsByResource).length > 0
+      ? Object.keys(claimsByResource)
+      : [
+          'users',
+          'organisations',
+          'establishments',
+          'roles',
+          'claims',
+          'sessions',
+          'user-accounts',
+        ];
 
   // Get all unique scopes for a resource (always include admin scope)
   const getScopes = (resourceClaims: Claim[]): string[] => {
     const scopes = new Set(resourceClaims.map((c) => c.scope));
     const scopeOrder = ['admin', 'any', 'organisation', 'establishment', 'own'];
     // Always include admin scope even if no claims exist for it
-    return ['admin', ...scopeOrder.filter((s) => scopes.has(s) && s !== 'admin')];
+    return [
+      'admin',
+      ...scopeOrder.filter((s) => scopes.has(s) && s !== 'admin'),
+    ];
   };
 
   // Always return the same actions in the same order
@@ -86,30 +101,36 @@ export default function ClaimsPage() {
     return ['read', 'create', 'update', 'enable', 'disable', 'delete', 'admin'];
   };
 
-  const hasClaim = (resource: string, scope: string, action: string): boolean => {
+  const hasClaim = (
+    resource: string,
+    scope: string,
+    action: string,
+  ): boolean => {
     // If scope is admin, all actions are checked (virtual admin scope)
     if (scope === 'admin') {
       return true;
     }
-    
+
     // Check if admin action exists for this resource and scope
     const hasAdminAction = claims.some(
-      (c) => c.resource === resource && c.scope === scope && c.action === 'admin'
+      (c) =>
+        c.resource === resource && c.scope === scope && c.action === 'admin',
     );
-    
+
     // If admin action exists, all other actions are also checked
     if (hasAdminAction && action !== 'admin') {
       return true;
     }
-    
+
     // If action is admin, return whether admin claim exists
     if (action === 'admin') {
       return hasAdminAction;
     }
-    
+
     // For other actions, check if the claim exists
     return claims.some(
-      (c) => c.resource === resource && c.scope === scope && c.action === action
+      (c) =>
+        c.resource === resource && c.scope === scope && c.action === action,
     );
   };
 
@@ -125,7 +146,9 @@ export default function ClaimsPage() {
     <div>
       <div className="mb-8">
         <h1 className="text-3xl font-semibold mb-2">Claims</h1>
-        <p className="text-[var(--color-text-secondary)]">View all available claims in the system</p>
+        <p className="text-[var(--color-text-secondary)]">
+          View all available claims in the system
+        </p>
       </div>
 
       {error && (
@@ -146,9 +169,14 @@ export default function ClaimsPage() {
             const actions = getActions();
 
             return (
-              <div key={resource} className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl overflow-hidden">
+              <div
+                key={resource}
+                className="bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl overflow-hidden"
+              >
                 <div className="px-6 py-4 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
-                  <h2 className="text-xl font-semibold capitalize">{resource}</h2>
+                  <h2 className="text-xl font-semibold capitalize">
+                    {resource}
+                  </h2>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
@@ -169,21 +197,34 @@ export default function ClaimsPage() {
                     </thead>
                     <tbody>
                       {scopes.map((scope) => (
-                        <tr key={scope} className="hover:bg-[rgba(99,102,241,0.05)]">
+                        <tr
+                          key={scope}
+                          className="hover:bg-[rgba(99,102,241,0.05)]"
+                        >
                           <td className="px-4 py-3 text-left border-b border-[var(--color-border)] font-medium capitalize sticky left-0 bg-[var(--color-bg-card)] z-10">
                             {scope}
                           </td>
                           {actions.map((action) => {
-                            const hasClaimValue = hasClaim(resource, scope, action);
+                            const hasClaimValue = hasClaim(
+                              resource,
+                              scope,
+                              action,
+                            );
                             return (
                               <td
                                 key={`${scope}-${action}`}
                                 className="px-4 py-3 text-center border-b border-[var(--color-border)]"
                               >
                                 {hasClaimValue ? (
-                                  <Check size={20} className="mx-auto text-[var(--color-success)]" />
+                                  <Check
+                                    size={20}
+                                    className="mx-auto text-[var(--color-success)]"
+                                  />
                                 ) : (
-                                  <X size={20} className="mx-auto text-[var(--color-text-secondary)] opacity-50" />
+                                  <X
+                                    size={20}
+                                    className="mx-auto text-[var(--color-text-secondary)] opacity-50"
+                                  />
                                 )}
                               </td>
                             );
