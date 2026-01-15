@@ -122,6 +122,7 @@ export class NotificationService {
     // Use custom link if provided, otherwise use the token
     const link: string = customLink ?? token;
 
+    // TODO : EMAIL TEMPLATE ?
     const body: string = `Bonjour,
 
 Vous avez reçu ce message car vous devez effectuer une ou plusieurs actions sur votre compte.

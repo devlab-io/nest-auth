@@ -26,6 +26,7 @@ export interface ActionConfig {
 export const ActionConfigToken: symbol = Symbol('ActionConfig');
 
 const actionConfigSchema = z.object({
+  AUTH_ACTION_CLIENT_URL: z.string().default('http://localhost:3000'), // TODO Use that ?
   AUTH_ACTION_INVITE: z.coerce.number().default(24),
   AUTH_ACTION_INVITE_ROUTE: z.string().default('auth/accept-invitation'),
   AUTH_ACTION_INVITE_ORGANISATION: z.string().optional(),
