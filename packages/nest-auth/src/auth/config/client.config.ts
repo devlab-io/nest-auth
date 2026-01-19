@@ -38,6 +38,16 @@ export interface ClientsConfig {
   clients: Map<string, ClientConfig>;
 }
 
+/**
+ * Type partiel pour la configuration des clients (utilisable en paramètre).
+ * Utilise un objet au lieu d'une Map pour faciliter la configuration.
+ */
+export type PartialClientsConfig = {
+  clients?: Record<string, Partial<Omit<ClientConfig, 'actions'> & {
+    actions?: Partial<Record<keyof ClientActionsConfig, Partial<ClientActionConfig>>>;
+  }>>;
+};
+
 export const ClientsConfigToken: symbol = Symbol('ClientsConfig');
 
 /**
@@ -131,13 +141,82 @@ function normalizeRoute(route: string): string {
 }
 
 /**
- * Provider pour la configuration des clients.
+ * Fusionne la configuration partielle avec celle des variables d'environnement.
+ * Les valeurs du paramètre prévalent sur celles des variables d'environnement.
  */
-export function provideClientsConfig(): Provider {
+function mergeClientsConfig(
+  envClients: Map<string, ClientConfig>,
+  partialConfig?: PartialClientsConfig,
+): Map<string, ClientConfig> {
+  if (!partialConfig?.clients) {
+    return envClients;
+  }
+
+  const merged = new Map(envClients);
+
+  for (const [clientId, partialClient] of Object.entries(partialConfig.clients)) {
+    const existing = merged.get(clientId);
+
+    if (existing) {
+      // Fusionner avec le client existant
+      const mergedActions: ClientActionsConfig = { ...existing.actions };
+
+      if (partialClient.actions) {
+        for (const [actionKey, actionValue] of Object.entries(partialClient.actions)) {
+          const key = actionKey as keyof ClientActionsConfig;
+          if (actionValue) {
+            mergedActions[key] = {
+              ...existing.actions[key],
+              ...actionValue,
+              validity: actionValue.validity ?? existing.actions[key]?.validity ?? DEFAULT_VALIDITY[key],
+            };
+          }
+        }
+      }
+
+      merged.set(clientId, {
+        id: partialClient.id ?? existing.id,
+        uri: partialClient.uri !== undefined ? partialClient.uri : existing.uri,
+        actions: mergedActions,
+      });
+    } else {
+      // Nouveau client à partir de la config partielle
+      const actions: ClientActionsConfig = {};
+
+      if (partialClient.actions) {
+        for (const [actionKey, actionValue] of Object.entries(partialClient.actions)) {
+          const key = actionKey as keyof ClientActionsConfig;
+          if (actionValue) {
+            actions[key] = {
+              route: actionValue.route,
+              validity: actionValue.validity ?? DEFAULT_VALIDITY[key],
+            };
+          }
+        }
+      }
+
+      merged.set(clientId, {
+        id: partialClient.id ?? clientId,
+        uri: partialClient.uri ?? null,
+        actions,
+      });
+    }
+  }
+
+  return merged;
+}
+
+/**
+ * Provider pour la configuration des clients.
+ * Fusionne la configuration partielle avec les variables d'environnement.
+ * Les valeurs du paramètre prévalent sur celles des variables d'environnement.
+ */
+export function provideClientsConfig(config?: PartialClientsConfig): Provider {
   return {
     provide: ClientsConfigToken,
     useFactory: (): ClientsConfig => {
-      const clients = parseClientsFromEnv(process.env);
+      const envClients = parseClientsFromEnv(process.env);
+      const clients = mergeClientsConfig(envClients, config);
 
       if (clients.size === 0) {
         console.warn(

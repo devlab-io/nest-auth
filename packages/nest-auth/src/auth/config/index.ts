@@ -27,5 +27,6 @@ export {
   ClientsConfigToken,
   ClientActionsConfig,
   ClientActionConfig,
+  PartialClientsConfig,
   provideClientsConfig,
 } from './client.config';
