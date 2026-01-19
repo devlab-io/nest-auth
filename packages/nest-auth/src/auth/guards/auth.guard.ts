@@ -3,6 +3,8 @@ import {
   CanActivate,
   ExecutionContext,
   UnauthorizedException,
+  ForbiddenException,
+  Inject,
 } from '@nestjs/common';
 import { JwtService } from '../services/jwt.service';
 import { ScopeService } from '../services/scope.service';
@@ -15,10 +17,12 @@ import {
 } from '@devlab-io/nest-auth-types';
 import { Reflector } from '@nestjs/core';
 import { CLAIMS_KEY } from '../decorators/claims';
+import { ClientsConfig, ClientsConfigToken } from '../config/client.config';
 
 /**
  * JWT Authentication Guard
- * Validates JWT tokens and loads the user account into the request context
+ * Validates JWT tokens and loads the user account into the request context.
+ * Also validates the X-Client-Id header and loads the ClientConfig.
  *
  * Uses JwtService.loadUserFromToken() which:
  * - Verifies the token
@@ -32,10 +36,33 @@ export class AuthGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly jwtService: JwtService,
     private readonly scopeService: ScopeService,
+    @Inject(ClientsConfigToken)
+    private readonly clientsConfig: ClientsConfig,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
+
+    // === Client validation (X-Client-Id header) ===
+    const clientId = request.headers?.['x-client-id'];
+
+    if (!clientId) {
+      throw new ForbiddenException(
+        'Missing X-Client-Id header. Request must include a valid client identifier.',
+      );
+    }
+
+    const client = this.clientsConfig.clients.get(clientId);
+    if (!client) {
+      throw new ForbiddenException(
+        `Unknown client: ${clientId}. This client is not configured.`,
+      );
+    }
+
+    // Store the client config in the request for the @Client() decorator
+    request.client = client;
+
+    // === JWT token validation ===
     const token: string | null = extractTokenFromRequest(request);
 
     // Verify that an authentication token is provided.

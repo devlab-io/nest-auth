@@ -106,146 +106,154 @@ AUTH_GOOGLE_CALLBACK_URL=
 
 **Note** : Si toutes les variables Google sont renseignées, l'authentification Google sera automatiquement activée.
 
-#### Configuration des Actions (Tokens)
+#### Configuration Multi-Clients
 
-Les routes d'actions définissent les URLs frontend qui seront utilisées dans les emails envoyés aux utilisateurs. Ces routes doivent correspondre à des pages frontend existantes qui acceptent un paramètre de token et appellent les endpoints correspondants du contrôleur `/auth`.
+Le système d'authentification supporte plusieurs clients (web, mobile, API) avec des configurations distinctes pour chaque type de client. Chaque client peut avoir :
+
+- **Son propre URI de redirection** : URL web (http/https), deeplink mobile, ou aucun (code seul)
+- **Ses propres routes d'actions** : chemins personnalisés pour chaque action
+- **Ses propres durées de validité** : tokens plus longs pour mobile, plus courts pour API
+
+Configurez vos clients avec des variables préfixées par index :
 
 ```env
-# Durée de validité des tokens d'invitation (en heures)
-AUTH_ACTION_INVITE=24
-# Route frontend pour accepter une invitation
-AUTH_ACTION_INVITE_ROUTE=auth/accept-invitation
-# Organisation par défaut pour les invitations (optionnel)
-AUTH_ACTION_INVITE_ORGANISATION=
-# Établissement par défaut pour les invitations (optionnel)
-AUTH_ACTION_INVITE_ESTABLISHMENT=
+# Client Web (développement)
+AUTH_CLIENT_0_ID=local
+AUTH_CLIENT_0_URI=http://localhost:3000
+AUTH_CLIENT_0_ACTION_INVITE_ROUTE=auth/accepter-invitation
+AUTH_CLIENT_0_ACTION_INVITE_VALIDITY=48
+AUTH_CLIENT_0_ACTION_VALIDATE_EMAIL_ROUTE=auth/valider-email
+AUTH_CLIENT_0_ACTION_VALIDATE_EMAIL_VALIDITY=24
+AUTH_CLIENT_0_ACTION_RESET_PASSWORD_ROUTE=auth/nouveau-mot-de-passe
+AUTH_CLIENT_0_ACTION_RESET_PASSWORD_VALIDITY=1
+AUTH_CLIENT_0_ACTION_CHANGE_PASSWORD_ROUTE=auth/changer-mot-de-passe
+AUTH_CLIENT_0_ACTION_CHANGE_PASSWORD_VALIDITY=24
+AUTH_CLIENT_0_ACTION_CHANGE_EMAIL_ROUTE=auth/changer-email
+AUTH_CLIENT_0_ACTION_CHANGE_EMAIL_VALIDITY=24
+AUTH_CLIENT_0_ACTION_ACCEPT_TERMS_ROUTE=auth/accepter-cgu
+AUTH_CLIENT_0_ACTION_ACCEPT_TERMS_VALIDITY=24
+AUTH_CLIENT_0_ACTION_ACCEPT_PRIVACY_POLICY_ROUTE=auth/accepter-confidentialite
+AUTH_CLIENT_0_ACTION_ACCEPT_PRIVACY_POLICY_VALIDITY=24
 
-# Validation d'email
-AUTH_ACTION_VALIDATE_EMAIL=24
-AUTH_ACTION_VALIDATE_EMAIL_ROUTE=auth/validate-email
+# Client Mobile iOS (deeplink)
+AUTH_CLIENT_1_ID=mobile-ios
+AUTH_CLIENT_1_URI=myapp://
+AUTH_CLIENT_1_ACTION_INVITE_ROUTE=invitation/accept
+AUTH_CLIENT_1_ACTION_INVITE_VALIDITY=168
+AUTH_CLIENT_1_ACTION_RESET_PASSWORD_ROUTE=password/reset
+AUTH_CLIENT_1_ACTION_RESET_PASSWORD_VALIDITY=24
 
-# Acceptation des conditions d'utilisation
-AUTH_ACTION_ACCEPT_TERMS=24
-AUTH_ACTION_ACCEPT_TERMS_ROUTE=auth/accept-terms
-
-# Acceptation de la politique de confidentialité
-AUTH_ACTION_ACCEPT_PRIVACY_POLICY=24
-AUTH_ACTION_ACCEPT_PRIVACY_POLICY_ROUTE=auth/accept-privacy-policy
-
-# Réinitialisation de mot de passe
-AUTH_ACTION_RESET_PASSWORD=24
-AUTH_ACTION_RESET_PASSWORD_ROUTE=auth/reset-password
-
-# Changement de mot de passe
-AUTH_ACTION_CHANGE_PASSWORD=24
-AUTH_ACTION_CHANGE_PASSWORD_ROUTE=auth/change-password
-
-# Changement d'email
-AUTH_ACTION_CHANGE_EMAIL=24
-AUTH_ACTION_CHANGE_EMAIL_ROUTE=auth/change-email
+# Client API (code seul, pas de liens)
+AUTH_CLIENT_2_ID=api
+AUTH_CLIENT_2_URI=none
+AUTH_CLIENT_2_ACTION_RESET_PASSWORD_VALIDITY=1
 ```
 
-**Important** : Les routes configurées doivent correspondre à des pages frontend existantes. Ces pages doivent :
+**Variables disponibles par client :**
 
-1. **Accepter les paramètres `token` et `email`** : Les URLs générées dans les emails incluront toujours deux paramètres :
-   - `token` : Le token d'action à utiliser
-   - `email` : L'adresse email de l'utilisateur (utilisé pour la validation)
+| Variable | Description | Exemple |
+|----------|-------------|---------|
+| `AUTH_CLIENT_N_ID` | Identifiant unique du client | `local`, `mobile-ios`, `api` |
+| `AUTH_CLIENT_N_URI` | URI de base pour les liens (`none` = code seul) | `https://app.example.com`, `myapp://`, `none` |
+| `AUTH_CLIENT_N_ACTION_*_ROUTE` | Route pour l'action | `auth/reset-password` |
+| `AUTH_CLIENT_N_ACTION_*_VALIDITY` | Durée de validité en heures | `24` |
 
-   Exemple : `/auth/accept-invitation?token=xxx&email=user@example.com`
+**Actions disponibles :** `INVITE`, `VALIDATE_EMAIL`, `RESET_PASSWORD`, `CHANGE_PASSWORD`, `CHANGE_EMAIL`, `ACCEPT_TERMS`, `ACCEPT_PRIVACY_POLICY`
 
-2. **Appeler l'endpoint correspondant** : Chaque page doit appeler l'endpoint POST approprié du contrôleur `/auth` avec le token et l'email reçus :
+**Valeurs par défaut pour la validité :**
+- `invite` : 48 heures
+- `validateEmail` : 24 heures
+- `resetPassword` : 1 heure
+- `changePassword` : 24 heures
+- `changeEmail` : 24 heures
+- `acceptTerms` : 24 heures
+- `acceptPrivacyPolicy` : 24 heures
 
-   | Route configurée             | Page frontend                                                  | Endpoint à appeler                               |
-   | ---------------------------- | -------------------------------------------------------------- | ------------------------------------------------ |
-   | `auth/accept-invitation`     | `/auth/accept-invitation?token=xxx&email=user@example.com`     | `POST /auth/accept-invitation`                   |
-   | `auth/validate-email`        | `/auth/validate-email?token=xxx&email=user@example.com`        | `POST /auth/accept-email-validation`             |
-   | `auth/accept-terms`          | `/auth/accept-terms?token=xxx&email=user@example.com`          | `POST /auth/accept-terms`                        |
-   | `auth/accept-privacy-policy` | `/auth/accept-privacy-policy?token=xxx&email=user@example.com` | `POST /auth/accept-privacy-policy`               |
-   | `auth/reset-password`        | `/auth/reset-password?token=xxx&email=user@example.com`        | `POST /auth/accept-reset-password`               |
-   | `auth/change-password`       | `/auth/change-password?token=xxx&email=user@example.com`       | `POST /auth/accept-change-password`              |
-   | `auth/change-email`          | `/auth/change-email?token=xxx&email=user@example.com`          | `POST /auth/accept-change-email` (si implémenté) |
+##### Identification du client
 
-   **Note** : Tous les endpoints d'acceptation d'actions requièrent à la fois le `token` et l'`email` dans le body de la requête pour valider que le token correspond bien à l'email fourni.
-
-**Exemple d'implémentation frontend** (Next.js) :
+Les clients doivent envoyer le header `X-Client-Id` avec chaque requête :
 
 ```typescript
-// app/auth/reset-password/page.tsx
-'use client';
+// Exemple avec fetch
+fetch('/api/auth/send-reset-password?email=user@example.com', {
+  headers: { 'X-Client-Id': 'local' }
+});
 
-import { useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+// Exemple avec axios
+axios.post('/api/auth/sign-up', data, {
+  headers: { 'X-Client-Id': 'mobile-ios' }
+});
+```
 
-export default function ResetPasswordPage() {
-  const searchParams = useSearchParams();
-  const token = searchParams.get('token');
-  const email = searchParams.get('email');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+##### Usage dans les controllers
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+```typescript
+import { Client, ClientConfig, ClientGuard, AuthGuard } from '@devlab-io/nest-auth';
 
-    if (!token || !email) {
-      alert('Token ou email manquant');
-      return;
-    }
+@Controller('auth')
+export class AuthController {
+  // Route publique : utiliser ClientGuard
+  @UseGuards(ClientGuard)
+  @Post('send-reset-password')
+  async sendResetPassword(
+    @Client() client: ClientConfig,
+    @Query('email') email: string,
+  ) {
+    return this.authService.sendResetPassword(email, client);
+  }
 
-    if (password !== confirmPassword) {
-      alert('Les mots de passe ne correspondent pas');
-      return;
-    }
-
-    try {
-      const response = await fetch('https://api.example.com/auth/accept-reset-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          token,
-          email, // L'email est requis pour valider que le token correspond bien à cet email
-          newPassword: password,
-        }),
-      });
-
-      if (response.ok) {
-        alert('Mot de passe réinitialisé avec succès');
-        // Rediriger vers la page de connexion
-      } else {
-        alert('Erreur lors de la réinitialisation');
-      }
-    } catch (error) {
-      console.error('Erreur:', error);
-      alert('Une erreur est survenue');
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <input
-        type="password"
-        placeholder="Nouveau mot de passe"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        required
-      />
-      <input
-        type="password"
-        placeholder="Confirmer le mot de passe"
-        value={confirmPassword}
-        onChange={(e) => setConfirmPassword(e.target.value)}
-        required
-      />
-      <button type="submit">Réinitialiser le mot de passe</button>
-    </form>
-  );
+  // Route authentifiée : AuthGuard inclut la validation du client
+  @UseGuards(AuthGuard)
+  @Post('send-change-password')
+  async sendChangePassword(
+    @Client() client: ClientConfig,
+    @Query('id') id: string,
+  ) {
+    return this.authService.sendChangePassword(id, client);
+  }
 }
 ```
 
-**Note** : Les URLs complètes dans les emails seront construites en combinant l'URL frontend (définie via le guard `FrontendUrlGuard`) avec la route configurée, le token et l'email. Par exemple : `https://frontend.example.com/auth/reset-password?token=abc123...&email=user@example.com`
+**Note importante :**
+- `ClientGuard` : À utiliser sur les routes **publiques** qui nécessitent l'identification du client
+- `AuthGuard` : À utiliser sur les routes **authentifiées** - il inclut automatiquement la validation du client
 
-L'email est toujours inclus dans les paramètres d'URL pour permettre à la page frontend de valider que le token correspond bien à l'email de l'utilisateur avant d'appeler l'API.
+Le décorateur `@Client()` récupère la configuration complète du client (`ClientConfig`) depuis la requête, incluant son `id`, son `uri`, et toutes ses `actions` configurées.
+
+##### Format des URLs générées
+
+Les URLs dans les emails sont construites automatiquement :
+
+**Pour les clients web (http/https) :**
+```
+https://app.example.com/auth/reset-password?token=ABC12345&email=user@example.com
+```
+
+**Pour les clients mobile (deeplink) :**
+```
+myapp://password/reset?token=ABC12345&email=user%40example.com
+```
+
+**Pour les clients API (code seul) :**
+L'email contient uniquement le code à 8 caractères alphanumériques (ex: `ABC12345`).
+
+##### Migration depuis l'ancienne configuration
+
+Si vous utilisez les anciennes variables `AUTH_ACTION_*`, vous devez migrer vers le nouveau format :
+
+1. **Supprimez** les anciennes variables `AUTH_ACTION_*`
+2. **Créez** la configuration du client avec `AUTH_CLIENT_0_*`
+3. **Ajoutez** le header `X-Client-Id` dans vos appels API
+
+**Correspondance des anciennes variables :**
+
+| Ancienne variable | Nouvelle variable |
+|-------------------|-------------------|
+| `AUTH_ACTION_INVITE` | `AUTH_CLIENT_0_ACTION_INVITE_VALIDITY` |
+| `AUTH_ACTION_INVITE_ROUTE` | `AUTH_CLIENT_0_ACTION_INVITE_ROUTE` |
+| `AUTH_ACTION_VALIDATE_EMAIL` | `AUTH_CLIENT_0_ACTION_VALIDATE_EMAIL_VALIDITY` |
+| `AUTH_ACTION_VALIDATE_EMAIL_ROUTE` | `AUTH_CLIENT_0_ACTION_VALIDATE_EMAIL_ROUTE` |
+| ... | ... |
 
 #### Configuration des Tenants (Organisations/Établissements)
 

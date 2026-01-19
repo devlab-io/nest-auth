@@ -26,7 +26,7 @@ import {
   PageDto,
 } from '../dtos';
 import { AuthGuard } from '../guards';
-import { Claims } from '../decorators/claims';
+import { Claims } from '../decorators';
 import { ORGANISATIONS } from '@devlab-io/nest-auth-types/constants';
 import {
   CREATE_ANY_ORGANISATIONS,

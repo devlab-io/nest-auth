@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationService } from './notification.service';
 import { MailerServiceToken } from '@devlab-io/nest-mailer';
-import { ActionConfig, ActionConfigToken } from '../config/action.config';
+import { ClientConfig } from '../config/client.config';
 import { ActionType, Action } from '@devlab-io/nest-auth-types';
 import { ActionTypeUtils } from '../utils';
 
@@ -18,34 +18,48 @@ describe('NotificationService', () => {
     send: jest.fn(),
   };
 
-  const mockActionConfig: ActionConfig = {
-    invite: {
-      validity: 24,
-      route: 'auth/accept-invitation',
+  const mockClientConfig: ClientConfig = {
+    id: 'local',
+    uri: 'https://example.com',
+    actions: {
+      invite: {
+        route: 'auth/accept-invitation',
+        validity: 24,
+      },
+      validateEmail: {
+        route: 'auth/validate-email',
+        validity: 24,
+      },
+      acceptTerms: {
+        route: 'auth/accept-terms',
+        validity: 24,
+      },
+      acceptPrivacyPolicy: {
+        route: 'auth/accept-privacy-policy',
+        validity: 24,
+      },
+      changePassword: {
+        route: 'auth/change-password',
+        validity: 24,
+      },
+      resetPassword: {
+        route: 'auth/reset-password',
+        validity: 24,
+      },
+      changeEmail: {
+        route: 'auth/change-email',
+        validity: 24,
+      },
     },
-    validateEmail: {
-      validity: 24,
-      route: 'auth/validate-email',
-    },
-    acceptTerms: {
-      validity: 24,
-      route: 'auth/accept-terms',
-    },
-    acceptPrivacyPolicy: {
-      validity: 24,
-      route: 'auth/accept-privacy-policy',
-    },
-    changePassword: {
-      validity: 24,
-      route: 'auth/change-password',
-    },
-    resetPassword: {
-      validity: 24,
-      route: 'auth/reset-password',
-    },
-    changeEmail: {
-      validity: 24,
-      route: 'auth/change-email',
+  };
+
+  const mockClientConfigNoUri: ClientConfig = {
+    id: 'api',
+    uri: null,
+    actions: {
+      resetPassword: {
+        validity: 1,
+      },
     },
   };
 
@@ -67,10 +81,6 @@ describe('NotificationService', () => {
           provide: MailerServiceToken,
           useValue: mockMailerService,
         },
-        {
-          provide: ActionConfigToken,
-          useValue: mockActionConfig,
-        },
       ],
     }).compile();
 
@@ -80,13 +90,12 @@ describe('NotificationService', () => {
 
   describe('buildActionLink', () => {
     it('should build action link for Invite', () => {
-      const frontendUrl = 'https://example.com';
       const token = 'test-token';
       const email = 'test@example.com';
 
       const result = service.buildActionLink(
         ActionType.Invite,
-        frontendUrl,
+        mockClientConfig,
         token,
         email,
       );
@@ -97,13 +106,12 @@ describe('NotificationService', () => {
     });
 
     it('should build action link for ValidateEmail', () => {
-      const frontendUrl = 'https://example.com';
       const token = 'test-token';
       const email = 'test@example.com';
 
       const result = service.buildActionLink(
         ActionType.ValidateEmail,
-        frontendUrl,
+        mockClientConfig,
         token,
         email,
       );
@@ -111,6 +119,62 @@ describe('NotificationService', () => {
       expect(result).toBe(
         'https://example.com/auth/validate-email?token=test-token&email=test%40example.com',
       );
+    });
+
+    it('should return undefined if client has no URI', () => {
+      const token = 'test-token';
+      const email = 'test@example.com';
+
+      const result = service.buildActionLink(
+        ActionType.ResetPassword,
+        mockClientConfigNoUri,
+        token,
+        email,
+      );
+
+      expect(result).toBeUndefined();
+    });
+
+    it('should handle deeplink URIs', () => {
+      const deeplinkClient: ClientConfig = {
+        id: 'mobile',
+        uri: 'myapp://',
+        actions: {
+          invite: {
+            route: 'invitation/accept',
+            validity: 48,
+          },
+        },
+      };
+
+      const result = service.buildActionLink(
+        ActionType.Invite,
+        deeplinkClient,
+        'token123',
+        'test@example.com',
+      );
+
+      expect(result).toBe(
+        'myapp://invitation/accept?token=token123&email=test%40example.com',
+      );
+    });
+  });
+
+  describe('getActionValidity', () => {
+    it('should return validity from client config', () => {
+      const result = service.getActionValidity(
+        mockClientConfig,
+        ActionType.Invite,
+      );
+      expect(result).toBe(24);
+    });
+
+    it('should return default validity if not configured', () => {
+      const result = service.getActionValidity(
+        mockClientConfigNoUri,
+        ActionType.Invite,
+      );
+      expect(result).toBe(24); // Default
     });
   });
 
@@ -182,8 +246,6 @@ describe('NotificationService', () => {
   describe('sendActionTokenEmail', () => {
     it('should send action token email', async () => {
       const email = 'test@example.com';
-      const frontendUrl = 'https://example.com';
-      const expiresIn = 24;
 
       (ActionTypeUtils.hasAction as jest.Mock).mockImplementation(
         (actionMask, actionType) => {
@@ -193,24 +255,23 @@ describe('NotificationService', () => {
 
       mockMailerService.send.mockResolvedValue(undefined);
 
-      await service.sendActionTokenEmail(
-        email,
-        mockAction,
-        frontendUrl,
-        expiresIn,
-      );
+      await service.sendActionTokenEmail(email, mockAction, mockClientConfig);
 
       expect(mockMailerService.send).toHaveBeenCalledWith(
         email,
         expect.stringContaining('Invitation'),
-        expect.stringContaining('test-token-123'),
+        expect.stringContaining(
+          'https://example.com/auth/accept-invitation?token=test-token-123',
+        ),
       );
     });
 
-    it('should use custom link in email if route is configured', async () => {
+    it('should send token only if client has no URI', async () => {
       const email = 'test@example.com';
-      const frontendUrl = 'https://example.com';
-      const expiresIn = 24;
+      const actionWithResetPassword = {
+        ...mockAction,
+        type: ActionType.ResetPassword,
+      };
 
       (ActionTypeUtils.hasAction as jest.Mock).mockImplementation(
         (actionMask, actionType) => {
@@ -222,23 +283,20 @@ describe('NotificationService', () => {
 
       await service.sendActionTokenEmail(
         email,
-        mockAction,
-        frontendUrl,
-        expiresIn,
+        actionWithResetPassword,
+        mockClientConfigNoUri,
       );
 
       const sendCall = (mockMailerService.send as jest.Mock).mock.calls[0];
       const emailBody = sendCall[2];
 
-      expect(emailBody).toContain(
-        'https://example.com/auth/accept-invitation?token=test-token-123&email=test%40example.com',
-      );
+      // Should contain the token directly, not a link
+      expect(emailBody).toContain('test-token-123');
+      expect(emailBody).not.toContain('https://');
     });
 
     it('should handle email sending failure', async () => {
       const email = 'test@example.com';
-      const frontendUrl = 'https://example.com';
-      const expiresIn = 24;
 
       (ActionTypeUtils.hasAction as jest.Mock).mockImplementation(
         (actionMask, actionType) => {
@@ -251,7 +309,7 @@ describe('NotificationService', () => {
       );
 
       await expect(
-        service.sendActionTokenEmail(email, mockAction, frontendUrl, expiresIn),
+        service.sendActionTokenEmail(email, mockAction, mockClientConfig),
       ).rejects.toThrow('Email sending failed');
     });
   });

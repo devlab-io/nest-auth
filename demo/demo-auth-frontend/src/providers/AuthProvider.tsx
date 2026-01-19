@@ -8,7 +8,7 @@ import {
   ReactNode,
   Context,
 } from 'react';
-import { AuthClient } from '@devlab-io/nest-auth-client';
+import { AuthClient, AuthState } from '@devlab-io/nest-auth-client';
 import { UserAccount } from '@devlab-io/nest-auth-types';
 
 interface AuthContextType {
@@ -24,7 +24,9 @@ const AuthContext: Context<AuthContextType | undefined> = createContext<
   AuthContextType | undefined
 >(undefined);
 
-const API_URL: string = 'http://localhost:4001';
+const API_URL: string =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4001';
+const CLIENT_ID: string = process.env.NEXT_PUBLIC_AUTH_CLIENT_ID || 'local';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [userAccount, setUserAccount] = useState<UserAccount | null>(null);
@@ -38,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const account: UserAccount | null = await AuthClient.initialize({
         baseURL: API_URL,
+        clientId: CLIENT_ID,
       });
       setUserAccount(account);
     } catch (error) {

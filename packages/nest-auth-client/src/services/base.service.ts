@@ -21,6 +21,7 @@ export abstract class BaseService {
 
     // Get configuration from AuthState
     const baseURL = AuthState.baseURL;
+    const clientId = AuthState.clientId;
     const timeout = AuthState.timeout;
     const defaultHeaders = AuthState.headers;
     const token = AuthState.token;
@@ -46,6 +47,10 @@ export abstract class BaseService {
 
     // Prepare headers
     const headers: Record<string, string> = { ...defaultHeaders };
+    console.log('client id:', clientId);
+    if (clientId) {
+      headers['X-Client-Id'] = clientId;
+    }
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }

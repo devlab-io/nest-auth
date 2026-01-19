@@ -27,7 +27,7 @@ import {
   CreateUserRequest,
 } from '@devlab-io/nest-auth-types';
 import { UserConfig, UserConfigToken } from '../config/user.config';
-import { ActionConfig, ActionConfigToken } from '../config/action.config';
+import { ClientConfig } from '../config/client.config';
 import { ActionService } from './action.service';
 import { UserAccountService } from './user-account.service';
 import { ActionTypeUtils } from '../utils';
@@ -50,7 +50,6 @@ export class AuthService {
 
   public constructor(
     @Inject(UserConfigToken) private readonly userConfig: UserConfig,
-    @Inject(ActionConfigToken) private readonly actionConfig: ActionConfig,
     private readonly actionService: ActionService,
     @Inject(UserServiceToken) private readonly userService: UserService,
     private readonly userAccountService: UserAccountService,
@@ -76,54 +75,55 @@ export class AuthService {
   }
 
   /**
-   * Get the maximum expiration time for a set of actions
+   * Get the maximum expiration time for a set of actions from client config
    *
+   * @param client - The client configuration
    * @param actions - Bit mask of actions
    * @returns The maximum expiration time in hours
    */
-  private getMaxExpirationTime(actions: number): number {
+  private getMaxExpirationTime(client: ClientConfig, actions: number): number {
     let maxExpiration: number = 0;
 
     if (ActionTypeUtils.hasAction(actions, ActionType.Invite)) {
       maxExpiration = Math.max(
         maxExpiration,
-        this.actionConfig.invite.validity,
+        client.actions.invite?.validity ?? 48,
       );
     }
     if (ActionTypeUtils.hasAction(actions, ActionType.ValidateEmail)) {
       maxExpiration = Math.max(
         maxExpiration,
-        this.actionConfig.validateEmail.validity,
+        client.actions.validateEmail?.validity ?? 24,
       );
     }
     if (ActionTypeUtils.hasAction(actions, ActionType.AcceptTerms)) {
       maxExpiration = Math.max(
         maxExpiration,
-        this.actionConfig.acceptTerms.validity,
+        client.actions.acceptTerms?.validity ?? 168,
       );
     }
     if (ActionTypeUtils.hasAction(actions, ActionType.AcceptPrivacyPolicy)) {
       maxExpiration = Math.max(
         maxExpiration,
-        this.actionConfig.acceptPrivacyPolicy.validity,
+        client.actions.acceptPrivacyPolicy?.validity ?? 168,
       );
     }
     if (ActionTypeUtils.hasAction(actions, ActionType.ChangePassword)) {
       maxExpiration = Math.max(
         maxExpiration,
-        this.actionConfig.changePassword.validity,
+        client.actions.changePassword?.validity ?? 1,
       );
     }
     if (ActionTypeUtils.hasAction(actions, ActionType.ResetPassword)) {
       maxExpiration = Math.max(
         maxExpiration,
-        this.actionConfig.resetPassword.validity,
+        client.actions.resetPassword?.validity ?? 1,
       );
     }
     if (ActionTypeUtils.hasAction(actions, ActionType.ChangeEmail)) {
       maxExpiration = Math.max(
         maxExpiration,
-        this.actionConfig.changeEmail.validity,
+        client.actions.changeEmail?.validity ?? 24,
       );
     }
 
@@ -142,22 +142,16 @@ export class AuthService {
    * Send an action token email to a user (generic method)
    *
    * @param request - The create action token request
-   * @param frontendUrl - Frontend URL to construct the action link (required for security)
+   * @param client - The client configuration
    * @param preActions - Optional callback to execute before creating the token (e.g., set fields to false)
    * @throws NotFoundException if the user is not found (when user is provided)
-   * @throws BadRequestException if neither email nor user is provided, or if frontend URL is missing
+   * @throws BadRequestException if neither email nor user is provided
    */
   public async sendActionToken(
     request: CreateActionRequest,
-    frontendUrl: string,
+    client: ClientConfig,
     preActions?: (user: UserEntity) => UpdateUserRequest,
   ): Promise<void> {
-    // Validate that frontend URL is provided (security requirement)
-    if (!frontendUrl) {
-      throw new BadRequestException(
-        'Frontend URL is required for security reasons',
-      );
-    }
     let user: UserEntity | undefined = undefined;
     let normalizedEmail: string;
 
@@ -182,7 +176,7 @@ export class AuthService {
 
     // Use provided expiresIn or calculate the maximum expiration time for the actions
     const expirationTime: number =
-      request.expiresIn ?? this.getMaxExpirationTime(request.type);
+      request.expiresIn ?? this.getMaxExpirationTime(client, request.type);
 
     // Create the action token (ActionService.create will verify if a user is required)
     const token: ActionEntity = await this.actionService.create({
@@ -199,8 +193,7 @@ export class AuthService {
     await this.notificationService.sendActionTokenEmail(
       normalizedEmail,
       token,
-      frontendUrl,
-      expirationTime,
+      client,
     );
   }
 
@@ -299,13 +292,13 @@ export class AuthService {
    * Invite a user by creating an invitation token
    *
    * @param invite - The invite request containing the email and roles.
-   * @param frontendUrl - Frontend URL to construct the invitation link (required for security)
+   * @param client - The client configuration
    * @returns The created action token
-   * @throws BadRequestException if a user with the same email already exists or frontend URL is missing
+   * @throws BadRequestException if a user with the same email already exists
    */
   public async sendInvitation(
     invite: InviteRequest,
-    frontendUrl: string,
+    client: ClientConfig,
   ): Promise<void> {
     // Check if a user with the same email already exists
     const exists: boolean = await this.userService.exists(invite.email);
@@ -316,9 +309,8 @@ export class AuthService {
       );
     }
 
-    // Check organisation is provided (either in invite or in config)
-    const organisationName =
-      invite.organisation ?? this.actionConfig.invite.organisation;
+    // Check organisation is provided
+    const organisationName: string | undefined = invite.organisation;
     let organisation: Organisation | null = null;
     let organisationId: string | undefined;
 
@@ -334,9 +326,8 @@ export class AuthService {
       organisationId = organisation.id;
     }
 
-    // Check establishment is provided (either in invite or in config)
-    const establishmentName =
-      invite.establishment ?? this.actionConfig.invite.establishment;
+    // Check establishment is provided
+    const establishmentName: string | undefined = invite.establishment;
     let establishment: Establishment | null = null;
     let establishmentId: string | undefined;
 
@@ -370,7 +361,7 @@ export class AuthService {
         organisationId,
         establishmentId,
       },
-      frontendUrl,
+      client,
     );
   }
 
@@ -396,7 +387,7 @@ export class AuthService {
     const passwordCredential = request.credentials?.find(
       (c) => c.type === 'password' && c.password,
     );
-    const password = passwordCredential?.password;
+    const password: string | undefined = passwordCredential?.password;
 
     // Create the user (with credentials if provided)
     const createUserRequest: CreateUserRequest = {
@@ -416,7 +407,7 @@ export class AuthService {
     const user: UserEntity = await this.userService.create(createUserRequest);
 
     // Create UserAccount for the user using organisation and establishment from action token (if provided)
-    const userAccount = await this.userAccountService.create({
+    const userAccount: UserAccount = await this.userAccountService.create({
       userId: user.id,
       organisationId: actionToken.organisationId,
       establishmentId: actionToken.establishmentId,
@@ -454,13 +445,14 @@ export class AuthService {
    * The user has to validate his email and reconnect in order to be signed in.
    *
    * @param request - The sign up request containing the users information.
+   * @param client - The client configuration
    * @returns The created user
    * @throws BadRequestException if a user with the same email or username already exists
    * @throws BadRequestException if invalid roles are provided
    */
   public async signUp(
     request: SignUpRequest,
-    frontendUrl: string,
+    client: ClientConfig,
   ): Promise<void> {
     // Validate that terms are accepted
     if (!request.acceptedTerms) {
@@ -537,7 +529,7 @@ export class AuthService {
     // Send the action email
     await this.sendActionToken(
       { type: ActionType.ValidateEmail, user: user },
-      frontendUrl,
+      client,
     );
 
     // Log
@@ -598,13 +590,12 @@ export class AuthService {
    * Send a email validation email to a user
    *
    * @param id - The ID of the user
-   * @param frontendUrl - Frontend URL to construct the validation link (required for security)
+   * @param client - The client configuration
    * @throws NotFoundException if the user is not found
-   * @throws BadRequestException if frontend URL is missing
    */
   public async sendEmailValidation(
     id: string,
-    frontendUrl: string,
+    client: ClientConfig,
   ): Promise<void> {
     // Get the user
     const user: UserEntity = await this.userService.getById(id);
@@ -615,7 +606,7 @@ export class AuthService {
         type: ActionType.ValidateEmail,
         user: user,
       },
-      frontendUrl,
+      client,
       (): UpdateUserRequest => {
         return { emailValidated: false } as UpdateUserRequest;
       },
@@ -639,13 +630,12 @@ export class AuthService {
    * Send a password change email to a user
    *
    * @param id - The ID of the user
-   * @param frontendUrl - Frontend URL to construct the change password link (required for security)
+   * @param client - The client configuration
    * @throws NotFoundException if the user is not found
-   * @throws BadRequestException if frontend URL is missing
    */
   public async sendChangePassword(
     id: string,
-    frontendUrl: string,
+    client: ClientConfig,
   ): Promise<void> {
     const user: UserEntity = await this.userService.getById(id);
     await this.sendActionToken(
@@ -653,7 +643,7 @@ export class AuthService {
         type: ActionType.ChangePassword,
         user: user,
       },
-      frontendUrl,
+      client,
     );
   }
 
@@ -674,12 +664,11 @@ export class AuthService {
    * Send a password reset email to a user
    *
    * @param email - The email of the user
-   * @param frontendUrl - Frontend URL to construct the reset password link (required for security)
-   * @throws BadRequestException if frontend URL is missing
+   * @param client - The client configuration
    */
   public async sendResetPassword(
     email: string,
-    frontendUrl: string,
+    client: ClientConfig,
   ): Promise<void> {
     // Get the user with the given email
     const user: UserEntity | null = await this.userService.findByEmail(email);
@@ -697,7 +686,7 @@ export class AuthService {
         type: ActionType.ResetPassword,
         user: user,
       },
-      frontendUrl,
+      client,
     );
   }
 

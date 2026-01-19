@@ -1,7 +1,7 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { MailerService, MailerServiceToken } from '@devlab-io/nest-mailer';
 import { ActionType, Action } from '@devlab-io/nest-auth-types';
-import { ActionConfig, ActionConfigToken } from '../config/action.config';
+import { ClientConfig, ClientActionConfig } from '../config/client.config';
 import { ActionTypeUtils } from '../utils';
 
 /**
@@ -13,54 +13,94 @@ export class NotificationService {
 
   public constructor(
     @Inject(MailerServiceToken) private readonly mailerService: MailerService,
-    @Inject(ActionConfigToken) private readonly actionConfig: ActionConfig,
   ) {}
+
+  /**
+   * Get the action configuration for a specific action type from the client config
+   */
+  private getClientAction(
+    client: ClientConfig,
+    actionType: ActionType,
+  ): ClientActionConfig | undefined {
+    switch (actionType) {
+      case ActionType.Invite:
+        return client.actions.invite;
+      case ActionType.ValidateEmail:
+        return client.actions.validateEmail;
+      case ActionType.ResetPassword:
+        return client.actions.resetPassword;
+      case ActionType.ChangePassword:
+        return client.actions.changePassword;
+      case ActionType.ChangeEmail:
+        return client.actions.changeEmail;
+      case ActionType.AcceptTerms:
+        return client.actions.acceptTerms;
+      case ActionType.AcceptPrivacyPolicy:
+        return client.actions.acceptPrivacyPolicy;
+      default:
+        return undefined;
+    }
+  }
 
   /**
    * Build a custom frontend link for an action token
    *
    * @param actionType - The action token type
-   * @param frontendUrl - The frontend URL
+   * @param client - The client configuration
    * @param token - The token value
    * @param email - The user email
    * @returns The custom link if route is configured, undefined otherwise
    */
   public buildActionLink(
     actionType: ActionType,
-    frontendUrl: string,
+    client: ClientConfig,
     token: string,
     email: string,
   ): string | undefined {
-    let actionRoute: string | undefined;
-
-    // Get the route for the specific action type
-    if (actionType === ActionType.Invite) {
-      actionRoute = this.actionConfig.invite.route;
-    } else if (actionType === ActionType.ValidateEmail) {
-      actionRoute = this.actionConfig.validateEmail.route;
-    } else if (actionType === ActionType.ChangePassword) {
-      actionRoute = this.actionConfig.changePassword.route;
-    } else if (actionType === ActionType.ResetPassword) {
-      actionRoute = this.actionConfig.resetPassword.route;
-    } else if (actionType === ActionType.ChangeEmail) {
-      actionRoute = this.actionConfig.changeEmail.route;
-    } else if (actionType === ActionType.AcceptTerms) {
-      actionRoute = this.actionConfig.acceptTerms.route;
-    } else if (actionType === ActionType.AcceptPrivacyPolicy) {
-      actionRoute = this.actionConfig.acceptPrivacyPolicy.route;
-    }
-
-    // If no route is configured, return undefined
-    if (!actionRoute) {
+    // If client has no URI, return undefined (code-only mode)
+    if (!client.uri) {
       return undefined;
     }
 
-    // Build the complete URL with query parameters
-    const url = new URL(`${frontendUrl}/${actionRoute}`);
+    // Get the action configuration for this client
+    const actionConfig: ClientActionConfig | undefined = this.getClientAction(
+      client,
+      actionType,
+    );
+
+    // If no route is configured, return undefined
+    if (!actionConfig?.route) {
+      return undefined;
+    }
+
+    // Handle deeplinks vs web URLs
+    if (client.uri.includes('://') && !client.uri.startsWith('http')) {
+      // Deeplink format: myapp://path?token=...&email=...
+      return `${client.uri}${actionConfig.route}?token=${token}&email=${encodeURIComponent(email)}`;
+    }
+
+    // Web URL format
+    const url: URL = new URL(`${client.uri}/${actionConfig.route}`);
     url.searchParams.set('token', token);
     url.searchParams.set('email', email.toLowerCase());
 
     return url.toString();
+  }
+
+  /**
+   * Get the validity (expiration time in hours) for an action type from client config
+   *
+   * @param client - The client configuration
+   * @param actionType - The action type
+   * @returns The validity in hours
+   */
+  public getActionValidity(
+    client: ClientConfig,
+    actionType: ActionType,
+  ): number {
+    const actionConfig = this.getClientAction(client, actionType);
+    // Default to 24 hours if not configured
+    return actionConfig?.validity ?? 24;
   }
 
   /**
@@ -145,31 +185,33 @@ L'équipe`;
    *
    * @param email - The recipient email address
    * @param actionToken - The action token entity
-   * @param frontendUrl - Frontend URL to construct the action link
-   * @param expiresIn - Expiration time in hours
+   * @param client - The client configuration
    * @throws Error if email sending fails
    */
   public async sendActionTokenEmail(
     email: string,
     actionToken: Action,
-    frontendUrl: string,
-    expiresIn: number,
+    client: ClientConfig,
   ): Promise<void> {
+    // Get validity from client config
+    const expiresIn: number = this.getActionValidity(client, actionToken.type);
+
     // Build custom link if route is configured
     const customLink: string | undefined = this.buildActionLink(
       actionToken.type,
-      frontendUrl,
+      client,
       actionToken.token,
       email,
     );
 
     // Generate email content from actions
-    const emailContent = this.generateEmailContent(
-      actionToken.type,
-      actionToken.token,
-      expiresIn,
-      customLink,
-    );
+    const emailContent: { subject: string; body: string } =
+      this.generateEmailContent(
+        actionToken.type,
+        actionToken.token,
+        expiresIn,
+        customLink,
+      );
 
     // Send the email
     await this.mailerService.send(

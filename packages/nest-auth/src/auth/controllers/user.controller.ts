@@ -449,7 +449,7 @@ export class UserController {
   async deleteUserSessions(
     @Param('id') id: string,
   ): Promise<DeleteSessionsResponseDto> {
-    const count = await this.sessionService.deleteAllByUserId(id);
+    const count: number = await this.sessionService.deleteAllByUserId(id);
     return { count };
   }
 }

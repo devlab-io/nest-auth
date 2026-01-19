@@ -1,10 +1,4 @@
 export {
-  UnitActionConfig,
-  ActionConfig,
-  ActionConfigToken,
-  provideActionConfig,
-} from './action.config';
-export {
   AdminConfig,
   AdminConfigToken,
   provideAdminConfig,
@@ -27,3 +21,11 @@ export {
   provideTenantsConfig,
 } from './tenants.config';
 export { UserConfig, UserConfigToken, provideUserConfig } from './user.config';
+export {
+  ClientConfig,
+  ClientsConfig,
+  ClientsConfigToken,
+  ClientActionsConfig,
+  ClientActionConfig,
+  provideClientsConfig,
+} from './client.config';

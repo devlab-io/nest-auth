@@ -2,19 +2,21 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { getClientOrigins } from '@devlab-io/nest-auth';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Enable CORS for the frontend
+  // Enable CORS for configured clients
+  const allowedOrigins = getClientOrigins([
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+  ]);
   app.enableCors({
-    origin: process.env.FRONTEND_URLS?.split(',') || [
-      'http://localhost:3000',
-      'http://127.0.0.1:3000',
-    ],
+    origin: allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Frontend-Url'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Client-Id'],
   });
 
   // Global validation pipe
