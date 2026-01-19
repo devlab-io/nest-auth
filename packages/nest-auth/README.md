@@ -164,10 +164,10 @@ AUTH_CLIENT_2_ACTION_RESET_PASSWORD_VALIDITY=1
 - `invite` : 48 heures
 - `validateEmail` : 24 heures
 - `resetPassword` : 1 heure
-- `changePassword` : 24 heures
+- `changePassword` : 1 heure
 - `changeEmail` : 24 heures
-- `acceptTerms` : 24 heures
-- `acceptPrivacyPolicy` : 24 heures
+- `acceptTerms` : 168 heures (7 jours)
+- `acceptPrivacyPolicy` : 168 heures (7 jours)
 
 ##### Identification du client
 

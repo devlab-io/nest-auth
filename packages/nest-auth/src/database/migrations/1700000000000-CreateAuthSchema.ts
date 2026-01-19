@@ -955,8 +955,8 @@ export class CreateAuthSchema1700000000000 implements MigrationInterface {
    * @param queryRunner - The query runner
    */
   private async createSuperAdmin(queryRunner: QueryRunner): Promise<void> {
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@devlab.io';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'ChangeMe1234*';
+    const adminEmail = process.env.AUTH_ADMIN_EMAIL || 'admin@devlab.io';
+    const adminPassword = process.env.AUTH_ADMIN_PASSWORD || 'ChangeMe1234*';
 
     // Hash the password
     const saltRounds = 10;
