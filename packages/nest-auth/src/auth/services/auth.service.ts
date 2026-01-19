@@ -484,6 +484,9 @@ export class AuthService {
     const rolesToAssign: string[] = Array.from(
       new Set([...defaultRoles, ...providedRoles]),
     );
+    if (rolesToAssign.length === 0) {
+      throw new BadRequestException('No roles to assign');
+    }
 
     // Required actions
     const createUserRequest: CreateUserRequest = {
@@ -519,12 +522,10 @@ export class AuthService {
     const user: UserEntity = await this.userService.create(createUserRequest);
 
     // Create the user account with roles
-    if (rolesToAssign.length > 0) {
-      await this.userAccountService.create({
-        userId: user.id,
-        roles: rolesToAssign,
-      });
-    }
+    await this.userAccountService.create({
+      userId: user.id,
+      roles: rolesToAssign,
+    });
 
     // Send the action email
     await this.sendActionToken(
