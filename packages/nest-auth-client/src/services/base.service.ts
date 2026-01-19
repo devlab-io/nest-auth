@@ -47,7 +47,6 @@ export abstract class BaseService {
 
     // Prepare headers
     const headers: Record<string, string> = { ...defaultHeaders };
-    console.log('client id:', clientId);
     if (clientId) {
       headers['X-Client-Id'] = clientId;
     }

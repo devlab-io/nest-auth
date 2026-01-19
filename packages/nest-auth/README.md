@@ -171,12 +171,17 @@ AUTH_CLIENT_2_ACTION_RESET_PASSWORD_VALIDITY=1
 
 ##### Identification du client
 
-Les clients doivent envoyer le header `X-Client-Id` avec chaque requête :
+Le client est identifié selon deux méthodes (par ordre de priorité) :
+
+1. **Header `X-Client-Id`** : Si présent, le client est identifié par son ID
+2. **Origin de la requête** : Si le header est absent, l'URI du client est comparée à l'origine de la requête (`Origin` ou `Referer`)
+
+**Méthode 1 : Header explicite (recommandé pour les apps mobiles/API)**
 
 ```typescript
 // Exemple avec fetch
 fetch('/api/auth/send-reset-password?email=user@example.com', {
-  headers: { 'X-Client-Id': 'local' }
+  headers: { 'X-Client-Id': 'mobile-ios' }
 });
 
 // Exemple avec axios
@@ -184,6 +189,25 @@ axios.post('/api/auth/sign-up', data, {
   headers: { 'X-Client-Id': 'mobile-ios' }
 });
 ```
+
+**Méthode 2 : Matching par origine (idéal pour les applications multi-domaines)**
+
+Pour les applications web où chaque tenant a son propre domaine, le header n'est pas nécessaire. Le client est automatiquement identifié par l'origine de la requête :
+
+```env
+# Configuration multi-domaines
+AUTH_CLIENT_0_ID=restaurant-paris
+AUTH_CLIENT_0_URI=https://menu.restaurant-paris.com
+AUTH_CLIENT_0_ACTION_RESET_PASSWORD_ROUTE=auth/reset-password
+
+AUTH_CLIENT_1_ID=restaurant-lyon
+AUTH_CLIENT_1_URI=https://menu.restaurant-lyon.com
+AUTH_CLIENT_1_ACTION_RESET_PASSWORD_ROUTE=auth/nouveau-mot-de-passe
+```
+
+Une requête depuis `https://menu.restaurant-paris.com` sera automatiquement associée au client `restaurant-paris`.
+
+**Note :** Pour le matching par origine, le header `Origin` (envoyé par le navigateur pour les requêtes CORS) ou `Referer` est utilisé.
 
 ##### Usage dans les controllers
 

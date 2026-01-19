@@ -5,15 +5,20 @@ import {
   ForbiddenException,
   Inject,
 } from '@nestjs/common';
+import { ClientsConfig, ClientsConfigToken } from '../config/client.config';
 import {
-  ClientConfig,
-  ClientsConfig,
-  ClientsConfigToken,
-} from '../config/client.config';
+  extractOriginFromRequest,
+  findClientByOrigin,
+} from '../utils/client.utils';
 
 /**
  * Client Guard
- * Validates that requests have a valid X-Client-Id header and loads the ClientConfig.
+ * Validates client identification and loads the ClientConfig.
+ *
+ * Client identification priority:
+ * 1. X-Client-Id header → match by ID
+ * 2. Origin/Referer header → match by URI
+ *
  * Use this guard for public routes that need client identification.
  * For authenticated routes, use AuthGuard which includes this logic.
  */
@@ -27,27 +32,33 @@ export class ClientGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
 
-    // Look for the client id
-    const clientId: string | undefined = request.headers?.['x-client-id']; // this is case insensitive;
-    if (!clientId) {
-      throw new ForbiddenException(
-        'Missing X-Client-Id header. Request must include a valid client identifier.',
-      );
+    // 1. Try explicit X-Client-Id header
+    const clientId: string | undefined = request.headers?.['x-client-id'];
+
+    if (clientId) {
+      const client = this.clientsConfig.clients.get(clientId);
+      if (!client) {
+        throw new ForbiddenException(
+          `Unknown client: ${clientId}. This client is not configured.`,
+        );
+      }
+      request.client = client;
+      return true;
     }
 
-    // Look for the client config
-    const client: ClientConfig | undefined =
-      this.clientsConfig.clients.get(clientId);
-    if (!client) {
-      throw new ForbiddenException(
-        `Unknown client: ${clientId}. This client is not configured.`,
-      );
+    // 2. Try matching origin with client URI
+    const origin = extractOriginFromRequest(request);
+    if (origin) {
+      const client = findClientByOrigin(this.clientsConfig.clients, origin);
+      if (client) {
+        request.client = client;
+        return true;
+      }
     }
 
-    // Store the client config in the request for the @Client() decorator
-    request.client = client;
-
-    // Done
-    return true;
+    // No client identification possible
+    throw new ForbiddenException(
+      'Unable to identify client. Provide X-Client-Id header or ensure Origin matches a configured client URI.',
+    );
   }
 }

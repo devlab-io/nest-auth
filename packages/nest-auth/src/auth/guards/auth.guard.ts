@@ -17,12 +17,24 @@ import {
 } from '@devlab-io/nest-auth-types';
 import { Reflector } from '@nestjs/core';
 import { CLAIMS_KEY } from '../decorators/claims';
-import { ClientsConfig, ClientsConfigToken } from '../config/client.config';
+import {
+  ClientConfig,
+  ClientsConfig,
+  ClientsConfigToken,
+} from '../config/client.config';
+import {
+  extractOriginFromRequest,
+  findClientByOrigin,
+} from '../utils/client.utils';
 
 /**
  * JWT Authentication Guard
  * Validates JWT tokens and loads the user account into the request context.
- * Also validates the X-Client-Id header and loads the ClientConfig.
+ * Also validates the client and loads the ClientConfig.
+ *
+ * Client identification priority:
+ * 1. X-Client-Id header → match by ID
+ * 2. Origin/Referer header → match by URI
  *
  * Uses JwtService.loadUserFromToken() which:
  * - Verifies the token
@@ -43,19 +55,32 @@ export class AuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
 
-    // === Client validation (X-Client-Id header) ===
-    const clientId = request.headers?.['x-client-id'];
+    // === Client validation ===
+    let client: ClientConfig | undefined;
 
-    if (!clientId) {
-      throw new ForbiddenException(
-        'Missing X-Client-Id header. Request must include a valid client identifier.',
-      );
+    // 1. Try explicit X-Client-Id header
+    const clientId: string | undefined = request.headers?.['x-client-id'];
+    if (clientId) {
+      client = this.clientsConfig.clients.get(clientId);
+      if (!client) {
+        throw new ForbiddenException(
+          `Unknown client: ${clientId}. This client is not configured.`,
+        );
+      }
     }
 
-    const client = this.clientsConfig.clients.get(clientId);
+    // 2. Try matching origin with client URI
+    if (!client) {
+      const origin = extractOriginFromRequest(request);
+      if (origin) {
+        client = findClientByOrigin(this.clientsConfig.clients, origin);
+      }
+    }
+
+    // No client identification possible
     if (!client) {
       throw new ForbiddenException(
-        `Unknown client: ${clientId}. This client is not configured.`,
+        'Unable to identify client. Provide X-Client-Id header or ensure Origin matches a configured client URI.',
       );
     }
 
