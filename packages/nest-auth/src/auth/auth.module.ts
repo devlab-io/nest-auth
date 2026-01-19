@@ -74,7 +74,7 @@ export class AuthModule {
    * @returns Dynamic authentication module
    */
   static forRoot(config?: DeepPartial<AuthConfig>): DynamicModule {
-    const clientsConfigProvider: Provider = provideClientsConfig();
+    const clientsConfigProvider: Provider = provideClientsConfig(config?.auth);
     const jwtConfigProvider: Provider = provideJwtConfig(config?.auth);
     const adminConfigProvider: Provider = provideAdminConfig(config?.auth);
     const userConfigProvider: Provider = provideUserConfig(config?.auth);

@@ -1,4 +1,5 @@
 import { Provider } from '@nestjs/common';
+import { DeepPartial } from 'typeorm';
 
 /**
  * Configuration d'une action pour un client spécifique.
@@ -37,16 +38,6 @@ export interface ClientConfig {
 export interface ClientsConfig {
   clients: Map<string, ClientConfig>;
 }
-
-/**
- * Type partiel pour la configuration des clients (utilisable en paramètre).
- * Utilise un objet au lieu d'une Map pour faciliter la configuration.
- */
-export type PartialClientsConfig = {
-  clients?: Record<string, Partial<Omit<ClientConfig, 'actions'> & {
-    actions?: Partial<Record<keyof ClientActionsConfig, Partial<ClientActionConfig>>>;
-  }>>;
-};
 
 export const ClientsConfigToken: symbol = Symbol('ClientsConfig');
 
@@ -141,20 +132,38 @@ function normalizeRoute(route: string): string {
 }
 
 /**
+ * Extrait les entrées d'une Map ou d'un objet Record.
+ */
+function getClientEntries(
+  clients: DeepPartial<Map<string, ClientConfig>>,
+): Array<[string, DeepPartial<ClientConfig>]> {
+  if (clients instanceof Map) {
+    return Array.from(clients.entries()) as Array<
+      [string, DeepPartial<ClientConfig>]
+    >;
+  }
+  // Si c'est un objet (Record passé en config)
+  return Object.entries(clients as Record<string, DeepPartial<ClientConfig>>);
+}
+
+/**
  * Fusionne la configuration partielle avec celle des variables d'environnement.
  * Les valeurs du paramètre prévalent sur celles des variables d'environnement.
  */
 function mergeClientsConfig(
   envClients: Map<string, ClientConfig>,
-  partialConfig?: PartialClientsConfig,
+  partialConfig?: DeepPartial<ClientsConfig>,
 ): Map<string, ClientConfig> {
   if (!partialConfig?.clients) {
     return envClients;
   }
 
   const merged = new Map(envClients);
+  const entries = getClientEntries(partialConfig.clients);
 
-  for (const [clientId, partialClient] of Object.entries(partialConfig.clients)) {
+  for (const [clientId, partialClient] of entries) {
+    if (!partialClient) continue;
+
     const existing = merged.get(clientId);
 
     if (existing) {
@@ -162,13 +171,18 @@ function mergeClientsConfig(
       const mergedActions: ClientActionsConfig = { ...existing.actions };
 
       if (partialClient.actions) {
-        for (const [actionKey, actionValue] of Object.entries(partialClient.actions)) {
-          const key = actionKey as keyof ClientActionsConfig;
+        const actionEntries = Object.entries(partialClient.actions) as Array<
+          [keyof ClientActionsConfig, DeepPartial<ClientActionConfig>]
+        >;
+        for (const [actionKey, actionValue] of actionEntries) {
           if (actionValue) {
-            mergedActions[key] = {
-              ...existing.actions[key],
+            mergedActions[actionKey] = {
+              ...existing.actions[actionKey],
               ...actionValue,
-              validity: actionValue.validity ?? existing.actions[key]?.validity ?? DEFAULT_VALIDITY[key],
+              validity:
+                actionValue.validity ??
+                existing.actions[actionKey]?.validity ??
+                DEFAULT_VALIDITY[actionKey],
             };
           }
         }
@@ -184,12 +198,14 @@ function mergeClientsConfig(
       const actions: ClientActionsConfig = {};
 
       if (partialClient.actions) {
-        for (const [actionKey, actionValue] of Object.entries(partialClient.actions)) {
-          const key = actionKey as keyof ClientActionsConfig;
+        const actionEntries = Object.entries(partialClient.actions) as Array<
+          [keyof ClientActionsConfig, DeepPartial<ClientActionConfig>]
+        >;
+        for (const [actionKey, actionValue] of actionEntries) {
           if (actionValue) {
-            actions[key] = {
+            actions[actionKey] = {
               route: actionValue.route,
-              validity: actionValue.validity ?? DEFAULT_VALIDITY[key],
+              validity: actionValue.validity ?? DEFAULT_VALIDITY[actionKey],
             };
           }
         }
@@ -211,7 +227,7 @@ function mergeClientsConfig(
  * Fusionne la configuration partielle avec les variables d'environnement.
  * Les valeurs du paramètre prévalent sur celles des variables d'environnement.
  */
-export function provideClientsConfig(config?: PartialClientsConfig): Provider {
+export function provideClientsConfig(config?: DeepPartial<ClientsConfig>): Provider {
   return {
     provide: ClientsConfigToken,
     useFactory: (): ClientsConfig => {
