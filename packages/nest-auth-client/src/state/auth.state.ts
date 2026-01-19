@@ -8,6 +8,7 @@ export interface AuthStorage {
 
 export interface AuthStateConfig {
   baseURL: string;
+  clientId?: string;
   timeout?: number;
   headers?: Record<string, string>;
   cookieName?: string;
@@ -26,6 +27,7 @@ export type UserAccountChangeCallback = (
  */
 export class AuthState {
   private static _baseURL: string | null = null;
+  private static _clientId: string | null = null;
   private static _timeout: number = 30000;
   private static _headers: Record<string, string> = {};
   private static _cookieName: string = 'access_token';
@@ -68,6 +70,13 @@ export class AuthState {
       );
     }
     return this._baseURL;
+  }
+
+  /**
+   * Get the client ID
+   */
+  public static get clientId(): string | null {
+    return this._clientId;
   }
 
   /**
@@ -132,6 +141,7 @@ export class AuthState {
 
       // Set configuration
       this._baseURL = config.baseURL.replace(/\/$/, ''); // Remove trailing slash
+      this._clientId = config.clientId || null;
       this._timeout = config.timeout || 30000;
       this._headers = {
         'Content-Type': 'application/json',
@@ -320,6 +330,10 @@ export class AuthState {
       ...this._headers,
       Authorization: `Bearer ${token}`,
     };
+
+    if (this._clientId) {
+      headers['X-Client-Id'] = this._clientId;
+    }
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);

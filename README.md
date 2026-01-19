@@ -16,7 +16,7 @@ Monorepo contenant les packages NestJS Authentication.
 Gérer un client mobile :
 
 - Remote Mobile App Attestation (RMAA) with Runtime Self-Protection (RASP)
-- Deeplink to redirect to a mobile app
+- Authorization Code Flow with PKCE (Proof Key for Code Exchange)
 
 Redesign Organisation / Establishment system:
 
@@ -35,8 +35,9 @@ Ce monorepo fournit une solution complète d'authentification pour les applicati
 
 - 🔐 **Authentification complète** : Inscription, connexion, déconnexion, réinitialisation de mot de passe
 - 👥 **Gestion multi-comptes** : Support des utilisateurs avec plusieurs comptes dans différentes organisations/établissements
+- 📱 **Multi-clients** : Support web, mobile (deeplinks) et API avec configuration distincte par client
 - 🔑 **Gestion des rôles** : Système de rôles et permissions intégré
-- 📧 **Validation par email** : Envoi et validation d'emails avec tokens sécurisés
+- 📧 **Validation par email** : Envoi et validation d'emails avec tokens sécurisés (liens ou codes 8 caractères)
 - 🎫 **Tokens JWT** : Authentification basée sur JWT avec gestion automatique des tokens
 - 📦 **Client TypeScript** : Client HTTP typé pour applications frontend (Next.js, React, etc.)
 - 🛡️ **Sécurité** : Protection CSRF, validation des données, gestion sécurisée des tokens

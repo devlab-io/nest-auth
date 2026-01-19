@@ -3,15 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../providers/AuthProvider';
-import { AuthClient, AuthState } from '@devlab-io/nest-auth-client';
+import { AuthClient } from '@devlab-io/nest-auth-client';
+import { Claim } from '@devlab-io/nest-auth-types';
 import { Shield, Check, X } from 'lucide-react';
-
-interface Claim {
-  id: string;
-  action: string;
-  scope: string;
-  resource: string;
-}
 
 export default function ClaimsPage() {
   const router = useRouter();
@@ -34,24 +28,8 @@ export default function ClaimsPage() {
 
   const loadClaims = async () => {
     try {
-      const baseURL = AuthState.baseURL || 'http://localhost:4001';
-      const token = AuthState.token;
-
-      const response = await fetch(`${baseURL}/claims`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to load claims');
-      }
-
-      const data = await response.json();
-      setClaims(data);
+      const claims: Claim[] = await AuthClient.claims.getAll();
+      setClaims(claims);
     } catch (err: any) {
       setError(err.message || 'Failed to load claims');
     } finally {
@@ -87,7 +65,7 @@ export default function ClaimsPage() {
 
   // Get all unique scopes for a resource (always include admin scope)
   const getScopes = (resourceClaims: Claim[]): string[] => {
-    const scopes = new Set(resourceClaims.map((c) => c.scope));
+    const scopes = new Set(resourceClaims.map((c) => c.scope as string));
     const scopeOrder = ['admin', 'any', 'organisation', 'establishment', 'own'];
     // Always include admin scope even if no claims exist for it
     return [

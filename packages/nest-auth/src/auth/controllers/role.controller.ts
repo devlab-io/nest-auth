@@ -11,7 +11,7 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { RoleService } from '../services';
 import { RoleDto, CreateRoleRequestDto, UpdateRoleRequestDto } from '../dtos';
 import { AuthGuard } from '../guards';
-import { Claims } from '../decorators/claims';
+import { Claims } from '../decorators';
 import {
   CREATE_ANY_ROLES,
   DELETE_ANY_ROLES,

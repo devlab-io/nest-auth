@@ -14,9 +14,9 @@ import {
   AuthResponseDto,
   UserAccountDto,
 } from '../dtos';
-import { FrontendUrl } from '../decorators';
-import { FrontendUrlGuard, AuthGuard } from '../guards';
-import { Claims } from '../decorators/claims';
+import { Client } from '../decorators';
+import { AuthGuard, ClientGuard } from '../guards';
+import { Claims } from '../decorators';
 import {
   ClaimAction,
   ClaimScope,
@@ -25,6 +25,7 @@ import {
   CREATE_ORG_USER_ACCOUNTS,
   READ_OWN_USER_ACCOUNTS,
 } from '@devlab-io/nest-auth-types';
+import { ClientConfig } from '../config/client.config';
 
 /**
  * Authentication controller
@@ -41,7 +42,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Get('account')
-  @UseGuards(AuthGuard, FrontendUrlGuard)
+  @UseGuards(AuthGuard)
   @Claims(READ_OWN_USER_ACCOUNTS)
   @ApiOperation({ summary: 'Get the current user account' })
   @ApiResponse({
@@ -65,7 +66,7 @@ export class AuthController {
   }
 
   @Post('invite')
-  @UseGuards(AuthGuard, FrontendUrlGuard)
+  @UseGuards(AuthGuard)
   @Claims(
     CREATE_ANY_USER_ACCOUNTS,
     CREATE_ORG_USER_ACCOUNTS,
@@ -75,20 +76,21 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Invitation sent successfully' })
   @ApiResponse({
     status: 400,
-    description: 'Bad request - Frontend URL required',
+    description: 'Bad request - Client not configured',
   })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden - Request origin not allowed',
+    description: 'Forbidden - Unknown client',
   })
   async invite(
     @Body() inviteRequest: InviteRequestDto,
-    @FrontendUrl() frontendUrl: string,
+    @Client() client: ClientConfig,
   ): Promise<void> {
-    return await this.authService.sendInvitation(inviteRequest, frontendUrl);
+    return await this.authService.sendInvitation(inviteRequest, client);
   }
 
   @Post('accept-invitation')
+  @UseGuards(ClientGuard)
   @ApiOperation({ summary: 'Accept an invitation and create an account' })
   @ApiResponse({
     status: 200,
@@ -104,15 +106,15 @@ export class AuthController {
   }
 
   @Post('sign-up')
-  @UseGuards(FrontendUrlGuard)
+  @UseGuards(ClientGuard)
   @ApiOperation({ summary: 'Register a new user account' })
   @ApiResponse({ status: 200, description: 'User registered successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
   async signUp(
     @Body() signUpRequest: SignUpRequestDto,
-    @FrontendUrl() frontendUrl: string,
+    @Client() client: ClientConfig,
   ): Promise<void> {
-    return await this.authService.signUp(signUpRequest, frontendUrl);
+    return await this.authService.signUp(signUpRequest, client);
   }
 
   @Post('sign-in')
@@ -138,28 +140,29 @@ export class AuthController {
   }
 
   @Post('send-email-validation')
-  @UseGuards(AuthGuard, FrontendUrlGuard)
+  @UseGuards(AuthGuard)
   @Claims([ClaimAction.CREATE, ClaimScope.ANY, 'actions'])
   @ApiOperation({ summary: 'Send an email validation token' })
   @ApiQuery({ name: 'id', type: String, description: 'User ID' })
   @ApiResponse({ status: 200, description: 'Email validation token sent' })
   @ApiResponse({
     status: 400,
-    description: 'Bad request - Frontend URL required',
+    description: 'Bad request - Client not configured',
   })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden - Request origin not allowed',
+    description: 'Forbidden - Unknown client',
   })
   @ApiResponse({ status: 404, description: 'User not found' })
   async sendEmailValidation(
     @Query('id') id: string,
-    @FrontendUrl() frontendUrl: string,
+    @Client() client: ClientConfig,
   ): Promise<void> {
-    return await this.authService.sendEmailValidation(id, frontendUrl);
+    return await this.authService.sendEmailValidation(id, client);
   }
 
   @Post('accept-email-validation')
+  @UseGuards(ClientGuard)
   @ApiOperation({ summary: 'Validate an email address using a token' })
   @ApiResponse({ status: 200, description: 'Email validated successfully' })
   @ApiResponse({ status: 403, description: 'Invalid or expired token' })
@@ -170,25 +173,25 @@ export class AuthController {
   }
 
   @Post('send-change-password')
-  @UseGuards(AuthGuard, FrontendUrlGuard)
+  @UseGuards(AuthGuard)
   @Claims([ClaimAction.CREATE, ClaimScope.ANY, 'actions'])
   @ApiOperation({ summary: 'Send a change password token' })
   @ApiQuery({ name: 'id', type: String, description: 'User ID' })
   @ApiResponse({ status: 200, description: 'Change password token sent' })
   @ApiResponse({
     status: 400,
-    description: 'Bad request - Frontend URL required',
+    description: 'Bad request - Client not configured',
   })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden - Request origin not allowed',
+    description: 'Forbidden - Unknown client',
   })
   @ApiResponse({ status: 404, description: 'User not found' })
   async sendChangePassword(
     @Query('id') id: string,
-    @FrontendUrl() frontendUrl: string,
+    @Client() client: ClientConfig,
   ): Promise<void> {
-    return await this.authService.sendChangePassword(id, frontendUrl);
+    return await this.authService.sendChangePassword(id, client);
   }
 
   @Post('accept-change-password')
@@ -203,28 +206,28 @@ export class AuthController {
   }
 
   @Post('send-reset-password')
-  @UseGuards(AuthGuard, FrontendUrlGuard)
-  @Claims([ClaimAction.CREATE, ClaimScope.ANY, 'actions'])
+  @UseGuards(ClientGuard)
   @ApiOperation({ summary: 'Send a password reset token' })
   @ApiQuery({ name: 'email', type: String, description: 'User email' })
   @ApiResponse({ status: 200, description: 'Password reset token sent' })
   @ApiResponse({
     status: 400,
-    description: 'Bad request - Frontend URL required or route not configured',
+    description: 'Bad request - Client not configured',
   })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden - Request origin not allowed',
+    description: 'Forbidden - Unknown client',
   })
   @ApiResponse({ status: 404, description: 'User not found' })
   async sendResetPassword(
-    @FrontendUrl() frontendUrl: string,
+    @Client() client: ClientConfig,
     @Query('email') email: string,
   ): Promise<void> {
-    return await this.authService.sendResetPassword(email, frontendUrl);
+    return await this.authService.sendResetPassword(email, client);
   }
 
   @Post('accept-reset-password')
+  @UseGuards(ClientGuard)
   @ApiOperation({ summary: 'Reset password using a token' })
   @ApiResponse({ status: 200, description: 'Password reset successfully' })
   @ApiResponse({ status: 403, description: 'Invalid or expired token' })
@@ -235,7 +238,7 @@ export class AuthController {
   }
 
   @Post('add-accept-terms')
-  @UseGuards(AuthGuard, FrontendUrlGuard)
+  @UseGuards(AuthGuard)
   @Claims([ClaimAction.CREATE, ClaimScope.ANY, 'actions'])
   @ApiOperation({ summary: 'Send an accept terms token' })
   @ApiQuery({ name: 'id', type: String, description: 'User ID' })
@@ -246,6 +249,7 @@ export class AuthController {
   }
 
   @Post('accept-terms')
+  @UseGuards(ClientGuard)
   @ApiOperation({ summary: 'Accept terms of service using a token' })
   @ApiResponse({ status: 200, description: 'Terms accepted successfully' })
   @ApiResponse({ status: 403, description: 'Invalid or expired token' })
@@ -256,7 +260,7 @@ export class AuthController {
   }
 
   @Post('add-accept-privacy-policy')
-  @UseGuards(AuthGuard, FrontendUrlGuard)
+  @UseGuards(AuthGuard)
   @Claims([ClaimAction.CREATE, ClaimScope.ANY, 'actions'])
   @ApiOperation({ summary: 'Send an accept privacy policy token' })
   @ApiQuery({ name: 'id', type: String, description: 'User ID' })
@@ -267,6 +271,7 @@ export class AuthController {
   }
 
   @Post('accept-privacy-policy')
+  @UseGuards(ClientGuard)
   @ApiOperation({ summary: 'Accept privacy policy using a token' })
   @ApiResponse({
     status: 200,

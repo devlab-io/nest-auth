@@ -9,13 +9,13 @@ import {
   provideAdminConfig,
   provideUserConfig,
   provideGoogleAuthConfig,
-  provideActionConfig,
+  provideClientsConfig,
   provideExtendedConfig,
   AuthConfig,
   UserConfigToken,
   UserConfig,
 } from './config';
-import { AuthGuard, FrontendUrlGuard } from './guards';
+import { AuthGuard, ClientGuard } from './guards';
 import {
   ActionService,
   AuthService,
@@ -74,7 +74,7 @@ export class AuthModule {
    * @returns Dynamic authentication module
    */
   static forRoot(config?: DeepPartial<AuthConfig>): DynamicModule {
-    const actionConfigProvider: Provider = provideActionConfig(config?.auth);
+    const clientsConfigProvider: Provider = provideClientsConfig(config?.auth);
     const jwtConfigProvider: Provider = provideJwtConfig(config?.auth);
     const adminConfigProvider: Provider = provideAdminConfig(config?.auth);
     const userConfigProvider: Provider = provideUserConfig(config?.auth);
@@ -198,7 +198,7 @@ export class AuthModule {
         ClaimController,
       ],
       providers: [
-        actionConfigProvider,
+        clientsConfigProvider,
         jwtConfigProvider,
         adminConfigProvider,
         userConfigProvider,
@@ -220,7 +220,7 @@ export class AuthModule {
         CredentialService,
         ScopeService,
         AuthGuard,
-        FrontendUrlGuard,
+        ClientGuard,
         {
           provide: APP_INTERCEPTOR,
           inject: [Reflector],
@@ -230,7 +230,7 @@ export class AuthModule {
         },
       ],
       exports: [
-        actionConfigProvider,
+        clientsConfigProvider,
         authConfigProvider,
         jwtConfigProvider,
         adminConfigProvider,
@@ -252,7 +252,7 @@ export class AuthModule {
         CredentialService,
         ScopeService,
         AuthGuard,
-        FrontendUrlGuard,
+        ClientGuard,
       ],
     };
   }

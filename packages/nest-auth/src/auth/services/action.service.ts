@@ -47,10 +47,16 @@ export class ActionService {
   ) {}
 
   /**
-   * Generate a secure random token
+   * Generate a secure random code (8 alphanumeric characters in uppercase)
    */
   private generateToken(): string {
-    return randomBytes(32).toString('hex');
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const bytes = randomBytes(8);
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+      code += chars[bytes[i] % chars.length];
+    }
+    return code;
   }
 
   /**

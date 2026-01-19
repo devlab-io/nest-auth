@@ -13,9 +13,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { SessionService } from '../services';
 import { SessionQueryParams } from '@devlab-io/nest-auth-types';
-import { SessionDto, DeleteSessionsResponseDto } from '../dtos';
 import {
   READ_ANY_SESSIONS,
   READ_ORG_SESSIONS,
@@ -27,8 +25,10 @@ import {
   DELETE_OWN_SESSIONS,
   SESSIONS,
 } from '@devlab-io/nest-auth-types/constants';
-import { Claims } from '../decorators/claims';
+import { Claims } from '../decorators';
+import { SessionDto, DeleteSessionsResponseDto } from '../dtos';
 import { AuthGuard } from '../guards';
+import { SessionService } from '../services';
 
 /**
  * Session controller
@@ -155,7 +155,7 @@ export class SessionController {
     type: DeleteSessionsResponseDto,
   })
   async deleteExpired(): Promise<DeleteSessionsResponseDto> {
-    const count = await this.sessionService.deleteExpired();
+    const count: number = await this.sessionService.deleteExpired();
     return { count };
   }
 }

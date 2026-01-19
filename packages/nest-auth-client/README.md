@@ -38,11 +38,14 @@ import { AuthClient } from '@devlab-io/nest-auth-client';
 // Initialiser le client (une seule fois au démarrage de l'application)
 const userAccount = await AuthClient.initialize({
   baseURL: 'https://api.example.com',
+  clientId: 'local', // Identifiant du client configuré côté serveur
   timeout: 30000,
   cookieName: 'access_token',
   // localStorage sera utilisé par défaut en browser
 });
 ```
+
+Le `clientId` est envoyé automatiquement dans le header `X-Client-Id` de toutes les requêtes. Ce header est requis par le serveur pour identifier le client et appliquer la configuration appropriée (URLs de redirection, durées de validité des tokens, etc.).
 
 ### Configuration avancée
 
@@ -58,6 +61,7 @@ const customStorage = {
 
 await AuthClient.initialize({
   baseURL: 'https://api.example.com',
+  clientId: process.env.NEXT_PUBLIC_AUTH_CLIENT_ID || 'local',
   timeout: 30000,
   cookieName: 'access_token',
   storage: customStorage, // ou null pour désactiver le storage
@@ -65,6 +69,16 @@ await AuthClient.initialize({
     'X-Custom-Header': 'value',
   },
 });
+```
+
+### Variables d'environnement recommandées
+
+```env
+# URL de l'API backend
+NEXT_PUBLIC_API_URL=https://api.example.com
+
+# Identifiant du client (doit correspondre à AUTH_CLIENT_N_ID côté serveur)
+NEXT_PUBLIC_AUTH_CLIENT_ID=local
 ```
 
 ## Utilisation des services
@@ -194,6 +208,7 @@ import { AuthClient, AuthState } from '@devlab-io/nest-auth-client';
 // 1. Initialiser au démarrage de l'application
 const userAccount = await AuthClient.initialize({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000',
+  clientId: process.env.NEXT_PUBLIC_AUTH_CLIENT_ID || 'local',
 });
 
 if (userAccount) {
@@ -243,6 +258,7 @@ Classe statique pour gérer l'état d'authentification.
 
 - `AuthState.userAccount` - Compte utilisateur actuel
 - `AuthState.token` - Token d'authentification
+- `AuthState.clientId` - Identifiant du client configuré
 - `AuthState.initialized` - État d'initialisation
 - `AuthState.hasRole(roleName)` - Vérifier un rôle
 - `AuthState.onUserAccountChange(callback)` - S'abonner aux changements

@@ -16,7 +16,7 @@ import {
 } from './establishment.service';
 import { NotificationService } from './notification.service';
 import { UserConfig, UserConfigToken } from '../config/user.config';
-import { ActionConfig, ActionConfigToken } from '../config/action.config';
+import { ClientConfig } from '../config/client.config';
 import {
   UserEntity,
   ActionEntity,
@@ -39,7 +39,19 @@ import {
   JwtToken,
 } from '@devlab-io/nest-auth-types';
 
-const FRONTEND_URL: string = 'https://example.com';
+const mockClientConfig: ClientConfig = {
+  id: 'local',
+  uri: 'https://example.com',
+  actions: {
+    invite: { route: 'auth/accept-invitation', validity: 24 },
+    validateEmail: { route: 'auth/validate-email', validity: 24 },
+    acceptTerms: { route: 'auth/accept-terms', validity: 24 },
+    acceptPrivacyPolicy: { route: 'auth/accept-privacy-policy', validity: 24 },
+    changePassword: { route: 'auth/change-password', validity: 24 },
+    resetPassword: { route: 'auth/reset-password', validity: 24 },
+    changeEmail: { route: 'auth/change-email', validity: 24 },
+  },
+};
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -57,21 +69,6 @@ describe('AuthService', () => {
       defaultRoles: ['user'],
       signUpRoles: ['user', 'premium'],
     },
-  };
-
-  const mockActionConfig: ActionConfig = {
-    invite: {
-      validity: 24,
-      route: 'auth/accept-invitation',
-      organisation: undefined,
-      establishment: undefined,
-    },
-    validateEmail: { validity: 24, route: 'auth/validate-email' },
-    acceptTerms: { validity: 24, route: 'auth/accept-terms' },
-    acceptPrivacyPolicy: { validity: 24, route: 'auth/accept-privacy-policy' },
-    changePassword: { validity: 24, route: 'auth/change-password' },
-    resetPassword: { validity: 24, route: 'auth/reset-password' },
-    changeEmail: { validity: 24, route: 'auth/change-email' },
   };
 
   const mockOrganisation: OrganisationEntity = {
@@ -179,6 +176,7 @@ describe('AuthService', () => {
 
     const mockNotificationService = {
       sendActionTokenEmail: jest.fn(),
+      getActionValidity: jest.fn().mockReturnValue(24),
     };
 
     const mockCredentialService = {
@@ -225,10 +223,6 @@ describe('AuthService', () => {
           provide: UserConfigToken,
           useValue: mockUserConfig,
         },
-        {
-          provide: ActionConfigToken,
-          useValue: mockActionConfig,
-        },
       ],
     }).compile();
 
@@ -245,30 +239,13 @@ describe('AuthService', () => {
   });
 
   describe('sendActionToken', () => {
-    const frontendUrl = 'https://example.com';
-
-    it('should throw BadRequestException if frontendUrl is missing', async () => {
-      const request: any = {
-        type: ActionType.Invite,
-        email: 'test@example.com',
-      };
-
-      await expect(service.sendActionToken(request, '')).rejects.toThrow(
-        BadRequestException,
-      );
-
-      await expect(
-        service.sendActionToken(request, null as any),
-      ).rejects.toThrow(BadRequestException);
-    });
-
     it('should throw BadRequestException if neither email nor user is provided', async () => {
       const request: any = {
         type: ActionType.Invite,
       };
 
       await expect(
-        service.sendActionToken(request, frontendUrl),
+        service.sendActionToken(request, mockClientConfig),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -281,7 +258,7 @@ describe('AuthService', () => {
       userService.getById.mockResolvedValue(mockUser);
       actionService.create.mockResolvedValue(mockActionToken);
 
-      await service.sendActionToken(request, frontendUrl);
+      await service.sendActionToken(request, mockClientConfig);
 
       expect(userService.getById).toHaveBeenCalledWith(mockUser.id);
       expect(actionService.create).toHaveBeenCalled();
@@ -296,7 +273,7 @@ describe('AuthService', () => {
 
       actionService.create.mockResolvedValue(mockActionToken);
 
-      await service.sendActionToken(request, frontendUrl);
+      await service.sendActionToken(request, mockClientConfig);
 
       expect(actionService.create).toHaveBeenCalled();
       expect(notificationService.sendActionTokenEmail).toHaveBeenCalled();
@@ -317,30 +294,14 @@ describe('AuthService', () => {
       userService.update.mockResolvedValue(updatedUser);
       actionService.create.mockResolvedValue(mockActionToken);
 
-      await service.sendActionToken(request, frontendUrl, preActions);
+      await service.sendActionToken(request, mockClientConfig, preActions);
 
       expect(preActions).toHaveBeenCalledWith(mockUser);
       expect(userService.update).toHaveBeenCalled();
     });
-
-    it('should build custom link when route is configured', async () => {
-      const request: any = {
-        type: ActionType.ResetPassword,
-        user: mockUser,
-      };
-
-      userService.getById.mockResolvedValue(mockUser);
-      actionService.create.mockResolvedValue(mockActionToken);
-
-      await service.sendActionToken(request, frontendUrl);
-
-      expect(notificationService.sendActionTokenEmail).toHaveBeenCalled();
-    });
   });
 
   describe('sendInvitation', () => {
-    const frontendUrl = 'https://example.com';
-
     it('should throw BadRequestException if user already exists', async () => {
       const invite: InviteRequest = {
         email: 'test@example.com',
@@ -351,9 +312,9 @@ describe('AuthService', () => {
 
       userService.exists.mockResolvedValue(true);
 
-      await expect(service.sendInvitation(invite, frontendUrl)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.sendInvitation(invite, mockClientConfig),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should allow invitation without organisation or establishment', async () => {
@@ -373,7 +334,7 @@ describe('AuthService', () => {
         .mockResolvedValue(undefined);
 
       await expect(
-        service.sendInvitation(invite, frontendUrl),
+        service.sendInvitation(invite, mockClientConfig),
       ).resolves.not.toThrow();
     });
 
@@ -388,9 +349,9 @@ describe('AuthService', () => {
       userService.exists.mockResolvedValue(false);
       organisationService.findByName = jest.fn().mockResolvedValue(null);
 
-      await expect(service.sendInvitation(invite, frontendUrl)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.sendInvitation(invite, mockClientConfig),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should send invitation email', async () => {
@@ -410,7 +371,7 @@ describe('AuthService', () => {
         .mockResolvedValue(mockEstablishment);
       actionService.create.mockResolvedValue(mockActionToken);
 
-      await service.sendInvitation(invite, frontendUrl);
+      await service.sendInvitation(invite, mockClientConfig);
 
       expect(userService.exists).toHaveBeenCalledWith('test@example.com');
       expect(organisationService.findByName).toHaveBeenCalledWith(
@@ -419,7 +380,6 @@ describe('AuthService', () => {
       expect(
         establishmentService.findByNameAndOrganisation,
       ).toHaveBeenCalledWith('Test Establishment', 'org-id');
-      // sendActionToken is called internally, which calls actionService.create
       expect(actionService.create).toHaveBeenCalled();
       const createCall = (actionService.create as jest.Mock).mock.calls[0][0];
       expect(createCall.email).toBe('test@example.com');
@@ -446,7 +406,7 @@ describe('AuthService', () => {
         .mockResolvedValue(mockEstablishment);
       actionService.create.mockResolvedValue(mockActionToken);
 
-      await service.sendInvitation(invite, frontendUrl);
+      await service.sendInvitation(invite, mockClientConfig);
 
       expect(actionService.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -493,8 +453,6 @@ describe('AuthService', () => {
           enabled: true,
         }),
       );
-      // Password credential is created during user creation, not separately
-      // userService.create already handles credentials
       expect(userAccountService.create).toHaveBeenCalledWith({
         userId: 'user-id',
         organisationId: 'org-id',
@@ -525,7 +483,7 @@ describe('AuthService', () => {
         acceptedPrivacyPolicy: true,
       };
 
-      await expect(service.signUp(request, FRONTEND_URL)).rejects.toThrow(
+      await expect(service.signUp(request, mockClientConfig)).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -540,7 +498,7 @@ describe('AuthService', () => {
         acceptedPrivacyPolicy: false,
       };
 
-      await expect(service.signUp(request, FRONTEND_URL)).rejects.toThrow(
+      await expect(service.signUp(request, mockClientConfig)).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -560,7 +518,7 @@ describe('AuthService', () => {
       actionService.create.mockResolvedValue(mockActionToken);
       notificationService.sendActionTokenEmail.mockResolvedValue(undefined);
 
-      await service.signUp(request, FRONTEND_URL);
+      await service.signUp(request, mockClientConfig);
 
       expect(userService.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -652,15 +610,13 @@ describe('AuthService', () => {
   });
 
   describe('sendEmailValidation', () => {
-    const frontendUrl = 'https://example.com';
-
     it('should throw NotFoundException if user not found', async () => {
       userService.getById.mockRejectedValue(
         new NotFoundException('User not found'),
       );
 
       await expect(
-        service.sendEmailValidation('user-id', frontendUrl),
+        service.sendEmailValidation('user-id', mockClientConfig),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -672,7 +628,7 @@ describe('AuthService', () => {
       });
       actionService.create.mockResolvedValue(mockActionToken);
 
-      await service.sendEmailValidation('user-id', frontendUrl);
+      await service.sendEmailValidation('user-id', mockClientConfig);
 
       expect(userService.getById).toHaveBeenCalledWith('user-id');
       expect(userService.update).toHaveBeenCalled();
@@ -710,24 +666,22 @@ describe('AuthService', () => {
     });
   });
 
-  describe('sendCreatePassword', () => {
-    const frontendUrl = 'https://example.com';
-
+  describe('sendChangePassword', () => {
     it('should throw NotFoundException if user not found', async () => {
       userService.getById.mockRejectedValue(
         new NotFoundException('User not found'),
       );
 
       await expect(
-        service.sendChangePassword('user-id', frontendUrl),
+        service.sendChangePassword('user-id', mockClientConfig),
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should send create password email', async () => {
+    it('should send change password email', async () => {
       userService.getById.mockResolvedValue(mockUser);
       actionService.create.mockResolvedValue(mockActionToken);
 
-      await service.sendChangePassword('user-id', frontendUrl);
+      await service.sendChangePassword('user-id', mockClientConfig);
 
       expect(userService.getById).toHaveBeenCalledWith('user-id');
       expect(actionService.create).toHaveBeenCalled();
@@ -735,8 +689,8 @@ describe('AuthService', () => {
     });
   });
 
-  describe('acceptCreatePassword', () => {
-    it('should process create password', async () => {
+  describe('acceptChangePassword', () => {
+    it('should process change password', async () => {
       const request: ChangePasswordRequest = {
         email: 'test@example.com',
         token: 'action-token-123',
@@ -744,13 +698,13 @@ describe('AuthService', () => {
         newPassword: 'newPassword123',
       };
 
-      const createPasswordToken = {
+      const changePasswordToken = {
         ...mockActionToken,
         type: ActionType.ChangePassword,
         user: mockUser,
       };
 
-      actionService.validate.mockResolvedValue(createPasswordToken);
+      actionService.validate.mockResolvedValue(changePasswordToken);
       userService.addPasswordCredential.mockResolvedValue(undefined);
 
       await service.acceptChangePassword(request);
@@ -769,13 +723,13 @@ describe('AuthService', () => {
         token: 'action-token-123',
       };
 
-      const createPasswordToken = {
+      const changePasswordToken = {
         ...mockActionToken,
         type: ActionType.ChangePassword,
         user: mockUser,
       };
 
-      actionService.validate.mockResolvedValue(createPasswordToken);
+      actionService.validate.mockResolvedValue(changePasswordToken);
 
       await expect(service.acceptChangePassword(request)).rejects.toThrow(
         BadRequestException,
@@ -784,12 +738,10 @@ describe('AuthService', () => {
   });
 
   describe('sendResetPassword', () => {
-    const frontendUrl = 'https://example.com';
-
     it('should return silently if user not found', async () => {
       userService.findByEmail.mockResolvedValue(null);
 
-      await service.sendResetPassword('test@example.com', frontendUrl);
+      await service.sendResetPassword('test@example.com', mockClientConfig);
 
       expect(userService.findByEmail).toHaveBeenCalledWith('test@example.com');
       expect(actionService.create).not.toHaveBeenCalled();
@@ -806,7 +758,7 @@ describe('AuthService', () => {
       userService.getById.mockResolvedValue(mockUser);
       actionService.create.mockResolvedValue(resetPasswordToken);
 
-      await service.sendResetPassword('test@example.com', frontendUrl);
+      await service.sendResetPassword('test@example.com', mockClientConfig);
 
       expect(userService.findByEmail).toHaveBeenCalledWith('test@example.com');
       expect(actionService.create).toHaveBeenCalled();

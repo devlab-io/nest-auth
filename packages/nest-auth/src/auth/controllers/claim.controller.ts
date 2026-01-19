@@ -3,7 +3,7 @@ import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ClaimService } from '../services';
 import { ClaimDto } from '../dtos';
 import { AuthGuard } from '../guards';
-import { Claims } from '../decorators/claims';
+import { Claims } from '../decorators';
 import { CLAIMS, READ_ANY_CLAIMS } from '@devlab-io/nest-auth-types/constants';
 
 /**

@@ -3,7 +3,7 @@ import { AdminConfig, AdminConfigToken } from './admin.config';
 import { JwtConfig, JwtConfigToken } from './jwt.config';
 import { GoogleAuthConfig, GoogleAuthConfigToken } from './google-auth.config';
 import { UserConfig, UserConfigToken } from './user.config';
-import { ActionConfig, ActionConfigToken } from './action.config';
+import { ClientsConfig, ClientsConfigToken } from './client.config';
 import { TenantsConfig, TenantsConfigToken } from './tenants.config';
 import { ExtentedConfig, ExtendedConfigToken } from './extended.config';
 
@@ -12,7 +12,7 @@ export interface AuthConfig {
     AdminConfig &
     UserConfig &
     GoogleAuthConfig &
-    ActionConfig &
+    ClientsConfig &
     TenantsConfig &
     ExtentedConfig;
 }
@@ -27,7 +27,7 @@ export function provideAuthConfig(): Provider {
       AdminConfigToken,
       UserConfigToken,
       GoogleAuthConfigToken,
-      ActionConfigToken,
+      ClientsConfigToken,
       TenantsConfigToken,
       ExtendedConfigToken,
     ],
@@ -36,7 +36,7 @@ export function provideAuthConfig(): Provider {
       adminConfig: AdminConfig,
       userConfig: UserConfig,
       googleAuthConfig: GoogleAuthConfig,
-      actionConfig: ActionConfig,
+      clientsConfig: ClientsConfig,
       tenantsConfig: TenantsConfig,
       extendedConfig: ExtentedConfig,
     ): AuthConfig => {
@@ -46,7 +46,7 @@ export function provideAuthConfig(): Provider {
           ...adminConfig,
           ...userConfig,
           ...googleAuthConfig,
-          ...actionConfig,
+          ...clientsConfig,
           ...tenantsConfig,
           ...extendedConfig,
         },

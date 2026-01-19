@@ -26,7 +26,7 @@ import {
   PageDto,
 } from '../dtos';
 import { AuthGuard } from '../guards';
-import { Claims } from '../decorators/claims';
+import { Claims } from '../decorators';
 import {
   CREATE_ANY_ESTABLISHMENTS,
   DELETE_OWN_ESTABLISHMENTS,
