@@ -227,7 +227,9 @@ function mergeClientsConfig(
  * Fusionne la configuration partielle avec les variables d'environnement.
  * Les valeurs du paramètre prévalent sur celles des variables d'environnement.
  */
-export function provideClientsConfig(config?: DeepPartial<ClientsConfig>): Provider {
+export function provideClientsConfig(
+  config?: DeepPartial<ClientsConfig>,
+): Provider {
   return {
     provide: ClientsConfigToken,
     useFactory: (): ClientsConfig => {
