@@ -104,8 +104,9 @@ function parseClientsFromEnv(
         : DEFAULT_VALIDITY[actionKey];
 
       // Use configured route, or default route if client has a URI
-      const effectiveRoute =
-        route ? normalizeRoute(route) : DEFAULT_ROUTES[actionKey];
+      const effectiveRoute = route
+        ? normalizeRoute(route)
+        : DEFAULT_ROUTES[actionKey];
 
       return {
         route: uri && uri !== 'none' ? effectiveRoute : undefined,
@@ -123,7 +124,10 @@ function parseClientsFromEnv(
         changePassword: parseAction('CHANGE_PASSWORD', 'changePassword'),
         changeEmail: parseAction('CHANGE_EMAIL', 'changeEmail'),
         acceptTerms: parseAction('ACCEPT_TERMS', 'acceptTerms'),
-        acceptPrivacyPolicy: parseAction('ACCEPT_PRIVACY_POLICY', 'acceptPrivacyPolicy'),
+        acceptPrivacyPolicy: parseAction(
+          'ACCEPT_PRIVACY_POLICY',
+          'acceptPrivacyPolicy',
+        ),
       },
     });
 
