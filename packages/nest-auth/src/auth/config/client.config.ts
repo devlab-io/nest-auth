@@ -55,6 +55,19 @@ const DEFAULT_VALIDITY: Record<keyof ClientActionsConfig, number> = {
 };
 
 /**
+ * Routes par défaut pour les actions.
+ */
+const DEFAULT_ROUTES: Record<keyof ClientActionsConfig, string> = {
+  invite: 'auth/accept-invitation',
+  validateEmail: 'auth/validate-email',
+  resetPassword: 'auth/reset-password',
+  changePassword: 'auth/change-password',
+  changeEmail: 'auth/change-email',
+  acceptTerms: 'auth/accept-terms',
+  acceptPrivacyPolicy: 'auth/accept-privacy-policy',
+};
+
+/**
  * Parse les variables d'environnement indexées pour construire la configuration des clients.
  *
  * Format des variables :
@@ -79,8 +92,8 @@ function parseClientsFromEnv(
 
     const parseAction = (
       actionName: string,
-      defaultValidityKey: keyof ClientActionsConfig,
-    ): ClientActionConfig | undefined => {
+      actionKey: keyof ClientActionsConfig,
+    ): ClientActionConfig => {
       const routeKey = `${prefix}ACTION_${actionName}_ROUTE`;
       const validityKey = `${prefix}ACTION_${actionName}_VALIDITY`;
 
@@ -88,15 +101,14 @@ function parseClientsFromEnv(
       const validityStr = env[validityKey];
       const validity = validityStr
         ? parseInt(validityStr, 10)
-        : DEFAULT_VALIDITY[defaultValidityKey];
+        : DEFAULT_VALIDITY[actionKey];
 
-      // Si pas de route et URI=none, on garde quand même la validité
-      if (!route && uri !== 'none') {
-        return undefined;
-      }
+      // Use configured route, or default route if client has a URI
+      const effectiveRoute =
+        route ? normalizeRoute(route) : DEFAULT_ROUTES[actionKey];
 
       return {
-        route: route ? normalizeRoute(route) : undefined,
+        route: uri && uri !== 'none' ? effectiveRoute : undefined,
         validity,
       };
     };
@@ -111,10 +123,7 @@ function parseClientsFromEnv(
         changePassword: parseAction('CHANGE_PASSWORD', 'changePassword'),
         changeEmail: parseAction('CHANGE_EMAIL', 'changeEmail'),
         acceptTerms: parseAction('ACCEPT_TERMS', 'acceptTerms'),
-        acceptPrivacyPolicy: parseAction(
-          'ACCEPT_PRIVACY_POLICY',
-          'acceptPrivacyPolicy',
-        ),
+        acceptPrivacyPolicy: parseAction('ACCEPT_PRIVACY_POLICY', 'acceptPrivacyPolicy'),
       },
     });
 

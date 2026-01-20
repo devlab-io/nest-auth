@@ -160,14 +160,19 @@ AUTH_CLIENT_2_ACTION_RESET_PASSWORD_VALIDITY=1
 
 **Actions disponibles :** `INVITE`, `VALIDATE_EMAIL`, `RESET_PASSWORD`, `CHANGE_PASSWORD`, `CHANGE_EMAIL`, `ACCEPT_TERMS`, `ACCEPT_PRIVACY_POLICY`
 
-**Valeurs par défaut pour la validité :**
-- `invite` : 48 heures
-- `validateEmail` : 24 heures
-- `resetPassword` : 1 heure
-- `changePassword` : 1 heure
-- `changeEmail` : 24 heures
-- `acceptTerms` : 168 heures (7 jours)
-- `acceptPrivacyPolicy` : 168 heures (7 jours)
+**Valeurs par défaut :**
+
+| Action | Route par défaut | Validité par défaut |
+|--------|------------------|---------------------|
+| `invite` | `auth/accept-invitation` | 48 heures |
+| `validateEmail` | `auth/validate-email` | 24 heures |
+| `resetPassword` | `auth/reset-password` | 1 heure |
+| `changePassword` | `auth/change-password` | 1 heure |
+| `changeEmail` | `auth/change-email` | 24 heures |
+| `acceptTerms` | `auth/accept-terms` | 168 heures (7 jours) |
+| `acceptPrivacyPolicy` | `auth/accept-privacy-policy` | 168 heures (7 jours) |
+
+**Note :** Si un client a une URI configurée mais pas de routes explicites, les routes par défaut sont automatiquement utilisées.
 
 ##### Identification du client
 
